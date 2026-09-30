@@ -1,0 +1,9 @@
+{
+  "src": [
+    "pages/Index",
+    "pages/AddAccount",
+    "pages/AccountDetail",
+    "pages/RecognizeBill",
+    "pages/Settings"
+  ]
+}

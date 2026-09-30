@@ -1,0 +1,456 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "Account module"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "Account assistant entry"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "Account Assistant"
+    },
+    {
+      "name": "month_expenses",
+      "value": "Expenses this month"
+    },
+    {
+      "name": "unit",
+      "value": "yuan"
+    },
+    {
+      "name": "month_no_expenses",
+      "value": "No expenses this month"
+    },
+    {
+      "name": "income_month",
+      "value": "Income this month"
+    },
+    {
+      "name": "month_no_income",
+      "value": "No income yet"
+    },
+    {
+      "name": "empty_tip",
+      "value": "Where did my money go? Record it now."
+    },
+    {
+      "name": "diet",
+      "value": "Meals"
+    },
+    {
+      "name": "healthy",
+      "value": "Medical"
+    },
+    {
+      "name": "transport",
+      "value": "Transportation"
+    },
+    {
+      "name": "house",
+      "value": "Housing"
+    },
+    {
+      "name": "snack",
+      "value": "Snacks, tobacco and alcohol"
+    },
+    {
+      "name": "study",
+      "value": "Study"
+    },
+    {
+      "name": "communicate",
+      "value": "Communication"
+    },
+    {
+      "name": "social",
+      "value": "Social"
+    },
+    {
+      "name": "investment_expenditure",
+      "value": "Investment expenditure"
+    },
+    {
+      "name": "shopping",
+      "value": "Shopping"
+    },
+    {
+      "name": "entertainment",
+      "value": "Entertainment"
+    },
+    {
+      "name": "loan",
+      "value": "Loan"
+    },
+    {
+      "name": "other_expenses",
+      "value": "Other expenses"
+    },
+    {
+      "name": "salary",
+      "value": "Salary"
+    },
+    {
+      "name": "bonus",
+      "value": "Bonus"
+    },
+    {
+      "name": "interest",
+      "value": "Interest"
+    },
+    {
+      "name": "invest",
+      "value": "Invest"
+    },
+    {
+      "name": "part_time",
+      "value": "Part time"
+    },
+    {
+      "name": "red_envelope",
+      "value": "Red envelope transfer"
+    },
+    {
+      "name": "borrow",
+      "value": "Borrow"
+    },
+    {
+      "name": "other_income",
+      "value": "Other income"
+    },
+    {
+      "name": "expenditure",
+      "value": "Expenditure"
+    },
+    {
+      "name": "income",
+      "value": "Income"
+    },
+    {
+      "name": "bill_amount",
+      "value": "Bill amount"
+    },
+    {
+      "name": "statistics_details",
+      "value": "Statistics details"
+    },
+    {
+      "name": "monthly_bill",
+      "value": "Monthly bill"
+    },
+    {
+      "name": "annual_bill",
+      "value": "Annual bill"
+    },
+    {
+      "name": "home",
+      "value": "Home"
+    },
+    {
+      "name": "statistics",
+      "value": "Statistics"
+    },
+    {
+      "name": "back",
+      "value": "Back"
+    },
+    {
+      "name": "no_expenses",
+      "value": "No expenses"
+    },
+    {
+      "name": "no_income",
+      "value": "No income"
+    },
+    {
+      "name": "by_date",
+      "value": "By date"
+    },
+    {
+      "name": "by_category",
+      "value": "By category"
+    },
+    {
+      "name": "all_expenses",
+      "value": "All expenses"
+    },
+    {
+      "name": "all_income",
+      "value": "All income"
+    },
+    {
+      "name": "save",
+      "value": "Save"
+    },
+    {
+      "name": "make_another_note",
+      "value": "Make another note"
+    },
+    {
+      "name": "confirm",
+      "value": "Confirm"
+    },
+    {
+      "name": "cancel",
+      "value": "Cancel"
+    },
+    {
+      "name": "detail",
+      "value": "Detail"
+    },
+    {
+      "name": "expense_label",
+      "value": "Expense: %s"
+    },
+    {
+      "name": "income_label",
+      "value": "Income: %s"
+    },
+    {
+      "name": "delete",
+      "value": "Delete"
+    },
+    {
+      "name": "delete_failed",
+      "value": "Failed to delete record"
+    },
+    {
+      "name": "month_expense_label",
+      "value": "Expense this month (yuan)"
+    },
+    {
+      "name": "year_expense_label",
+      "value": "Expense this year (yuan)"
+    },
+    {
+      "name": "month_income_label",
+      "value": "Income this month (yuan)"
+    },
+    {
+      "name": "year_income_label",
+      "value": "Income this year (yuan)"
+    },
+    {
+      "name": "home_income_label",
+      "value": "Income this month (yuan): "
+    },
+    {
+      "name": "count_unit",
+      "value": "%d"
+    },
+    {
+      "name": "require_amount_type",
+      "value": "Please fill in amount and type"
+    },
+    {
+      "name": "save_success",
+      "value": "Record saved successfully"
+    },
+    {
+      "name": "save_failed",
+      "value": "Failed to save"
+    },
+    {
+      "name": "invalid_amount",
+      "value": "Amount must be greater than 0 with at most 2 decimal places"
+    },
+    {
+      "name": "amount_placeholder",
+      "value": "¥ 0.00"
+    },
+    {
+      "name": "description_placeholder",
+      "value": "Enter a note..."
+    },
+    {
+      "name": "submit",
+      "value": "Submit"
+    },
+    {
+      "name": "recognize_entry_title",
+      "value": "Image Bill"
+    },
+    {
+      "name": "pick_tip",
+      "value": "Take or pick a receipt photo to auto-recognize amount and merchant"
+    },
+    {
+      "name": "pick_from_camera",
+      "value": "Take Photo"
+    },
+    {
+      "name": "pick_from_gallery",
+      "value": "Choose from Gallery"
+    },
+    {
+      "name": "recognizing",
+      "value": "Recognizing bill..."
+    },
+    {
+      "name": "recognize_confirm_title",
+      "value": "Confirm Recognition"
+    },
+    {
+      "name": "amount_label",
+      "value": "Amount"
+    },
+    {
+      "name": "merchant_label",
+      "value": "Merchant"
+    },
+    {
+      "name": "merchant_placeholder",
+      "value": "Enter merchant name"
+    },
+    {
+      "name": "confirm_save",
+      "value": "Save Bill"
+    },
+    {
+      "name": "not_a_bill",
+      "value": "No valid bill found, try another image"
+    },
+    {
+      "name": "recognize_failed",
+      "value": "Recognition failed, please retry"
+    },
+    {
+      "name": "pick_image_failed",
+      "value": "Failed to pick image"
+    },
+    {
+      "name": "camera_failed",
+      "value": "Camera failed, please retry"
+    },
+    {
+      "name": "settings_title",
+      "value": "Settings"
+    },
+    {
+      "name": "settings_entry",
+      "value": "Recognition Settings"
+    },
+    {
+      "name": "recognizer_type_label",
+      "value": "Recognition Engine"
+    },
+    {
+      "name": "recognizer_mock",
+      "value": "Local Mock"
+    },
+    {
+      "name": "recognizer_cloud",
+      "value": "Cloud LLM"
+    },
+    {
+      "name": "cloud_config_title",
+      "value": "Cloud Recognition"
+    },
+    {
+      "name": "base_url_label",
+      "value": "Base URL"
+    },
+    {
+      "name": "base_url_placeholder",
+      "value": "e.g. https://api.example.com/v1"
+    },
+    {
+      "name": "api_key_label",
+      "value": "API Key"
+    },
+    {
+      "name": "api_key_placeholder",
+      "value": "Enter API Key"
+    },
+    {
+      "name": "model_label",
+      "value": "Model"
+    },
+    {
+      "name": "model_placeholder",
+      "value": "e.g. qwen-vl-plus, glm-4v"
+    },
+    {
+      "name": "cloud_hint",
+      "value": "Use a multimodal model with image input. DeepSeek text-only APIs cannot recognize images. The API key is stored only on this device."
+    },
+    {
+      "name": "settings_saved",
+      "value": "Settings saved"
+    },
+    {
+      "name": "cloud_config_incomplete",
+      "value": "Please complete cloud recognition settings first"
+    },
+    {
+      "name": "cloud_image_failed",
+      "value": "Failed to process image, try another one"
+    },
+    {
+      "name": "cloud_network_failed",
+      "value": "Network error, please check connection and retry"
+    },
+    {
+      "name": "cloud_timeout",
+      "value": "Request timeout, please retry"
+    },
+    {
+      "name": "cloud_unauthorized",
+      "value": "Invalid or expired API Key, please check settings"
+    },
+    {
+      "name": "cloud_rate_limited",
+      "value": "Too many requests or quota exceeded, please retry later"
+    },
+    {
+      "name": "cloud_server_error",
+      "value": "Recognition service error, please retry later"
+    },
+    {
+      "name": "cloud_bad_response",
+      "value": "Invalid response format from recognition service"
+    },
+    {
+      "name": "cloud_bad_result",
+      "value": "Invalid recognition result format, please retry"
+    },
+    {
+      "name": "saved_config_title",
+      "value": "Saved Config"
+    },
+    {
+      "name": "no_saved_config",
+      "value": "No cloud config saved yet"
+    },
+    {
+      "name": "edit_config_title",
+      "value": "Edit Config"
+    },
+    {
+      "name": "clear_config",
+      "value": "Clear Config"
+    },
+    {
+      "name": "clear_confirm_msg",
+      "value": "Clear the saved cloud config?"
+    },
+    {
+      "name": "clear_success",
+      "value": "Config cleared"
+    },
+    {
+      "name": "test_connection",
+      "value": "Test Connection"
+    },
+    {
+      "name": "testing_connection",
+      "value": "Testing connection..."
+    },
+    {
+      "name": "test_success_prefix",
+      "value": "Connected. Model reply: "
+    }
+  ]
+}

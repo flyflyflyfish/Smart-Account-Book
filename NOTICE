@@ -1,0 +1,21 @@
+# NOTICE
+
+本项目是基于开源项目 **account_app_harmonyos** 的二次开发。
+
+## 上游项目
+
+- 项目名称：account_app_harmonyos
+- 作者：banggx
+- 许可证：Apache License 2.0
+- 原始仓库地址：【待填】
+
+## 修改说明
+
+本仓库在上游项目基础上进行了以下主要修改（后续阶段将持续补充）：
+
+- 阶段 0：仓库合规清理（移除签名配置、补充 .gitignore、许可证与来源声明、README 重写）。
+- 【待补充】后续功能与重构项。
+
+## 版权声明
+
+上游代码版权归原作者 banggx 所有，遵循 Apache License 2.0 分发。本项目的修改部分由本项目贡献者提供，同样遵循 Apache License 2.0。

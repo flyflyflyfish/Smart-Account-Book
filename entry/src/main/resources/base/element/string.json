@@ -1,0 +1,476 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "记账助手模块"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "记账助手入口"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "记账助手"
+    },
+    {
+      "name": "month_expenses",
+      "value": "本月支出"
+    },
+    {
+      "name": "unit",
+      "value": "元"
+    },
+    {
+      "name": "month_no_expenses",
+      "value": "本月暂无支出"
+    },
+    {
+      "name": "income_month",
+      "value": "本月收入"
+    },
+    {
+      "name": "month_no_income",
+      "value": "暂无收入"
+    },
+    {
+      "name": "empty_tip",
+      "value": "我的钱去哪了，赶紧来记录一下吧"
+    },
+    {
+      "name": "diet",
+      "value": "早午晚餐"
+    },
+    {
+      "name": "healthy",
+      "value": "医疗"
+    },
+    {
+      "name": "transport",
+      "value": "交通运输"
+    },
+    {
+      "name": "house",
+      "value": "住房"
+    },
+    {
+      "name": "snack",
+      "value": "零食烟酒"
+    },
+    {
+      "name": "study",
+      "value": "学习"
+    },
+    {
+      "name": "communicate",
+      "value": "通讯"
+    },
+    {
+      "name": "social",
+      "value": "社交"
+    },
+    {
+      "name": "investment_expenditure",
+      "value": "投资支出"
+    },
+    {
+      "name": "shopping",
+      "value": "购物"
+    },
+    {
+      "name": "entertainment",
+      "value": "娱乐"
+    },
+    {
+      "name": "loan",
+      "value": "外借"
+    },
+    {
+      "name": "other_expenses",
+      "value": "其他支出"
+    },
+    {
+      "name": "salary",
+      "value": "工资"
+    },
+    {
+      "name": "bonus",
+      "value": "奖金"
+    },
+    {
+      "name": "interest",
+      "value": "利息"
+    },
+    {
+      "name": "invest",
+      "value": "投资"
+    },
+    {
+      "name": "part_time",
+      "value": "兼职"
+    },
+    {
+      "name": "red_envelope",
+      "value": "红包转账"
+    },
+    {
+      "name": "borrow",
+      "value": "借入"
+    },
+    {
+      "name": "other_income",
+      "value": "其他收入"
+    },
+    {
+      "name": "expenditure",
+      "value": "支出"
+    },
+    {
+      "name": "income",
+      "value": "收入"
+    },
+    {
+      "name": "bill_amount",
+      "value": "账单金额"
+    },
+    {
+      "name": "statistics_details",
+      "value": "统计明细"
+    },
+    {
+      "name": "monthly_bill",
+      "value": "月账单"
+    },
+    {
+      "name": "annual_bill",
+      "value": "年账单"
+    },
+    {
+      "name": "home",
+      "value": "首页"
+    },
+    {
+      "name": "statistics",
+      "value": "统计"
+    },
+    {
+      "name": "back",
+      "value": "返回"
+    },
+    {
+      "name": "no_expenses",
+      "value": "无支出"
+    },
+    {
+      "name": "no_income",
+      "value": "无收入"
+    },
+    {
+      "name": "by_date",
+      "value": "按日期"
+    },
+    {
+      "name": "by_category",
+      "value": "按分类"
+    },
+    {
+      "name": "all_expenses",
+      "value": "总支出"
+    },
+    {
+      "name": "all_income",
+      "value": "总收入"
+    },
+    {
+      "name": "save",
+      "value": "保存"
+    },
+    {
+      "name": "make_another_note",
+      "value": "再记一笔"
+    },
+    {
+      "name": "confirm",
+      "value": "确定"
+    },
+    {
+      "name": "cancel",
+      "value": "取消"
+    },
+    {
+      "name": "detail",
+      "value": "详情"
+    },
+    {
+      "name": "expense_label",
+      "value": "支出: %s"
+    },
+    {
+      "name": "income_label",
+      "value": "收入: %s"
+    },
+    {
+      "name": "delete",
+      "value": "删除"
+    },
+    {
+      "name": "delete_failed",
+      "value": "删除记录失败"
+    },
+    {
+      "name": "month_expense_label",
+      "value": "本月支出(元)"
+    },
+    {
+      "name": "year_expense_label",
+      "value": "本年支出(元)"
+    },
+    {
+      "name": "month_income_label",
+      "value": "本月收入(元)"
+    },
+    {
+      "name": "year_income_label",
+      "value": "本年收入(元)"
+    },
+    {
+      "name": "home_income_label",
+      "value": "本月收入(元): "
+    },
+    {
+      "name": "month_balance_label",
+      "value": "本月结余"
+    },
+    {
+      "name": "delete_confirm_title",
+      "value": "删除确认"
+    },
+    {
+      "name": "delete_confirm_msg",
+      "value": "确定删除这条账单吗？删除后不可恢复"
+    },
+    {
+      "name": "empty_tip_sub",
+      "value": "点击右下角 + 按钮记一笔"
+    },
+    {
+      "name": "detail_empty_tip",
+      "value": "该时间段暂无账单记录"
+    },
+    {
+      "name": "count_unit",
+      "value": "%d笔"
+    },
+    {
+      "name": "require_amount_type",
+      "value": "请填写完账单金额和类型"
+    },
+    {
+      "name": "save_success",
+      "value": "保存记账记录成功"
+    },
+    {
+      "name": "save_failed",
+      "value": "保存失败"
+    },
+    {
+      "name": "invalid_amount",
+      "value": "金额需为大于0且最多两位小数的数字"
+    },
+    {
+      "name": "amount_placeholder",
+      "value": "¥ 0.00"
+    },
+    {
+      "name": "description_placeholder",
+      "value": "请输入备注信息..."
+    },
+    {
+      "name": "submit",
+      "value": "提交"
+    },
+    {
+      "name": "recognize_entry_title",
+      "value": "图片记账"
+    },
+    {
+      "name": "pick_tip",
+      "value": "拍摄或选择小票、账单截图，自动识别金额与商家"
+    },
+    {
+      "name": "pick_from_camera",
+      "value": "拍照识别"
+    },
+    {
+      "name": "pick_from_gallery",
+      "value": "从相册选择"
+    },
+    {
+      "name": "recognizing",
+      "value": "正在识别账单..."
+    },
+    {
+      "name": "recognize_confirm_title",
+      "value": "确认识别结果"
+    },
+    {
+      "name": "amount_label",
+      "value": "金额"
+    },
+    {
+      "name": "merchant_label",
+      "value": "商家"
+    },
+    {
+      "name": "merchant_placeholder",
+      "value": "请输入商家名称"
+    },
+    {
+      "name": "confirm_save",
+      "value": "确认入账"
+    },
+    {
+      "name": "not_a_bill",
+      "value": "未识别到有效账单，请换一张图片"
+    },
+    {
+      "name": "recognize_failed",
+      "value": "识别失败，请重试"
+    },
+    {
+      "name": "pick_image_failed",
+      "value": "选择图片失败"
+    },
+    {
+      "name": "camera_failed",
+      "value": "拍照失败，请重试"
+    },
+    {
+      "name": "settings_title",
+      "value": "设置"
+    },
+    {
+      "name": "settings_entry",
+      "value": "识别设置"
+    },
+    {
+      "name": "recognizer_type_label",
+      "value": "识别引擎"
+    },
+    {
+      "name": "recognizer_mock",
+      "value": "本地模拟"
+    },
+    {
+      "name": "recognizer_cloud",
+      "value": "云端大模型"
+    },
+    {
+      "name": "cloud_config_title",
+      "value": "云端识别配置"
+    },
+    {
+      "name": "base_url_label",
+      "value": "接口地址"
+    },
+    {
+      "name": "base_url_placeholder",
+      "value": "如 https://api.example.com/v1"
+    },
+    {
+      "name": "api_key_label",
+      "value": "API Key"
+    },
+    {
+      "name": "api_key_placeholder",
+      "value": "请输入 API Key"
+    },
+    {
+      "name": "model_label",
+      "value": "模型"
+    },
+    {
+      "name": "model_placeholder",
+      "value": "如 qwen-vl-plus、glm-4v"
+    },
+    {
+      "name": "cloud_hint",
+      "value": "需使用支持图片输入的多模态模型，DeepSeek 纯文本接口不可用于图片识别；API Key 仅保存在本机"
+    },
+    {
+      "name": "settings_saved",
+      "value": "设置已保存"
+    },
+    {
+      "name": "cloud_config_incomplete",
+      "value": "请先在设置页完善云端识别配置"
+    },
+    {
+      "name": "cloud_image_failed",
+      "value": "图片处理失败，请换一张图片"
+    },
+    {
+      "name": "cloud_network_failed",
+      "value": "网络连接失败，请检查网络后重试"
+    },
+    {
+      "name": "cloud_timeout",
+      "value": "请求超时，请稍后重试"
+    },
+    {
+      "name": "cloud_unauthorized",
+      "value": "API Key 无效或已过期，请到设置页检查"
+    },
+    {
+      "name": "cloud_rate_limited",
+      "value": "请求过于频繁或额度不足，请稍后重试"
+    },
+    {
+      "name": "cloud_server_error",
+      "value": "识别服务返回错误，请稍后重试"
+    },
+    {
+      "name": "cloud_bad_response",
+      "value": "识别服务返回格式错误"
+    },
+    {
+      "name": "cloud_bad_result",
+      "value": "识别结果格式错误，请重试"
+    },
+    {
+      "name": "saved_config_title",
+      "value": "已保存的配置"
+    },
+    {
+      "name": "no_saved_config",
+      "value": "暂未保存云端配置"
+    },
+    {
+      "name": "edit_config_title",
+      "value": "修改配置"
+    },
+    {
+      "name": "clear_config",
+      "value": "清空配置"
+    },
+    {
+      "name": "clear_confirm_msg",
+      "value": "确定清空已保存的云端配置吗？"
+    },
+    {
+      "name": "clear_success",
+      "value": "配置已清空"
+    },
+    {
+      "name": "test_connection",
+      "value": "测试连接"
+    },
+    {
+      "name": "testing_connection",
+      "value": "正在测试连接..."
+    },
+    {
+      "name": "test_success_prefix",
+      "value": "连接成功，模型回复："
+    }
+  ]
+}
