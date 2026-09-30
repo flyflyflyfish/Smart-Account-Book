@@ -1,0 +1,37 @@
+# 依赖
+/node_modules
+/oh_modules
+/oh_modules/**
+**/oh_modules
+
+# 构建产物
+**/build
+/.hvigor
+/.preview
+**/.preview
+
+# 本地配置（含个人路径，不入库）
+/local.properties
+*.log
+
+# 签名产物（含证书与密钥，不入库）
+*.hap
+*.app
+*.p12
+*.p7b
+*.cer
+
+# IDE 配置
+/.idea
+/.cache
+/.clangd
+/.clang-format
+/.clang-tidy
+.cxx
+
+# 测试产物
+**/.test
+
+# UI 校验截图与崩溃日志，不入库
+/.shots
+jscrash-*.txt
