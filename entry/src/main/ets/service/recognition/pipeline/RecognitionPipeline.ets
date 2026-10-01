@@ -25,9 +25,9 @@ export interface PipelineResult {
 export class RecognitionPipeline {
   private steps: PipelineStep[];
 
-  constructor() {
-    // 顺序即职责：校验 -> 规范化 -> 分类 -> 去重
-    this.steps = [new ValidateStep(), new NormalizeStep(), new ClassifyStep(), new DedupStep()];
+  constructor(steps?: PipelineStep[]) {
+    // 顺序即职责：校验 -> 规范化 -> 分类 -> 去重；测试可注入自定义步骤
+    this.steps = steps ? steps : [new ValidateStep(), new NormalizeStep(), new ClassifyStep(), new DedupStep()];
   }
 
   async run(imageUri: string, raw: RecognitionResult): Promise<PipelineResult> {

@@ -1,14 +1,14 @@
 import MerchantCategory from '../../../models/recognition/MerchantCategory';
-import MerchantCategoryRepository from '../../../data/MerchantCategoryRepository';
+import MerchantCategoryRepository, { MerchantCategoryStore } from '../../../data/MerchantCategoryRepository';
 import { Classifier } from './Classifier';
 
 /**
  * 学习分类器：优先命中历史“商家 → 分类”记忆，入账后由确认页调用 learn 写入
  */
 export class LearnedClassifier implements Classifier {
-  private repository: MerchantCategoryRepository;
+  private repository: MerchantCategoryStore;
 
-  constructor(repository: MerchantCategoryRepository) {
+  constructor(repository: MerchantCategoryStore) {
     this.repository = repository;
   }
 
@@ -34,6 +34,11 @@ export class LearnedClassifier implements Classifier {
     record.accountType = accountType;
     record.updatedAt = Date.now();
     await this.repository.upsert(record);
+  }
+
+  // 清除全部学习到的“商家 → 分类”记忆，返回删除条数
+  async clearLearned(): Promise<number> {
+    return this.repository.clearAll();
   }
 }
 
