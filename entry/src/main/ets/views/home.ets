@@ -29,27 +29,34 @@ export default struct Home {
   @State accountList: GroupByDate[] = [];
   @State expenses: number = 0;
   @State income: number = 0;
+  // 首页所选日期，默认今天，可切换查看其他日期
+  @State selectedDate: number = dayjs().startOf('day').valueOf();
+  // 批量删除模式
+  @State batchMode: boolean = false;
+  // 批量模式下勾选的账单 id
+  @State selectedIds: number[] = [];
   // 账单增删后由 BillStore 通知刷新
   private billListener: BillChangeListener = () => {
-    this.queryCurrentMonthAccountRecords();
+    this.queryByDate();
   };
 
-  async queryCurrentMonthAccountRecords(): Promise<void> {
+  async queryByDate(): Promise<void> {
     try {
-      const currentTime = dayjs().valueOf();
-      const res = await AccountService.getAccountByMonth(currentTime);
+      const start = dayjs(this.selectedDate).startOf('day').valueOf();
+      const end = dayjs(this.selectedDate).endOf('day').valueOf();
+      const res = await AccountService.queryByDateRange(start, end);
       this.accountList = StatsService.groupByDate(res);
       const total = StatsService.statsConsume(res);
       this.expenses = total.expenses;
       this.income = total.income;
     } catch (err) {
-      Logger.error('查询本月记录失败', (err as Error).message);
+      Logger.error('查询当日记录失败', (err as Error).message);
     }
   }
 
   aboutToAppear(): void {
     BillStore.subscribe(this.billListener);
-    this.queryCurrentMonthAccountRecords();
+    this.queryByDate();
   }
 
   aboutToDisappear(): void {
@@ -58,6 +65,92 @@ export default struct Home {
 
   balance(): number {
     return this.income - this.expenses;
+  }
+
+  isToday(): boolean {
+    return dayjs(this.selectedDate).isSame(dayjs(), 'day');
+  }
+
+  showDatePicker(): void {
+    this.getUIContext().showDatePickerDialog({
+      start: new Date('2020-1-1'),
+      end: new Date(),
+      selected: new Date(this.selectedDate),
+      onDateAccept: (value: Date) => {
+        this.selectedDate = dayjs(value).startOf('day').valueOf();
+        this.queryByDate();
+      }
+    });
+  }
+
+  toggleBatchMode(): void {
+    this.batchMode = !this.batchMode;
+    this.selectedIds = [];
+  }
+
+  toggleSelect(id: number): void {
+    const idx = this.selectedIds.indexOf(id);
+    if (idx >= 0) {
+      this.selectedIds.splice(idx, 1);
+    } else {
+      this.selectedIds.push(id);
+    }
+    this.selectedIds = this.selectedIds.slice();
+  }
+
+  allRecordIds(): number[] {
+    const ids: number[] = [];
+    for (const group of this.accountList) {
+      for (const record of group.records) {
+        ids.push(record.id);
+      }
+    }
+    return ids;
+  }
+
+  toggleSelectAll(): void {
+    const all = this.allRecordIds();
+    if (this.selectedIds.length === all.length) {
+      this.selectedIds = [];
+    } else {
+      this.selectedIds = all.slice();
+    }
+  }
+
+  confirmBatchDelete(): void {
+    if (this.selectedIds.length === 0) {
+      Toast.error($r('app.string.require_select'));
+      return;
+    }
+    AlertDialog.show({
+      title: $r('app.string.delete_confirm_title'),
+      message: $r('app.string.batch_delete_confirm_msg', this.selectedIds.length),
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      primaryButton: {
+        value: $r('app.string.cancel'),
+        action: () => {
+        }
+      },
+      secondaryButton: {
+        value: $r('app.string.delete'),
+        fontColor: $r('app.color.red'),
+        action: () => {
+          this.batchDelete();
+        }
+      }
+    });
+  }
+
+  async batchDelete(): Promise<void> {
+    try {
+      await AccountService.deleteByIds(this.selectedIds);
+      this.selectedIds = [];
+      this.batchMode = false;
+    } catch (err) {
+      Logger.error('批量删除失败', (err as Error).message);
+      Toast.error($r('app.string.delete_failed'));
+    }
   }
 
   deleteRecord(id: number): void {
@@ -115,9 +208,61 @@ export default struct Home {
     .margin({ left: SPACE_MEDIUM })
   }
 
+  @Builder DateSelector() {
+    Row({ space: SPACE_SMALL }) {
+      Row({ space: SPACE_SMALL }) {
+        Text(this.isToday() ? $r('app.string.today') : dayjs(this.selectedDate).format('YYYY-MM-DD'))
+          .fontSize(16)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.font_1'))
+        Image($r('app.media.arrow_down'))
+          .width(14)
+          .objectFit(ImageFit.Contain)
+          .fillColor($r('app.color.font_2'))
+      }
+      .onClick(() => {
+        this.showDatePicker();
+      })
+      Blank()
+      Text(this.batchMode ? $r('app.string.cancel') : $r('app.string.batch_manage'))
+        .fontSize(14)
+        .fontColor($r('app.color.green'))
+        .onClick(() => {
+          this.toggleBatchMode();
+        })
+    }.width('100%')
+  }
+
+  @Builder BatchOperateBar() {
+    Row({ space: SPACE_MEDIUM }) {
+      Button(this.selectedIds.length === this.allRecordIds().length ? $r('app.string.cancel_select_all') : $r('app.string.select_all'))
+        .layoutWeight(1)
+        .height(40)
+        .fontSize(15)
+        .backgroundColor($r('app.color.white'))
+        .fontColor($r('app.color.font_3'))
+        .type(ButtonType.Normal)
+        .borderRadius(SPACE_SMALL)
+        .onClick(() => {
+          this.toggleSelectAll();
+        })
+      Button($r('app.string.batch_delete_count', this.selectedIds.length))
+        .layoutWeight(1)
+        .height(40)
+        .fontSize(15)
+        .backgroundColor($r('app.color.red'))
+        .fontColor($r('app.color.white'))
+        .type(ButtonType.Normal)
+        .borderRadius(SPACE_SMALL)
+        .onClick(() => {
+          this.confirmBatchDelete();
+        })
+    }.width('100%')
+  }
+
   @Builder BalanceBadge() {
     Row({ space: SPACE_TINY }) {
-      Text($r('app.string.month_balance_label'))
+      Text($r('app.string.day_balance_label'))
         .fontSize(12)
         .lineHeight(15)
         .fontColor(this.balance() >= 0 ? $r('app.color.green') : $r('app.color.red'))
@@ -158,7 +303,8 @@ export default struct Home {
 
   build() {
     Column({ space: SPACE_MEDIUM }) {
-      Text($r('app.string.month_expenses'))
+      this.DateSelector()
+      Text($r('app.string.day_expenses'))
         .infoFont(12, 15)
         .opacity(0.7)
       Text('¥ ' + this.expenses.toFixed(2))
@@ -166,7 +312,7 @@ export default struct Home {
         .fontWeight(FontWeight.Bold)
       Row({ space: SPACE_MEDIUM }) {
         Row({ space: SPACE_TINY }) {
-          Text($r('app.string.home_income_label'))
+          Text($r('app.string.day_income_label'))
             .infoFont(12, 15)
             .opacity(0.7)
           Text('¥ ' + this.income.toFixed(2))
@@ -183,10 +329,22 @@ export default struct Home {
               }) {
                 ForEach(item.records, (record: ItemRecordInfo) => {
                   ListItem() {
-                    AccountItem({ account: record })
+                    Row({ space: SPACE_SMALL }) {
+                      if (this.batchMode) {
+                        Checkbox()
+                          .select(this.selectedIds.indexOf(record.id) >= 0)
+                          .onChange((checked: boolean) => {
+                            this.toggleSelect(record.id);
+                          })
+                      }
+                      AccountItem({ account: record })
+                        .layoutWeight(1)
+                    }.width('100%')
                   }.swipeAction({ end: this.AccountItemOperate(record) })
                   .onClick(() => {
-                    this.openEditPage(record);
+                    if (!this.batchMode) {
+                      this.openEditPage(record);
+                    }
                   })
                 })
               }.divider({ strokeWidth: 1, color: $r('app.color.grey_1') })
@@ -201,6 +359,9 @@ export default struct Home {
       .layoutWeight(1)
       .borderRadius(RADIUS_CARD)
       .padding(SPACE_LARGE)
+      if (this.batchMode) {
+        this.BatchOperateBar()
+      }
     }.width('100%')
     .height('100%')
     .padding(PAGE_PADDING)
