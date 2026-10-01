@@ -14,7 +14,30 @@ import {
 } from '../data/schema';
 
 export default class EntryAbility extends UIAbility {
+  private selectPage: string = '';
+  private currentWindowStage: window.WindowStage | null = null;
+
+  // 解析卡片 router 事件传入的 targetPage 参数
+  private readCardParam(want: Want): void {
+    if (want && want.parameters) {
+      const raw = want.parameters['params'];
+      if (typeof raw === 'string') {
+        try {
+          const params = JSON.parse(raw) as Record<string, Object>;
+          const target = params['targetPage'];
+          if (typeof target === 'string') {
+            this.selectPage = target;
+          }
+        } catch (err) {
+          const e = err as Error;
+          hilog.error(0x0000, 'testTag', '解析卡片参数失败: %{private}s', e.message);
+        }
+      }
+    }
+  }
+
   async onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): Promise<void> {
+    this.readCardParam(want);
     try {
       // 依次等待首选项与数据库初始化完成
       await PreferenceUtil.loadPreference(this.context);
@@ -46,14 +69,33 @@ export default class EntryAbility extends UIAbility {
   onWindowStageCreate(windowStage: window.WindowStage) {
     // Main window is created, set main page for this ability
     hilog.info(0x0000, 'testTag', '%{private}s', 'Ability onWindowStageCreate');
+    this.currentWindowStage = windowStage;
 
-    windowStage.loadContent('pages/Index', (err, data) => {
+    let targetPage = 'pages/Index';
+    if (this.selectPage === 'add') {
+      targetPage = 'pages/AddAccount';
+    } else if (this.selectPage === 'recognize') {
+      targetPage = 'pages/RecognizeBill';
+    } else if (this.selectPage === 'ai') {
+      AppStorage.setOrCreate('quickTab', 1);
+      targetPage = 'pages/Index';
+    }
+
+    windowStage.loadContent(targetPage, (err, data) => {
       if (err.code) {
         hilog.error(0x0000, 'testTag', 'Failed to load the content. Cause: %{private}s', JSON.stringify(err) ?? '');
         return;
       }
       hilog.info(0x0000, 'testTag', 'Succeeded in loading the content. Data: %{private}s', JSON.stringify(data) ?? '');
     });
+  }
+
+  onNewWant(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+    hilog.info(0x0000, 'testTag', '%{private}s', 'Ability onNewWant');
+    this.readCardParam(want);
+    if (this.currentWindowStage !== null) {
+      this.onWindowStageCreate(this.currentWindowStage);
+    }
   }
 
   onWindowStageDestroy() {
