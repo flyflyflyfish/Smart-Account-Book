@@ -147,27 +147,6 @@ struct ModelSettings {
       .margin({ bottom: SPACE_SMALL })
   }
 
-  @Builder EngineRow(label: ResourceStr, hint: ResourceStr, enabled: boolean, onChange: (isOn: boolean) => void) {
-    Column({ space: SPACE_TINY }) {
-      Row({ space: SPACE_MEDIUM }) {
-        Text(label)
-          .fontSize(15)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.font_3'))
-        Blank()
-        Toggle({ type: ToggleType.Switch, isOn: enabled })
-          .onChange((isOn: boolean) => {
-            onChange(isOn);
-          })
-      }.width('100%')
-      Text(hint)
-        .width('100%')
-        .fontSize(12)
-        .lineHeight(17)
-        .fontColor($r('app.color.font_2'))
-    }.width('100%')
-  }
-
   @Builder FormRow(label: ResourceStr, placeholder: ResourceStr, value: string, isPassword: boolean,
     onValueChange: (value: string) => void) {
     Row() {
@@ -208,15 +187,37 @@ struct ModelSettings {
         Column({ space: SPACE_MEDIUM }) {
           Column({ space: SPACE_MEDIUM }) {
             this.SectionTitle($r('app.string.recognizer_type_label'))
-            this.EngineRow($r('app.string.recognizer_ocr'), $r('app.string.ocr_hint'), this.ocrEnabled,
-              (isOn: boolean) => {
-                this.ocrEnabled = isOn;
-              })
+            Column({ space: SPACE_TINY }) {
+              Row({ space: SPACE_MEDIUM }) {
+                Text($r('app.string.recognizer_ocr'))
+                  .fontSize(15)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor($r('app.color.font_3'))
+                Blank()
+                Toggle({ type: ToggleType.Switch, isOn: $$this.ocrEnabled })
+              }.width('100%')
+              Text($r('app.string.ocr_hint'))
+                .width('100%')
+                .fontSize(12)
+                .lineHeight(17)
+                .fontColor($r('app.color.font_2'))
+            }.width('100%')
             Divider().color($r('app.color.grey_1'))
-            this.EngineRow($r('app.string.recognizer_cloud'), $r('app.string.cloud_hint'), this.cloudEnabled,
-              (isOn: boolean) => {
-                this.cloudEnabled = isOn;
-              })
+            Column({ space: SPACE_TINY }) {
+              Row({ space: SPACE_MEDIUM }) {
+                Text($r('app.string.recognizer_cloud'))
+                  .fontSize(15)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor($r('app.color.font_3'))
+                Blank()
+                Toggle({ type: ToggleType.Switch, isOn: $$this.cloudEnabled })
+              }.width('100%')
+              Text($r('app.string.cloud_hint'))
+                .width('100%')
+                .fontSize(12)
+                .lineHeight(17)
+                .fontColor($r('app.color.font_2'))
+            }.width('100%')
           }
           .width('100%')
           .padding(SPACE_LARGE)
