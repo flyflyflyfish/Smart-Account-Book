@@ -16,7 +16,7 @@ import { RecognitionPipeline } from '../service/recognition/pipeline/Recognition
 import learnedClassifier from '../service/recognition/classifier/LearnedClassifier';
 import AccountService from '../service/account';
 import { SOURCE_IMAGE } from '../common/constants';
-import { MAX_PICK_IMAGES, RECOGNIZE_CONCURRENCY, RecognizerType } from '../common/Config';
+import { MAX_PICK_IMAGES, RECOGNIZE_CONCURRENCY } from '../common/Config';
 import { isDuplicateBill } from '../common/dedup';
 import { Toast } from '../components/ToastDialog';
 import { Logger } from '../utils/Logger';
@@ -27,6 +27,11 @@ import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_TINY, SPACE_
 const STEP_PICK: number = 0;
 const STEP_RECOGNIZING: number = 1;
 const STEP_CONFIRM: number = 2;
+
+// 加号菜单跳转来源：camera 直接拍照、gallery 直接选相册
+interface RecognizeSourceParam {
+  source: string;
+}
 
 @Entry
 @Component
@@ -47,6 +52,16 @@ struct RecognizeBill {
   @State selectType: AccountTypeModel | undefined = undefined;
   @State autoClassified: boolean = false;
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
+
+  aboutToAppear(): void {
+    const params = router.getParams() as RecognizeSourceParam | undefined;
+    const source = params && typeof params.source === 'string' ? params.source : '';
+    if (source === 'camera') {
+      this.pickFromCamera();
+    } else if (source === 'gallery') {
+      this.pickFromGallery();
+    }
+  }
 
   // 从相册多选账单图片：走系统选择器，无需相册权限
   async pickFromGallery(): Promise<void> {
@@ -82,10 +97,10 @@ struct RecognizeBill {
     }
   }
 
-  // 云端识别前确认用户同意上传图片；本地模拟无需同意
+  // 云端识别前确认用户同意上传图片；端侧识别无需同意
   ensureCloudConsent(): Promise<boolean> {
-    return CloudLlmConfigStore.loadRecognizerType().then((type: RecognizerType): Promise<boolean> => {
-      if (type !== RecognizerType.CLOUD) {
+    return CloudLlmConfigStore.loadCloudEnabled().then((enabled: boolean): Promise<boolean> => {
+      if (!enabled) {
         return Promise.resolve(true);
       }
       return CloudLlmConfigStore.loadCloudConsent().then((agreed: boolean): Promise<boolean> => {
@@ -474,15 +489,6 @@ struct RecognizeBill {
         .borderRadius(SPACE_SMALL)
         .onClick(() => {
           this.pickFromGallery();
-        })
-      Text($r('app.string.settings_entry'))
-        .fontSize(14)
-        .fontColor($r('app.color.green'))
-        .margin({ top: SPACE_SMALL })
-        .onClick(() => {
-          router.pushUrl({ url: 'pages/Settings' }).catch((err: Error): void => {
-            Logger.error('跳转设置页失败', err.message);
-          });
         })
     }
     .width(BreakpointConstants.max_content_size.getValue(this.currentBreakpoint))

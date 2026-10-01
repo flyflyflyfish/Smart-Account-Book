@@ -1,5 +1,4 @@
 import {
-  RecognizerType,
   RECOGNIZE_CONFIDENCE_THRESHOLD,
   RECOGNIZE_RETRY_MAX_ATTEMPTS,
   RECOGNIZE_RETRY_BASE_DELAY_MS,
@@ -7,7 +6,6 @@ import {
 } from '../../common/Config';
 import CloudLlmConfigStore from './CloudLlmConfigStore';
 import { CloudLlmRecognizer } from './CloudLlmRecognizer';
-import { MockRecognizer } from './MockRecognizer';
 import { LocalOcrRecognizer } from './LocalOcrRecognizer';
 import { Recognizer } from './Recognizer';
 import { FallbackRecognizer } from './decorators/FallbackRecognizer';
@@ -16,20 +14,21 @@ import { CachingRecognizer } from './decorators/CachingRecognizer';
 import { LoggingRecognizer } from './decorators/LoggingRecognizer';
 
 /**
- * 识别器工厂：按设置页保存的类型创建基础识别器，再按配置组合装饰器
- * CLOUD：Logging(Caching(Retry(Fallback(Cloud, LocalOcr))))
- * MOCK： Logging(Caching(Retry(Mock)))
+ * 识别器工厂：按设置页的引擎开关创建基础识别器，再按配置组合装饰器
+ * 云端启用：Logging(Caching(Retry(Fallback(Cloud, LocalOcr))))  —— 云端失败降级端侧（若端侧也启用）
+ * 仅端侧：  Logging(Caching(Retry(LocalOcr)))
  */
 export class RecognizerFactory {
   static async create(): Promise<Recognizer> {
-    const type = await CloudLlmConfigStore.loadRecognizerType();
+    const cloudEnabled = await CloudLlmConfigStore.loadCloudEnabled();
+    const ocrEnabled = await CloudLlmConfigStore.loadOcrEnabled();
     let primary: Recognizer;
     let useFallback = false;
-    if (type === RecognizerType.CLOUD) {
+    if (cloudEnabled) {
       primary = new CloudLlmRecognizer(await CloudLlmConfigStore.loadConfig());
-      useFallback = true;
+      useFallback = ocrEnabled;
     } else {
-      primary = new MockRecognizer();
+      primary = new LocalOcrRecognizer();
     }
 
     let recognizer: Recognizer = primary;

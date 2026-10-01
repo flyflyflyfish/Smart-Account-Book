@@ -6,11 +6,11 @@
     },
     {
       "name": "bg",
-      "value": "#313446"
+      "value": "#F4F5F7"
     },
     {
       "name": "font_1",
-      "value": "#FFFFFF"
+      "value": "#1F2329"
     },
     {
       "name": "font_2",
@@ -71,6 +71,10 @@
     {
       "name": "white_alpha",
       "value": "#29FFFFFF"
+    },
+    {
+      "name": "transparent",
+      "value": "#00000000"
     }
   ]
 }

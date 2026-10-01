@@ -191,13 +191,6 @@ export default struct Home {
     });
   }
 
-  // 跳转设置页
-  openSettings(): void {
-    router.pushUrl({ url: 'pages/Settings' }).catch((err: Error): void => {
-      Logger.error('跳转设置页失败', err.message);
-    });
-  }
-
   @Builder GroupHeaderBuilder(item: GroupByDate) {
     GroupHeader({ group: item })
   }
@@ -231,12 +224,6 @@ export default struct Home {
         this.showDatePicker();
       })
       Blank()
-      Text($r('app.string.settings'))
-        .fontSize(14)
-        .fontColor($r('app.color.font_1'))
-        .onClick(() => {
-          this.openSettings();
-        })
       Text(this.batchMode ? $r('app.string.cancel') : $r('app.string.batch_manage'))
         .fontSize(14)
         .fontColor($r('app.color.green'))

@@ -67,6 +67,14 @@ export class CloudLlmRecognizer implements Recognizer {
     return this.postChat([message]);
   }
 
+  // 文本对话：复用同一 OpenAI 兼容接口，供 AI 助手聊天使用
+  async chat(messages: ChatMessage[]): Promise<string> {
+    if (!this.config.baseUrl || !this.config.apiKey || !this.config.model) {
+      throw new Error(getContext().resourceManager.getStringSync($r('app.string.cloud_config_incomplete')));
+    }
+    return this.postChat(messages);
+  }
+
   // 读取图片 -> 缩放至最长边不超过 1280 -> 打包为 JPEG(质量80) -> Base64
   private async imageToBase64(uri: string): Promise<string> {
     let file: fs.File | undefined = undefined;

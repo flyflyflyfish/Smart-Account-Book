@@ -5,11 +5,12 @@ export const PREF_USER_FIRST_KEY = 'userFirstUsed';
 export const SOURCE_MANUAL: number = 0;
 export const SOURCE_IMAGE: number = 1;
 
-// 云端识别配置与识别器类型的 Preferences 键
+// 云端识别配置与识别引擎开关的 Preferences 键
 export const PREF_CLOUD_BASE_URL = 'cloud_base_url';
 export const PREF_CLOUD_API_KEY = 'cloud_api_key';
 export const PREF_CLOUD_MODEL = 'cloud_model';
-export const PREF_RECOGNIZER_TYPE = 'recognizer_type';
+export const PREF_OCR_ENABLED = 'ocr_enabled';
+export const PREF_CLOUD_ENABLED = 'cloud_enabled';
 // 用户是否同意将图片上传至云端识别服务
 export const PREF_CLOUD_CONSENT = 'cloud_consent';
 
