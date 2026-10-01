@@ -6,7 +6,7 @@ import { RADIUS_ICON, SPACE_MEDIUM, SPACE_SMALL, SPACE_TINY } from '../common/di
 @Component
 export default struct AccountItem {
   private account: ItemRecordInfo = {
-    id: 0,
+    id: '',
     type: 0,
     accountType: 0,
     description: '',

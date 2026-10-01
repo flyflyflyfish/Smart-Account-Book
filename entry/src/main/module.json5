@@ -38,6 +38,13 @@
         // 云端识别需要联网；选图与拍照走系统选择器，无需相册/相机权限
         "name": "ohos.permission.INTERNET"
       }
+    ],
+    "metadata": [
+      {
+        // AGC「常规 > 应用 > OAuth 2.0客户端ID」的应用级 Client ID（与 APP ID 相同）
+        "name": "client_id",
+        "value": "6917617909249760913"
+      }
     ]
   }
 }

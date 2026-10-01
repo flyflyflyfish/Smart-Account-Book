@@ -58,7 +58,7 @@ export interface ColumnInfo {
 }
 
 export interface ItemRecordInfo {
-  id: number;
+  id: string;
   type: number;
   accountType: number;
   description?: string;

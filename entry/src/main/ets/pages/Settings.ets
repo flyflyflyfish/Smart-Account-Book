@@ -8,6 +8,8 @@ import learnedClassifier from '../service/recognition/classifier/LearnedClassifi
 import { Toast } from '../components/ToastDialog';
 import { Logger } from '../utils/Logger';
 import BreakpointConstants from '../common/breakpoint';
+import AuthService from '../service/AuthService';
+import CloudInit from '../data/CloudInit';
 import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_XLARGE } from '../common/dimens';
 
 // 测试结果中模型回复的展示上限，避免刷屏
@@ -31,6 +33,9 @@ struct Settings {
   @State testSuccess: boolean = false;
   // 云端上传授权状态：撤回后下次云端识别会重新询问
   @State cloudConsent: boolean = false;
+  // 华为账号登录状态与用户 uid
+  @State signedIn: boolean = false;
+  @State uid: string = '';
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
 
   async aboutToAppear(): Promise<void> {
@@ -42,8 +47,37 @@ struct Settings {
       this.recognizerType = await CloudLlmConfigStore.loadRecognizerType();
       this.cloudConsent = await CloudLlmConfigStore.loadCloudConsent();
       this.updateSavedSummary(config);
+      const currentUid = await AuthService.getCurrentUid();
+      if (currentUid) {
+        this.signedIn = true;
+        this.uid = currentUid;
+      }
     } catch (error) {
       Logger.error('加载设置失败', (error as Error).message);
+    }
+  }
+
+  // 登录华为账号：成功后初始化云开发服务，启用云端双写
+  async onSignIn(): Promise<void> {
+    const currentUid = await AuthService.signInWithHuaweiId();
+    if (currentUid) {
+      CloudInit.init();
+      this.signedIn = true;
+      this.uid = currentUid;
+      Toast.success($r('app.string.sign_in_success'));
+    } else {
+      Toast.error($r('app.string.sign_in_failed'));
+    }
+  }
+
+  // 退出登录：清空登录态并失效云开发服务
+  async onSignOut(): Promise<void> {
+    const success = await AuthService.signOut();
+    if (success) {
+      CloudInit.reset();
+      this.signedIn = false;
+      this.uid = '';
+      Toast.success($r('app.string.sign_out_success'));
     }
   }
 
@@ -234,6 +268,59 @@ struct Settings {
             .fontSize(18)
             .fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.font_1'))
+
+          // 云同步账号卡片
+          Column({ space: SPACE_SMALL }) {
+            Text($r('app.string.cloud_sync_title'))
+              .width('100%')
+              .fontSize(14)
+              .fontColor($r('app.color.font_3'))
+            Row({ space: SPACE_MEDIUM }) {
+              Column({ space: 2 }) {
+                Text(this.signedIn ? $r('app.string.signed_in') : $r('app.string.not_signed_in'))
+                  .fontSize(14)
+                  .fontColor(this.signedIn ? $r('app.color.green') : $r('app.color.font_2'))
+                if (this.signedIn) {
+                  this.InfoRow($r('app.string.uid_label'), this.uid)
+                }
+              }
+              .alignItems(HorizontalAlign.Start)
+              .layoutWeight(1)
+              if (this.signedIn) {
+                Button($r('app.string.sign_out'))
+                  .height(32)
+                  .fontSize(13)
+                  .fontColor($r('app.color.red'))
+                  .backgroundColor($r('app.color.white'))
+                  .type(ButtonType.Normal)
+                  .borderRadius(SPACE_SMALL)
+                  .border({ width: 1, color: $r('app.color.red') })
+                  .onClick(() => {
+                    this.onSignOut();
+                  })
+              } else {
+                Button($r('app.string.sign_in_huawei'))
+                  .height(32)
+                  .fontSize(13)
+                  .fontColor($r('app.color.white'))
+                  .backgroundColor($r('app.color.green'))
+                  .type(ButtonType.Normal)
+                  .borderRadius(SPACE_SMALL)
+                  .onClick(() => {
+                    this.onSignIn();
+                  })
+              }
+            }.width('100%')
+            Text($r('app.string.cloud_sync_hint'))
+              .width('100%')
+              .fontSize(12)
+              .lineHeight(17)
+              .fontColor($r('app.color.font_2'))
+          }
+          .width('100%')
+          .padding(SPACE_LARGE)
+          .backgroundColor($r('app.color.white'))
+          .borderRadius(RADIUS_CARD)
 
           // 识别引擎切换：mock / cloud
           Column({ space: SPACE_MEDIUM }) {

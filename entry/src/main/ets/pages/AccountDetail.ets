@@ -56,7 +56,7 @@ struct AccountDetail {
     }
   }
 
-  deleteRecord(id: number): void {
+  deleteRecord(id: string): void {
     // 删除成功后由 BillStore 通知刷新，无需手动重新查询
     AccountService.deleteById(id).catch((err: Error): void => {
       Logger.error('删除记录失败', err.message);
