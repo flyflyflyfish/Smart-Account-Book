@@ -185,8 +185,56 @@
       "value": "保存"
     },
     {
-      "name": "make_another_note",
-      "value": "再记一笔"
+      "name": "clear",
+      "value": "清空"
+    },
+    {
+      "name": "bill_step_title",
+      "value": "第 %d/%d 笔"
+    },
+    {
+      "name": "prev_bill",
+      "value": "上一笔"
+    },
+    {
+      "name": "skip",
+      "value": "跳过"
+    },
+    {
+      "name": "finish",
+      "value": "完成"
+    },
+    {
+      "name": "auto_classified",
+      "value": "自动"
+    },
+    {
+      "name": "task_index",
+      "value": "第 %d 张"
+    },
+    {
+      "name": "task_success_count",
+      "value": "%d 笔"
+    },
+    {
+      "name": "task_failed",
+      "value": "失败"
+    },
+    {
+      "name": "import_selected",
+      "value": "一键入账"
+    },
+    {
+      "name": "duplicated_tip",
+      "value": "疑似重复"
+    },
+    {
+      "name": "retry",
+      "value": "重试"
+    },
+    {
+      "name": "all_recognize_failed",
+      "value": "全部识别失败，请重试"
     },
     {
       "name": "confirm",
@@ -335,6 +383,14 @@
     {
       "name": "recognize_failed",
       "value": "识别失败，请重试"
+    },
+    {
+      "name": "recognize_amount_warning",
+      "value": "识别金额无效，请手动填写金额"
+    },
+    {
+      "name": "recognize_paytime_warning",
+      "value": "支付时间未识别，已使用当前时间"
     },
     {
       "name": "pick_image_failed",
