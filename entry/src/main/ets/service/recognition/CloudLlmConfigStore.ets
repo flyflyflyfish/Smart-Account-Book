@@ -30,6 +30,16 @@ class CloudLlmConfigStore {
   async saveRecognizerType(type: RecognizerType): Promise<void> {
     await PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_RECOGNIZER_TYPE, type);
   }
+
+  // 读取云端识别上传同意状态：默认 false，未同意前不得上传图片
+  async loadCloudConsent(): Promise<boolean> {
+    const value = await PreferenceUtil.getPreferenceValue(CONSTANTS.PREF_CLOUD_CONSENT, false);
+    return value === true;
+  }
+
+  async saveCloudConsent(agreed: boolean): Promise<void> {
+    await PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_CLOUD_CONSENT, agreed);
+  }
 }
 
 export default new CloudLlmConfigStore();
