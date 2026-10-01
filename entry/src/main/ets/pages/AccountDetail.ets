@@ -5,9 +5,11 @@ import GroupHeader from '../components/GroupHeader';
 import { AccountType, GroupByDate, ItemRecordInfo } from '../models/account/account';
 import AccountService from '../service/account';
 import StatsService from '../service/stats';
+import BillStore, { BillChangeListener } from '../common/BillStore';
+import { Toast } from '../components/ToastDialog';
 import BreakpointConstants from '../common/breakpoint';
 import { Logger } from '../utils/Logger';
-import { RADIUS_CARD, SPACE_LARGE, SPACE_XLARGE } from '../common/dimens';
+import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_XLARGE } from '../common/dimens';
 
 /**
  * 账单详情页路由参数
@@ -24,23 +26,89 @@ struct AccountDetail {
   @State accountType: number = AccountType.EXPENSES;
   @State accountList: GroupByDate[] = [];
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
+  private startTime: number = 0;
+  private endTime: number = 0;
+  // 账单增删后由 BillStore 通知刷新
+  private billListener: BillChangeListener = () => {
+    this.loadData();
+  };
 
   async aboutToAppear(): Promise<void> {
+    BillStore.subscribe(this.billListener);
+    // 路由参数是不透明数据，统一校验类型后再使用
+    const params = router.getParams() as AccountDetailParams | undefined;
+    this.startTime = params && typeof params.startTime === 'number' ? params.startTime : 0;
+    this.endTime = params && typeof params.endTime === 'number' ? params.endTime : 0;
+    this.accountType = params && typeof params.accountType === 'number' ? params.accountType : AccountType.EXPENSES;
+    await this.loadData();
+  }
+
+  aboutToDisappear(): void {
+    BillStore.unsubscribe(this.billListener);
+  }
+
+  async loadData(): Promise<void> {
     try {
-      // 路由参数是不透明数据，统一校验类型后再使用
-      const params = router.getParams() as AccountDetailParams | undefined;
-      const startTime = params && typeof params.startTime === 'number' ? params.startTime : 0;
-      const endTime = params && typeof params.endTime === 'number' ? params.endTime : 0;
-      this.accountType = params && typeof params.accountType === 'number' ? params.accountType : AccountType.EXPENSES;
-      const res = await AccountService.getRangeAccountByType(startTime, endTime, this.accountType);
+      const res = await AccountService.getRangeAccountByType(this.startTime, this.endTime, this.accountType);
       this.accountList = StatsService.groupByDate(res);
     } catch (err) {
       Logger.error('加载账单详情失败', (err as Error).message);
     }
   }
 
+  deleteRecord(id: number): void {
+    // 删除成功后由 BillStore 通知刷新，无需手动重新查询
+    AccountService.deleteById(id).catch((err: Error): void => {
+      Logger.error('删除记录失败', err.message);
+      Toast.error($r('app.string.delete_failed'));
+    })
+  }
+
+  // 删除前二次确认，避免误滑误删
+  confirmDelete(record: ItemRecordInfo): void {
+    AlertDialog.show({
+      title: $r('app.string.delete_confirm_title'),
+      message: $r('app.string.delete_confirm_msg'),
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      primaryButton: {
+        value: $r('app.string.cancel'),
+        action: () => {
+        }
+      },
+      secondaryButton: {
+        value: $r('app.string.delete'),
+        fontColor: $r('app.color.red'),
+        action: () => {
+          this.deleteRecord(record.id);
+        }
+      }
+    });
+  }
+
+  // 通过 AppStorage 把待编辑记录带给记账页，与首页编辑方式保持一致
+  openEditPage(record: ItemRecordInfo): void {
+    AppStorage.setOrCreate('editRecord', record);
+    router.pushUrl({ url: 'pages/AddAccount' }).catch((err: Error): void => {
+      Logger.error('跳转编辑页失败', err.message);
+    });
+  }
+
   @Builder GroupHeaderBuilder(item: GroupByDate) {
     GroupHeader({ group: item, accountType: this.accountType })
+  }
+
+  @Builder AccountItemOperate(record: ItemRecordInfo) {
+    Row() {
+      Button($r('app.string.delete'))
+        .type(ButtonType.Normal)
+        .padding({ left: 12, right: 12 })
+        .backgroundColor($r('app.color.red'))
+        .onClick(() => {
+          this.confirmDelete(record)
+        })
+    }.height('100%')
+    .margin({ left: SPACE_MEDIUM })
   }
 
   @Builder EmptyView() {
@@ -70,7 +138,10 @@ struct AccountDetail {
                   ForEach(item.records, (record: ItemRecordInfo) => {
                     ListItem() {
                       AccountItem({ account: record })
-                    }
+                    }.swipeAction({ end: this.AccountItemOperate(record) })
+                    .onClick(() => {
+                      this.openEditPage(record);
+                    })
                   })
                 }.divider({ strokeWidth: 1, color: $r('app.color.grey_1') })
               })
