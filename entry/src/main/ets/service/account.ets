@@ -96,6 +96,13 @@ class AccountService {
   getRangeAccountByType(startTime: number, endTime: number, type: number): Promise<AccountPO[]> {
     return this.repository.queryRangeAndType(startTime, endTime, type);
   }
+
+  /**
+   * 查询指定日期范围内的全部账单，供去重比较使用
+   */
+  queryByDateRange(startTime: number, endTime: number): Promise<AccountPO[]> {
+    return this.repository.queryByDateRange(startTime, endTime);
+  }
 }
 
 export default new AccountService(new RdbAccountRepository());

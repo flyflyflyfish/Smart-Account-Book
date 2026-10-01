@@ -18,4 +18,8 @@ export interface RecognitionResult {
   confidence: number;
   // 图片是否为有效账单，false 时不进入确认流程
   isBill: boolean;
+  // 分类是否由流水线智能分类自动给出，供确认页展示标记
+  autoClassified?: boolean;
+  // 是否与已有账单疑似重复，供确认页高亮并默认不勾选
+  duplicated?: boolean;
 }
