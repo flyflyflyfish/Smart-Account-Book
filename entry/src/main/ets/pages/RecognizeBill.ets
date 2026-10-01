@@ -16,6 +16,7 @@ import learnedClassifier from '../service/recognition/classifier/LearnedClassifi
 import AccountService from '../service/account';
 import { SOURCE_IMAGE } from '../common/constants';
 import { MAX_PICK_IMAGES, RECOGNIZE_CONCURRENCY } from '../common/Config';
+import { isDuplicateBill } from '../common/dedup';
 import { Toast } from '../components/ToastDialog';
 import { Logger } from '../utils/Logger';
 import BreakpointConstants from '../common/breakpoint';
@@ -197,7 +198,7 @@ struct RecognizeBill {
       for (const d of task.drafts) {
         this.drafts.push(d);
       }
-      this.drafts = this.drafts.slice();
+      this.dedupWithinBatch();
     }
   }
 
@@ -217,6 +218,36 @@ struct RecognizeBill {
       }
     }
     this.drafts = all;
+    this.dedupWithinBatch();
+  }
+
+  // 本次识别结果内部去重：与数据库重复的保持不勾选，互相重复的只保留第一条勾选
+  dedupWithinBatch(): void {
+    const n = this.drafts.length;
+    for (let i = 0; i < n; i++) {
+      const current = this.drafts[i];
+      if (current.duplicated) {
+        current.selected = false;
+        continue;
+      }
+      const amount = parseFloat(current.amountText);
+      if (!(amount > 0)) {
+        continue;
+      }
+      for (let j = 0; j < i; j++) {
+        const prev = this.drafts[j];
+        const prevAmount = parseFloat(prev.amountText);
+        if (!(prevAmount > 0)) {
+          continue;
+        }
+        if (isDuplicateBill(amount, current.merchant, current.payTime,
+          prevAmount, prev.merchant, prev.payTime)) {
+          current.selected = false;
+          break;
+        }
+      }
+    }
+    this.drafts = this.drafts.slice();
   }
 
   // 展开/收起编辑面板
