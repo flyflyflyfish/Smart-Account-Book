@@ -46,7 +46,7 @@ class DBUtil {
     }
     try {
       await this.rdbStore.executeSql(createSQL);
-      Logger.debug('数据表创建成功', createSQL);
+      Logger.debug('数据表创建成功');
     } catch (err) {
       const e = err as Error;
       Logger.error('数据表创建失败', e.message);
@@ -85,7 +85,7 @@ class DBUtil {
       if (hasAccountTable) {
         for (const sql of alterSqls) {
           await this.rdbStore.executeSql(sql);
-          Logger.debug('数据库迁移执行成功', sql);
+          Logger.debug('数据库迁移执行成功');
         }
       }
       this.rdbStore.version = targetVersion;
@@ -101,9 +101,10 @@ class DBUtil {
     if (!this.rdbStore) {
       throw new DbError('rdbStore 尚未初始化');
     }
+    const start = Date.now();
     try {
       const id = await this.rdbStore.insert(tableName, values);
-      Logger.debug('新增数据成功, 新增ID: ', id);
+      Logger.debug('新增数据成功, 耗时(ms): ', Date.now() - start);
       return id;
     } catch (err) {
       const e = err as Error;
@@ -116,9 +117,10 @@ class DBUtil {
     if (!this.rdbStore) {
       throw new DbError('rdbStore 尚未初始化');
     }
+    const start = Date.now();
     try {
       const rows = await this.rdbStore.delete(predicates);
-      Logger.debug('删除数据成功, 删除行数: ', rows);
+      Logger.debug('删除数据成功, 删除行数: ', rows, '耗时(ms): ', Date.now() - start);
       return rows;
     } catch (err) {
       const e = err as Error;
@@ -131,9 +133,10 @@ class DBUtil {
     if (!this.rdbStore) {
       throw new DbError('rdbStore 尚未初始化');
     }
+    const start = Date.now();
     try {
       const rows = await this.rdbStore.update(values, predicates);
-      Logger.debug('更新数据成功, 更新行数: ', rows);
+      Logger.debug('更新数据成功, 更新行数: ', rows, '耗时(ms): ', Date.now() - start);
       return rows;
     } catch (err) {
       const e = err as Error;
@@ -146,9 +149,10 @@ class DBUtil {
     if (!this.rdbStore) {
       throw new DbError('rdbStore 尚未初始化');
     }
+    const start = Date.now();
     try {
       const result = await this.rdbStore.query(predicates, columns);
-      Logger.debug('查询数据成功, 查询总数: ', result.rowCount);
+      Logger.debug('查询数据成功, 查询总数: ', result.rowCount, '耗时(ms): ', Date.now() - start);
       return result;
     } catch (err) {
       const e = err as Error;
