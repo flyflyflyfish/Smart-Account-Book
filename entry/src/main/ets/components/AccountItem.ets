@@ -1,6 +1,7 @@
+import dayjs from 'dayjs';
 import { AccountType, ItemRecordInfo } from '../models/account/account';
 import AccountTypeModel from '../models/accountType/AccountTypeModel';
-import { RADIUS_ICON, SPACE_MEDIUM, SPACE_TINY } from '../common/dimens';
+import { RADIUS_ICON, SPACE_MEDIUM, SPACE_SMALL, SPACE_TINY } from '../common/dimens';
 
 @Component
 export default struct AccountItem {
@@ -15,6 +16,15 @@ export default struct AccountItem {
     info: new AccountTypeModel(0, '', '', '')
   };
 
+  // 显示消费时间（时分）：旧数据 payTime 为 0 时退回日期当天 00:00
+  formatPayTime(): string {
+    const payTime = this.account.payTime ?? 0;
+    if (payTime > 0) {
+      return dayjs(payTime).format('HH:mm');
+    }
+    return dayjs(this.account.time).format('HH:mm');
+  }
+
   build() {
     Row({ space: SPACE_MEDIUM }) {
       Column() {
@@ -28,9 +38,15 @@ export default struct AccountItem {
       .alignItems(HorizontalAlign.Center)
       .justifyContent(FlexAlign.Center)
       Column({ space: SPACE_TINY }) {
-        Text(this.account.info.name)
-          .fontColor($r('app.color.font_3'))
-          .fontSize(15)
+        Row({ space: SPACE_SMALL }) {
+          Text(this.account.info.name)
+            .fontColor($r('app.color.font_3'))
+            .fontSize(15)
+          Text(this.formatPayTime())
+            .fontSize(11)
+            .lineHeight(15)
+            .fontColor($r('app.color.font_2'))
+        }
         if (this.account.description) {
           Text(this.account.description)
             .fontSize(12)
