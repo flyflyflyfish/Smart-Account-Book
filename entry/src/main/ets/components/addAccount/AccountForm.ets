@@ -98,6 +98,7 @@ export default struct AccountForm {
   }
 
   async onSave(): Promise<void> {
+    this.showKeyboard = false;
     const selectType = this.selectType;
     if (!this.validateAmount() || !selectType) {
       Toast.error($r('app.string.require_amount_type'));
@@ -185,25 +186,16 @@ export default struct AccountForm {
       .rowsGap(KEY_GAP)
       .width('100%')
       .height(this.getKeyboardHeight())
-      // 键盘内提供显式收起入口，不依赖再次点击金额行
-      Button($r('app.string.confirm'))
-        .width('100%')
-        .height(40)
-        .fontSize(15)
-        .backgroundColor($r('app.color.green'))
-        .fontColor($r('app.color.white'))
-        .type(ButtonType.Normal)
-        .borderRadius(SPACE_SMALL)
-        .onClick(() => {
-          this.showKeyboard = false;
-        })
-    }.margin({ top: SPACE_MEDIUM })
+    }
+    .width('100%')
+    .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM, top: SPACE_MEDIUM, bottom: SPACE_MEDIUM })
+    .backgroundColor($r('app.color.bg'))
   }
 
   build() {
-    // 键盘弹出时整体可滚动，避免按钮被挤出屏幕
-    Scroll() {
-      Column() {
+    Stack({ alignContent: Alignment.Bottom }) {
+      Scroll() {
+        Column() {
         Column() {
           Row() {
             Text($r('app.string.bill_amount'))
@@ -242,6 +234,7 @@ export default struct AccountForm {
                     .lineHeight(15)
                 }.onClick(() => {
                   this.selectType = item;
+                  this.showKeyboard = false;
                 })
               }.width('100%')
             }, (item: AccountTypeModel) => item.id.toString())
@@ -272,6 +265,9 @@ export default struct AccountForm {
               .onChange((val: string) => {
                 this.description = val;
               })
+              .onClick(() => {
+                this.showKeyboard = false;
+              })
           }.height(40).padding({ left: 10 })
           Divider().color($r('app.color.grey_1'))
             .margin({ top: 4 })
@@ -279,10 +275,6 @@ export default struct AccountForm {
         .padding(SPACE_LARGE)
         .backgroundColor($r('app.color.white'))
         .borderRadius(RADIUS_CARD)
-
-        if (this.showKeyboard) {
-          this.KeyboardPanel()
-        }
 
         Row({ space: SPACE_MEDIUM }) {
           Button($r('app.string.save'))
@@ -304,10 +296,28 @@ export default struct AccountForm {
             })
         }.width('100%')
         .margin({ top: SPACE_MEDIUM, bottom: SPACE_MEDIUM })
-      }.width('100%')
+        }.width('100%')
+      }
+      .scrollBar(BarState.Off)
+      .align(Alignment.Top)
+      .width('100%')
+      .height('100%')
+
+      // 键盘浮层：覆盖在底部，点键盘外任意处收起
+      if (this.showKeyboard) {
+        Column() {
+          Column()
+            .width('100%')
+            .layoutWeight(1)
+            .onClick(() => {
+              this.showKeyboard = false;
+            })
+          this.KeyboardPanel()
+        }
+        .width('100%')
+        .height('100%')
+      }
     }
-    .scrollBar(BarState.Off)
-    .align(Alignment.Top)
     .width('100%')
     .height('100%')
   }
