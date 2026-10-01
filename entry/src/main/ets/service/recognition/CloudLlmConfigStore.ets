@@ -1,10 +1,9 @@
 import PreferenceUtil from '../../utils/PreferenceUtil';
-import { RecognizerType } from '../../common/Config';
 import * as CONSTANTS from '../../common/constants';
 import { CloudLlmConfig } from '../../models/recognition/CloudLlmModels';
 
 /**
- * 云端识别配置存取：API Key 仅保存在本机 Preferences，绝不写入代码或仓库
+ * 云端识别配置与引擎开关存取：API Key 仅保存在本机 Preferences，绝不写入代码或仓库
  */
 class CloudLlmConfigStore {
   async loadConfig(): Promise<CloudLlmConfig> {
@@ -22,13 +21,22 @@ class CloudLlmConfigStore {
     await PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_CLOUD_MODEL, config.model);
   }
 
-  async loadRecognizerType(): Promise<RecognizerType> {
-    const value = Number(await PreferenceUtil.getPreferenceValue(CONSTANTS.PREF_RECOGNIZER_TYPE, RecognizerType.MOCK));
-    return value === RecognizerType.CLOUD ? RecognizerType.CLOUD : RecognizerType.MOCK;
+  async loadOcrEnabled(): Promise<boolean> {
+    const value = await PreferenceUtil.getPreferenceValue(CONSTANTS.PREF_OCR_ENABLED, true);
+    return value === true;
   }
 
-  async saveRecognizerType(type: RecognizerType): Promise<void> {
-    await PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_RECOGNIZER_TYPE, type);
+  async saveOcrEnabled(enabled: boolean): Promise<void> {
+    await PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_OCR_ENABLED, enabled);
+  }
+
+  async loadCloudEnabled(): Promise<boolean> {
+    const value = await PreferenceUtil.getPreferenceValue(CONSTANTS.PREF_CLOUD_ENABLED, false);
+    return value === true;
+  }
+
+  async saveCloudEnabled(enabled: boolean): Promise<void> {
+    await PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_CLOUD_ENABLED, enabled);
   }
 
   // 读取云端识别上传同意状态：默认 false，未同意前不得上传图片

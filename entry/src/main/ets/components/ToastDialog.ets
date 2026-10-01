@@ -31,7 +31,7 @@ export default struct ToastDialog {
       Text(this.message)
         .fontSize(15)
         .lineHeight(21)
-        .fontColor($r('app.color.font_1'))
+        .fontColor($r('app.color.white'))
         .textAlign(TextAlign.Center)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })

@@ -1,7 +1,7 @@
 import router from '@ohos.router'
 @Component
 export default struct AccountNavigator {
-  private title: ResourceStr = $r('app.string.back');
+  title: ResourceStr = $r('app.string.back');
 
   build() {
     Row(){
@@ -9,11 +9,11 @@ export default struct AccountNavigator {
         Image($r('app.media.arrow_left'))
           .height(14)
           .objectFit(ImageFit.Cover)
-          .fillColor($r('app.color.white'))
+          .fillColor($r('app.color.font_1'))
         Text(this.title)
           .fontSize(16)
           .fontWeight(500)
-          .fontColor($r('app.color.white'))
+          .fontColor($r('app.color.font_1'))
       }.onClick(() => {
         router.back();
       })

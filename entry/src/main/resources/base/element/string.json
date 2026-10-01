@@ -453,8 +453,8 @@
       "value": "识别引擎"
     },
     {
-      "name": "recognizer_mock",
-      "value": "本地模拟"
+      "name": "recognizer_ocr",
+      "value": "端侧识别"
     },
     {
       "name": "recognizer_cloud",
@@ -675,6 +675,122 @@
     {
       "name": "settings",
       "value": "设置"
+    },
+    {
+      "name": "ai_assistant",
+      "value": "AI助手"
+    },
+    {
+      "name": "add_menu_title",
+      "value": "记一笔"
+    },
+    {
+      "name": "add_menu_manual",
+      "value": "手动添加"
+    },
+    {
+      "name": "account_login",
+      "value": "账号登录"
+    },
+    {
+      "name": "model_settings",
+      "value": "模型设置"
+    },
+    {
+      "name": "appearance",
+      "value": "外观"
+    },
+    {
+      "name": "privacy_security",
+      "value": "隐私与安全"
+    },
+    {
+      "name": "settings_section_account",
+      "value": "账号"
+    },
+    {
+      "name": "settings_section_ai",
+      "value": "AI 与模型"
+    },
+    {
+      "name": "settings_section_general",
+      "value": "通用"
+    },
+    {
+      "name": "account_login_desc",
+      "value": "登录华为账号，账单云端备份"
+    },
+    {
+      "name": "model_settings_desc",
+      "value": "云端大模型接口与识别引擎"
+    },
+    {
+      "name": "appearance_desc",
+      "value": "主题与外观偏好"
+    },
+    {
+      "name": "privacy_security_desc",
+      "value": "云端授权与数据管理"
+    },
+    {
+      "name": "ai_greeting",
+      "value": "你好，我是你的记账助手，可以帮你记一笔，也能分析消费、生成小结。"
+    },
+    {
+      "name": "ai_input_hint",
+      "value": "例如：早餐 15 元"
+    },
+    {
+      "name": "ai_send",
+      "value": "发送"
+    },
+    {
+      "name": "ai_thinking",
+      "value": "思考中..."
+    },
+    {
+      "name": "ai_config_missing",
+      "value": "尚未配置模型，请先在设置中填写云端大模型"
+    },
+    {
+      "name": "ai_configure_model",
+      "value": "去配置"
+    },
+    {
+      "name": "appearance_coming_soon",
+      "value": "更多外观设置即将上线"
+    },
+    {
+      "name": "mic_permission_reason",
+      "value": "用于语音记账，将你说的话转换成文字并解析金额与分类"
+    },
+    {
+      "name": "voice_listening",
+      "value": "正在聆听..."
+    },
+    {
+      "name": "voice_unavailable",
+      "value": "语音识别暂不可用"
+    },
+    {
+      "name": "voice_failed",
+      "value": "语音识别失败，请重试"
+    },
+    {
+      "name": "mic_permission_denied",
+      "value": "未获得麦克风权限，请在设置中开启"
+    },
+    {
+      "name": "voice_result_title",
+      "value": "入账确认"
+    },
+    {
+      "name": "edit",
+      "value": "编辑"
+    },
+    {
+      "name": "ocr_hint",
+      "value": "端侧识别在设备本地完成，无需联网和 API Key；仅提取金额、商家与时间，无法识别分类。"
     }
   ]
 }
