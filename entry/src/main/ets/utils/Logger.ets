@@ -3,7 +3,7 @@ import hilog from '@ohos.hilog';
 export class Logger {
   private static domain: number = 0xFF00;
   private static prefix: string = '[account-app]';
-  private static format: string = '%{public}s';
+  private static format: string = '%{private}s';
 
   private static buildFormat(count: number): string {
     const parts: string[] = [];
