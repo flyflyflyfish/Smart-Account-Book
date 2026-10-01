@@ -1,4 +1,7 @@
 import router from '@ohos.router';
+import { formProvider } from '@kit.FormKit';
+import { Want } from '@kit.AbilityKit';
+import { Logger } from '../utils/Logger';
 import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_TINY } from '../common/dimens';
 
 /**
@@ -54,6 +57,62 @@ export default struct SettingsView {
     })
   }
 
+  // 拉起系统卡片管理页，添加记账小组件到桌面
+  addWidget(): void {
+    const want: Want = {
+      bundleName: 'com.flyfish.account_app',
+      abilityName: 'EntryFormAbility',
+      parameters: {
+        'ohos.extra.param.key.form_dimension': 2,
+        'ohos.extra.param.key.form_name': 'quickAccountCard',
+        'ohos.extra.param.key.module_name': 'entry'
+      }
+    };
+    try {
+      formProvider.openFormManager(want);
+    } catch (err) {
+      Logger.error('打开卡片管理页失败', (err as Error).message);
+    }
+  }
+
+  @Builder ActionRow(icon: ResourceStr, label: ResourceStr, desc: ResourceStr, action: () => void) {
+    Row({ space: SPACE_MEDIUM }) {
+      Column() {
+        Image(icon)
+          .width(20)
+          .height(20)
+          .fillColor($r('app.color.green'))
+      }
+      .width(40)
+      .height(40)
+      .borderRadius(20)
+      .backgroundColor($r('app.color.green_alpha'))
+      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
+      Column({ space: 2 }) {
+        Text(label)
+          .fontSize(16)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('app.color.font_3'))
+        Text(desc)
+          .fontSize(12)
+          .fontColor($r('app.color.font_2'))
+      }
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
+      Image($r('app.media.arrow_left'))
+        .width(14)
+        .objectFit(ImageFit.Contain)
+        .rotate({ angle: 180 })
+        .fillColor($r('app.color.font_2'))
+    }
+    .width('100%')
+    .padding({ left: SPACE_LARGE, right: SPACE_LARGE, top: SPACE_MEDIUM, bottom: SPACE_MEDIUM })
+    .backgroundColor($r('app.color.white'))
+    .borderRadius(RADIUS_CARD)
+    .onClick(action)
+  }
+
   build() {
     Column() {
       Text($r('app.string.settings_title'))
@@ -78,6 +137,10 @@ export default struct SettingsView {
             $r('app.string.appearance_desc'), 'pages/Appearance')
           this.MenuRow($r('app.media.shield'), $r('app.string.privacy_security'),
             $r('app.string.privacy_security_desc'), 'pages/PrivacySecurity')
+          this.ActionRow($r('app.media.add'), $r('app.string.add_widget'),
+            $r('app.string.add_widget_desc'), (): void => {
+              this.addWidget();
+            })
         }
         .width('100%')
         .padding({ left: SPACE_LARGE, right: SPACE_LARGE, top: SPACE_SMALL, bottom: SPACE_LARGE })
