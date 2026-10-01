@@ -73,6 +73,18 @@ class AccountService {
   }
 
   /**
+   * 批量删除记录：循环删除后只通知一次，避免多次刷新
+   */
+  async deleteByIds(ids: number[]): Promise<number> {
+    let rows = 0;
+    for (const id of ids) {
+      rows += await this.repository.deleteById(id);
+    }
+    BillStore.notifyChanged();
+    return rows;
+  }
+
+  /**
    * 按月份获取记账记录
    */
   getAccountByMonth(time: string | number): Promise<AccountPO[]> {

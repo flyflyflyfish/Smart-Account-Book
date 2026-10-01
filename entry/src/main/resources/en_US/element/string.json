@@ -17,6 +17,46 @@
       "value": "Expenses this month"
     },
     {
+      "name": "today",
+      "value": "Today"
+    },
+    {
+      "name": "day_expenses",
+      "value": "Expenses today"
+    },
+    {
+      "name": "day_income_label",
+      "value": "Income today: "
+    },
+    {
+      "name": "day_balance_label",
+      "value": "Balance today"
+    },
+    {
+      "name": "batch_manage",
+      "value": "Batch manage"
+    },
+    {
+      "name": "require_select",
+      "value": "Please select bills first"
+    },
+    {
+      "name": "batch_delete_confirm_msg",
+      "value": "Delete the selected %d bills?"
+    },
+    {
+      "name": "select_all",
+      "value": "Select all"
+    },
+    {
+      "name": "cancel_select_all",
+      "value": "Unselect all"
+    },
+    {
+      "name": "batch_delete_count",
+      "value": "Delete (%d)"
+    },
+    {
       "name": "unit",
       "value": "yuan"
     },

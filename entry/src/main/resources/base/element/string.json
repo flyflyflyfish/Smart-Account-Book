@@ -17,6 +17,46 @@
       "value": "本月支出"
     },
     {
+      "name": "today",
+      "value": "今天"
+    },
+    {
+      "name": "day_expenses",
+      "value": "当日支出"
+    },
+    {
+      "name": "day_income_label",
+      "value": "当日收入(元): "
+    },
+    {
+      "name": "day_balance_label",
+      "value": "当日结余"
+    },
+    {
+      "name": "batch_manage",
+      "value": "批量管理"
+    },
+    {
+      "name": "require_select",
+      "value": "请先选择账单"
+    },
+    {
+      "name": "batch_delete_confirm_msg",
+      "value": "确定删除选中的 %d 条账单吗？"
+    },
+    {
+      "name": "select_all",
+      "value": "全选"
+    },
+    {
+      "name": "cancel_select_all",
+      "value": "取消全选"
+    },
+    {
+      "name": "batch_delete_count",
+      "value": "删除(%d)"
+    },
+    {
       "name": "unit",
       "value": "元"
     },
@@ -298,7 +338,7 @@
     },
     {
       "name": "empty_tip_sub",
-      "value": "点击右下角 + 按钮记一笔"
+      "value": "点击绿色 + 按钮记一笔"
     },
     {
       "name": "detail_empty_tip",
