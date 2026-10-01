@@ -567,6 +567,70 @@
     {
       "name": "test_success_prefix",
       "value": "连接成功，模型回复："
+    },
+    {
+      "name": "cloud_consent_title",
+      "value": "云端识别需要上传图片"
+    },
+    {
+      "name": "cloud_consent_msg",
+      "value": "使用云端识别时，账单图片将上传到你在设置中配置的服务商，用于识别金额、商家与时间。是否同意？"
+    },
+    {
+      "name": "agree",
+      "value": "同意"
+    },
+    {
+      "name": "privacy_title",
+      "value": "隐私与安全"
+    },
+    {
+      "name": "cloud_consent_label",
+      "value": "云端上传授权"
+    },
+    {
+      "name": "consent_granted",
+      "value": "已授权：图片将上传到已配置的服务商"
+    },
+    {
+      "name": "consent_not_granted",
+      "value": "未授权：下次云端识别将再次询问"
+    },
+    {
+      "name": "revoke_consent",
+      "value": "撤回授权"
+    },
+    {
+      "name": "revoke_consent_success",
+      "value": "已撤回云端上传授权"
+    },
+    {
+      "name": "clear_learned",
+      "value": "清除学习到的商家分类"
+    },
+    {
+      "name": "clear_learned_confirm_title",
+      "value": "清除学习分类"
+    },
+    {
+      "name": "clear_learned_confirm_msg",
+      "value": "确定清除所有学习到的商家分类记忆吗？"
+    },
+    {
+      "name": "clear_learned_confirm",
+      "value": "清除"
+    },
+    {
+      "name": "clear_learned_success",
+      "value": "已清除学习到的商家分类"
+    },
+    {
+      "name": "ocr_unsupported",
+      "value": "当前设备不支持端侧文字识别"
+    },
+    {
+      "name": "ocr_failed",
+      "value": "端侧识别失败，请重试"
     }
   ]
 }
