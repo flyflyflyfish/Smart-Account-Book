@@ -24,3 +24,7 @@ export const INCOME_CATEGORY_NAMES: string[] = [
 // 识别流水线警告文案（不依赖资源上下文，供测试与流水线内部使用）
 export const WARN_AMOUNT_INVALID: string = '识别金额无效，请手动填写金额';
 export const WARN_PAYTIME_INVALID: string = '支付时间未识别，已使用当前时间';
+
+// 云数据库存储区名称与 schema 文件名，需与 AGC 控制台配置保持一致
+export const CLOUD_ZONE_NAME: string = 'AccountZone';
+export const CLOUD_SCHEMA_FILE: string = 'schema.json';

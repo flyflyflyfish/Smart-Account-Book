@@ -14,11 +14,10 @@ class FakeAccountRepository implements AccountRepository {
     return this.list;
   }
 
-  async insert(record: AccountPO): Promise<number> {
-    return 0;
+  async insert(record: AccountPO): Promise<void> {
   }
 
-  async deleteById(id: number): Promise<number> {
+  async deleteById(id: string): Promise<number> {
     return 0;
   }
 
@@ -26,7 +25,7 @@ class FakeAccountRepository implements AccountRepository {
     return [];
   }
 
-  async update(id: number, record: AccountPO): Promise<number> {
+  async update(id: string, record: AccountPO): Promise<number> {
     return 0;
   }
 }

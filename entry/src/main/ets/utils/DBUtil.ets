@@ -2,7 +2,7 @@ import relationalStore from '@ohos.data.relationalStore';
 import common from '@ohos.app.ability.common';
 import { Logger } from './Logger';
 import { DbError } from './DbError';
-import { ACCOUNT_TABLE_NAME } from '../data/schema';
+import { ACCOUNT_TABLE_NAME, MigrationStep } from '../data/schema';
 
 const DB_FILENAME: string = 'account.db';
 
@@ -67,33 +67,44 @@ class DBUtil {
   }
 
   /**
-   * 数据库版本迁移：老库（version 低于目标版本且账单表已存在）逐条执行补列 SQL，
-   * 全部成功后把 version 置为目标版本；新装的库表尚不存在，直接置版本号，
-   * 新列由建表语句保证。任一步失败抛错且不更新版本号，下次启动重试。
+   * 在单个事务内执行一组迁移 SQL，任一步失败即回滚，保证迁移原子性
    */
-  async migrateIfNeeded(targetVersion: number, alterSqls: string[]): Promise<void> {
+  private async executeSqlsInTransaction(sqls: string[]): Promise<void> {
+    if (!this.rdbStore) {
+      throw new DbError('rdbStore 尚未初始化，无法执行迁移');
+    }
+    this.rdbStore.beginTransaction();
+    try {
+      for (const sql of sqls) {
+        await this.rdbStore.executeSql(sql);
+      }
+      this.rdbStore.commit();
+    } catch (err) {
+      this.rdbStore.rollBack();
+      const e = err as Error;
+      Logger.error('迁移事务执行失败', e.message);
+      throw new DbError('数据库迁移失败');
+    }
+  }
+
+  /**
+   * 数据库版本迁移：按版本号升序逐级执行。老库（账单表已存在）才执行迁移 SQL，
+   * 新装的库表尚不存在，直接置版本号，结构由建表语句保证。任一步失败抛错且不更新版本号。
+   */
+  async migrate(steps: MigrationStep[]): Promise<void> {
     if (!this.rdbStore) {
       throw new DbError('rdbStore 尚未初始化，无法执行数据库迁移');
     }
-    const currentVersion = this.rdbStore.version;
-    if (currentVersion >= targetVersion) {
-      Logger.debug('数据库版本已是最新', currentVersion);
-      return;
-    }
-    try {
+    for (const step of steps) {
+      if (this.rdbStore.version >= step.toVersion) {
+        continue;
+      }
       const hasAccountTable = await this.tableExists(ACCOUNT_TABLE_NAME);
       if (hasAccountTable) {
-        for (const sql of alterSqls) {
-          await this.rdbStore.executeSql(sql);
-          Logger.debug('数据库迁移执行成功');
-        }
+        await this.executeSqlsInTransaction(step.sqls);
       }
-      this.rdbStore.version = targetVersion;
-      Logger.debug('数据库迁移完成, 版本: ', targetVersion);
-    } catch (err) {
-      const e = err as Error;
-      Logger.error('数据库迁移失败', e.message);
-      throw new DbError('数据库迁移失败');
+      this.rdbStore.version = step.toVersion;
+      Logger.debug('数据库迁移完成, 版本: ', step.toVersion);
     }
   }
 

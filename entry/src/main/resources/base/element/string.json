@@ -631,6 +631,50 @@
     {
       "name": "ocr_failed",
       "value": "端侧识别失败，请重试"
+    },
+    {
+      "name": "cloud_sync_title",
+      "value": "云同步"
+    },
+    {
+      "name": "cloud_sync_hint",
+      "value": "登录华为账号后，账单自动备份到云端，换机或重装不丢失"
+    },
+    {
+      "name": "sign_in_huawei",
+      "value": "登录华为账号"
+    },
+    {
+      "name": "sign_out",
+      "value": "退出登录"
+    },
+    {
+      "name": "signed_in",
+      "value": "已登录"
+    },
+    {
+      "name": "not_signed_in",
+      "value": "未登录"
+    },
+    {
+      "name": "uid_label",
+      "value": "用户ID"
+    },
+    {
+      "name": "sign_in_success",
+      "value": "登录成功，账单将自动备份到云端"
+    },
+    {
+      "name": "sign_in_failed",
+      "value": "登录失败，请重试"
+    },
+    {
+      "name": "sign_out_success",
+      "value": "已退出登录"
+    },
+    {
+      "name": "settings",
+      "value": "设置"
     }
   ]
 }
