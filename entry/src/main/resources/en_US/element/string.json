@@ -185,8 +185,56 @@
       "value": "Save"
     },
     {
-      "name": "make_another_note",
-      "value": "Make another note"
+      "name": "clear",
+      "value": "Clear"
+    },
+    {
+      "name": "bill_step_title",
+      "value": "Bill %d/%d"
+    },
+    {
+      "name": "prev_bill",
+      "value": "Previous"
+    },
+    {
+      "name": "skip",
+      "value": "Skip"
+    },
+    {
+      "name": "finish",
+      "value": "Done"
+    },
+    {
+      "name": "auto_classified",
+      "value": "Auto"
+    },
+    {
+      "name": "task_index",
+      "value": "Image %d"
+    },
+    {
+      "name": "task_success_count",
+      "value": "%d bills"
+    },
+    {
+      "name": "task_failed",
+      "value": "Failed"
+    },
+    {
+      "name": "import_selected",
+      "value": "Import"
+    },
+    {
+      "name": "duplicated_tip",
+      "value": "Possible duplicate"
+    },
+    {
+      "name": "retry",
+      "value": "Retry"
+    },
+    {
+      "name": "all_recognize_failed",
+      "value": "All failed, please retry"
     },
     {
       "name": "confirm",
@@ -315,6 +363,14 @@
     {
       "name": "recognize_failed",
       "value": "Recognition failed, please retry"
+    },
+    {
+      "name": "recognize_amount_warning",
+      "value": "Recognized amount is invalid, please fill it in manually"
+    },
+    {
+      "name": "recognize_paytime_warning",
+      "value": "Payment time not recognized, using current time"
     },
     {
       "name": "pick_image_failed",

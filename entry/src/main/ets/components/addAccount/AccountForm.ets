@@ -294,7 +294,7 @@ export default struct AccountForm {
             .onClick(() => {
               this.onSave();
             })
-          Button($r('app.string.make_another_note'))
+          Button($r('app.string.clear'))
             .backgroundColor($r('app.color.grey_2'))
             .fontColor($r('app.color.white'))
             .type(ButtonType.Normal)

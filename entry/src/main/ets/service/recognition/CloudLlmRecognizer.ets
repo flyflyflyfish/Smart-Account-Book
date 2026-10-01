@@ -20,18 +20,18 @@ import CategoryRegistry from '../../models/accountType/CategoryRegistry';
 import { Recognizer } from './Recognizer';
 import { Logger } from '../../utils/Logger';
 
-// 图片最长边限制：兼顾识别精度与请求体积
-const MAX_IMAGE_EDGE: number = 1280;
-// JPEG 压缩质量
-const JPEG_QUALITY: number = 80;
-// 云端请求超时时间
-const HTTP_TIMEOUT_MS: number = 30000;
+// 图片最长边限制：缩小到 1024 显著减小 base64 体积，加快上传与推理
+const MAX_IMAGE_EDGE: number = 1024;
+// JPEG 压缩质量：降到 70 进一步减小体积，账单文字仍可辨
+const JPEG_QUALITY: number = 70;
+// 云端请求超时时间：多笔账单图片较大、模型推理慢，放宽到 120s 避免误超时
+const HTTP_TIMEOUT_MS: number = 120000;
 // http 模块透传的 curl 超时错误码
 const HTTP_ERROR_TIMEOUT: number = 2300028;
 
 /**
  * 云端识别器：适配器模式封装 OpenAI 兼容的多模态大模型 API
- * 流程：图片压缩转码 -> 组装请求 -> 调云端接口 -> 清理并校验 JSON -> 映射为识别结果
+ * 流程：图片压缩转码 -> 组装请求 -> 调云端接口 -> 清理并校验 JSON 数组 -> 映射为多笔识别结果
  */
 export class CloudLlmRecognizer implements Recognizer {
   private config: CloudLlmConfig;
@@ -40,7 +40,7 @@ export class CloudLlmRecognizer implements Recognizer {
     this.config = config;
   }
 
-  async recognize(imageUri: string): Promise<RecognitionResult> {
+  async recognize(imageUri: string): Promise<RecognitionResult[]> {
     if (!this.config.baseUrl || !this.config.apiKey || !this.config.model) {
       throw new Error(getContext().resourceManager.getStringSync($r('app.string.cloud_config_incomplete')));
     }
@@ -93,16 +93,16 @@ export class CloudLlmRecognizer implements Recognizer {
     }
   }
 
-  // 提示词约束：只输出 JSON，分类名只能取项目已有分类，不确定的字段留空
+  // 提示词约束：只输出 JSON 数组，一张图多笔交易时输出多个元素，分类名只能取项目已有分类
   private buildPrompt(): string {
     const expenseNames = CategoryRegistry.listNames(AccountType.EXPENSES).join('、');
     const incomeNames = CategoryRegistry.listNames(AccountType.INCOME).join('、');
-    return '你是账单识别助手。请判断图片是否为账单、小票或收支截图，并提取关键信息。' +
-      '只输出一个 JSON 对象，不要输出任何解释文字或 markdown 代码块。' +
-      'JSON 格式：{"isBill": boolean, "accountType": "支出 或 收入", "amount": number, ' +
+    return '你是账单识别助手。请判断图片是否为账单、小票或收支截图，并提取其中的全部交易记录。' +
+      '只输出一个 JSON 数组，不要输出任何解释文字或 markdown 代码块。' +
+      '数组每个元素的格式：{"accountType": "支出 或 收入", "amount": number, ' +
       '"merchant": string, "payTime": "YYYY-MM-DD HH:mm 或空字符串", "category": string}。' +
       `支出分类只能取：${expenseNames}。收入分类只能取：${incomeNames}。` +
-      '非账单图片 isBill 为 false，其余字段用空字符串或 0；无法确定的字段不要猜测，用空字符串或 0。';
+      '非账单图片输出空数组 []；一张图包含多笔交易时输出多个元素；无法确定的字段不要猜测，用空字符串或 0。';
   }
 
   // 调用 OpenAI 兼容的 chat/completions 接口，返回模型输出的文本
@@ -165,26 +165,35 @@ export class CloudLlmRecognizer implements Recognizer {
     return parsed.choices[0].message.content;
   }
 
-  // 模型可能包裹 markdown 代码块或在 JSON 前后输出多余文字，先清理再解析
-  private parseResult(content: string): RecognitionResult {
+  // 模型可能包裹 markdown 代码块或在 JSON 前后输出多余文字，先清理再解析为数组
+  private parseResult(content: string): RecognitionResult[] {
     let cleaned = content.trim();
     if (cleaned.startsWith('```')) {
       cleaned = cleaned.replace(/^```[a-zA-Z]*\s*/, '').replace(/```\s*$/, '').trim();
     }
-    const start = cleaned.indexOf('{');
-    const end = cleaned.lastIndexOf('}');
+    const start = cleaned.indexOf('[');
+    const end = cleaned.lastIndexOf(']');
     if (start < 0 || end <= start) {
       throw new Error(getContext().resourceManager.getStringSync($r('app.string.cloud_bad_result')));
     }
-    let raw: LlmBillRaw;
+    let rawList: LlmBillRaw[];
     try {
-      raw = JSON.parse(cleaned.substring(start, end + 1)) as LlmBillRaw;
+      rawList = JSON.parse(cleaned.substring(start, end + 1)) as LlmBillRaw[];
     } catch (error) {
       throw new Error(getContext().resourceManager.getStringSync($r('app.string.cloud_bad_result')));
     }
-    if (raw.isBill !== true) {
-      return this.notBillResult();
+    if (!Array.isArray(rawList)) {
+      throw new Error(getContext().resourceManager.getStringSync($r('app.string.cloud_bad_result')));
     }
+    const results: RecognitionResult[] = [];
+    for (const raw of rawList) {
+      results.push(this.parseItem(raw));
+    }
+    return results;
+  }
+
+  // 单笔映射：金额与时间非法时回退默认值，交流水线与确认页兜底
+  private parseItem(raw: LlmBillRaw): RecognitionResult {
     const accountType = raw.accountType === '收入' ? AccountType.INCOME : AccountType.EXPENSES;
     const amount = typeof raw.amount === 'number' && raw.amount > 0 ? raw.amount : 0;
     const merchant = typeof raw.merchant === 'string' ? raw.merchant : '';
@@ -220,18 +229,5 @@ export class CloudLlmRecognizer implements Recognizer {
       }
     }
     return Date.now();
-  }
-
-  private notBillResult(): RecognitionResult {
-    const result: RecognitionResult = {
-      accountType: AccountType.EXPENSES,
-      amount: 0,
-      merchant: '',
-      payTime: Date.now(),
-      categoryName: '',
-      confidence: 0,
-      isBill: false
-    };
-    return result;
   }
 }
