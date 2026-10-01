@@ -11,11 +11,12 @@ import { BillDraft } from '../models/recognition/BillDraft';
 import { ImageTask, ImageTaskStatus } from '../models/recognition/ImageTask';
 import { RecognizerFactory } from '../service/recognition/RecognizerFactory';
 import { Recognizer } from '../service/recognition/Recognizer';
+import CloudLlmConfigStore from '../service/recognition/CloudLlmConfigStore';
 import { RecognitionPipeline } from '../service/recognition/pipeline/RecognitionPipeline';
 import learnedClassifier from '../service/recognition/classifier/LearnedClassifier';
 import AccountService from '../service/account';
 import { SOURCE_IMAGE } from '../common/constants';
-import { MAX_PICK_IMAGES, RECOGNIZE_CONCURRENCY } from '../common/Config';
+import { MAX_PICK_IMAGES, RECOGNIZE_CONCURRENCY, RecognizerType } from '../common/Config';
 import { isDuplicateBill } from '../common/dedup';
 import { Toast } from '../components/ToastDialog';
 import { Logger } from '../utils/Logger';
@@ -81,8 +82,48 @@ struct RecognizeBill {
     }
   }
 
-  // 批量识别入口：建任务列表 -> 并发识别 -> 合并结果
+  // 云端识别前确认用户同意上传图片；本地模拟无需同意
+  ensureCloudConsent(): Promise<boolean> {
+    return CloudLlmConfigStore.loadRecognizerType().then((type: RecognizerType): Promise<boolean> => {
+      if (type !== RecognizerType.CLOUD) {
+        return Promise.resolve(true);
+      }
+      return CloudLlmConfigStore.loadCloudConsent().then((agreed: boolean): Promise<boolean> => {
+        if (agreed) {
+          return Promise.resolve(true);
+        }
+        return new Promise<boolean>((resolve: (v: boolean) => void) => {
+          AlertDialog.show({
+            title: $r('app.string.cloud_consent_title'),
+            message: $r('app.string.cloud_consent_msg'),
+            autoCancel: true,
+            alignment: DialogAlignment.Center,
+            primaryButton: {
+              value: $r('app.string.cancel'),
+              action: () => {
+                resolve(false);
+              }
+            },
+            secondaryButton: {
+              value: $r('app.string.agree'),
+              fontColor: $r('app.color.green'),
+              action: () => {
+                CloudLlmConfigStore.saveCloudConsent(true);
+                resolve(true);
+              }
+            }
+          });
+        });
+      });
+    });
+  }
+
+  // 批量识别入口：先确认云端同意，再建任务列表 -> 并发识别 -> 合并结果
   async startBatchRecognize(uris: string[]): Promise<void> {
+    const consented = await this.ensureCloudConsent();
+    if (!consented) {
+      return;
+    }
     this.step = STEP_RECOGNIZING;
     this.expandedIndex = -1;
     const tasks: ImageTask[] = [];

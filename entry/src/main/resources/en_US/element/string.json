@@ -547,6 +547,70 @@
     {
       "name": "test_success_prefix",
       "value": "Connected. Model reply: "
+    },
+    {
+      "name": "cloud_consent_title",
+      "value": "Cloud recognition uploads images"
+    },
+    {
+      "name": "cloud_consent_msg",
+      "value": "When using cloud recognition, your bill image will be uploaded to the service provider configured in Settings to recognize amount, merchant and time. Do you agree?"
+    },
+    {
+      "name": "agree",
+      "value": "Agree"
+    },
+    {
+      "name": "privacy_title",
+      "value": "Privacy & Security"
+    },
+    {
+      "name": "cloud_consent_label",
+      "value": "Cloud upload permission"
+    },
+    {
+      "name": "consent_granted",
+      "value": "Granted: images will be uploaded to the configured provider"
+    },
+    {
+      "name": "consent_not_granted",
+      "value": "Not granted: you will be asked again on next cloud recognition"
+    },
+    {
+      "name": "revoke_consent",
+      "value": "Revoke"
+    },
+    {
+      "name": "revoke_consent_success",
+      "value": "Cloud upload permission revoked"
+    },
+    {
+      "name": "clear_learned",
+      "value": "Clear learned merchant categories"
+    },
+    {
+      "name": "clear_learned_confirm_title",
+      "value": "Clear learned categories"
+    },
+    {
+      "name": "clear_learned_confirm_msg",
+      "value": "Clear all learned merchant-category mappings?"
+    },
+    {
+      "name": "clear_learned_confirm",
+      "value": "Clear"
+    },
+    {
+      "name": "clear_learned_success",
+      "value": "Learned merchant categories cleared"
+    },
+    {
+      "name": "ocr_unsupported",
+      "value": "This device does not support on-device OCR"
+    },
+    {
+      "name": "ocr_failed",
+      "value": "On-device recognition failed, please retry"
     }
   ]
 }
