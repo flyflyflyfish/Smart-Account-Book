@@ -4,6 +4,9 @@
     "pages/AddAccount",
     "pages/AccountDetail",
     "pages/RecognizeBill",
-    "pages/Settings"
+    "pages/AccountLogin",
+    "pages/ModelSettings",
+    "pages/Appearance",
+    "pages/PrivacySecurity"
   ]
 }

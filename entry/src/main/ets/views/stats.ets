@@ -272,7 +272,7 @@ export default struct Stats {
 
   build() {
     Column({ space: 20 }) {
-      StatsHeader({ type: $statsType, time: $time })
+      StatsHeader({ type: this.statsType, time: this.time })
       this.TotalStats()
       Column() {
         StatsDetailHeader({

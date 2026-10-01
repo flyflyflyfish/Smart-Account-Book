@@ -16,7 +16,7 @@ const OCR_CONFIDENCE: number = 0.6;
 /**
  * 端侧 OCR 识别器：Core Vision Kit 通用文字识别
  * 只提取文本，金额/商家/时间用本地规则解析，分类留空交给流水线智能分类
- * 注意：init/release 起始 API 12，本项目 API 11 下直接调用 recognizeText
+ * 注意：init/release 起始 API 12，本项目 compatibleSdkVersion 为 12，需先 init 加载模型
  */
 export class LocalOcrRecognizer implements Recognizer {
   async recognize(imageUri: string): Promise<RecognitionResult[]> {
@@ -24,7 +24,10 @@ export class LocalOcrRecognizer implements Recognizer {
       throw new Error(getContext().resourceManager.getStringSync($r('app.string.ocr_unsupported')));
     }
     let file: fs.File | undefined = undefined;
+    let inited = false;
     try {
+      await textRecognition.init();
+      inited = true;
       file = fs.openSync(imageUri, fs.OpenMode.READ_ONLY);
       const source = image.createImageSource(file.fd);
       const options: image.DecodingOptions = {
@@ -45,6 +48,13 @@ export class LocalOcrRecognizer implements Recognizer {
     } finally {
       if (file) {
         fs.closeSync(file);
+      }
+      if (inited) {
+        try {
+          await textRecognition.release();
+        } catch (err) {
+          Logger.error('端侧 OCR 释放失败', (err as Error).message);
+        }
       }
     }
   }

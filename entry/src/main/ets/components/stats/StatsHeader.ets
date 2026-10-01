@@ -1,154 +1,123 @@
 import dayjs from 'dayjs';
 import { StatsType } from '../../models/stats/stats';
-import PickerDialog, { StatsTypeOption } from '../PickerDialog';
-import { OptionsItem, StatsItem } from '../../models/stats/StatsItem';
+import OptionsGridDialog from '../OptionsGridDialog';
+import { OptionsItem } from '../../models/stats/StatsItem';
 import PreferenceUtil from '../../utils/PreferenceUtil';
 import * as CONSTANTS from '../../common/constants';
 import { SPACE_SMALL, SPACE_TINY } from '../../common/dimens';
 
+/**
+ * 统计页头部：月账单/年账单用分段控件切换，年份、月份用下拉网格弹窗选择，
+ * 替代原先循环滚动的 TextPicker 与费劲的横向月份列表
+ */
 @Component
 export default struct StatsHeader {
   @Link @Watch('onTypeChange') type: StatsType;
   @Link time: number;
-  @State selected: number = 0;
   private firstUseTime: number = 0;
-  private statsTypeOptions: StatsTypeOption[] = [
-    { label: '月账单', value: StatsType.MONTH },
-    { label: '年账单', value: StatsType.YEAR }
-  ];
-  controller = new CustomDialogController({
-    builder: PickerDialog({
-      options: this.statsTypeOptions,
-      onChange: (type: StatsType) => {
-        this.type = type;
-        this.time = dayjs().valueOf();
+
+  yearController = new CustomDialogController({
+    builder: OptionsGridDialog({
+      title: '选择年份',
+      options: this.yearOptions(),
+      onChange: (year: number) => {
+        this.time = dayjs(this.time).set('year', year).valueOf();
       }
     }),
-    customStyle: true
+    customStyle: true,
+    alignment: DialogAlignment.Center
+  })
+
+  monthController = new CustomDialogController({
+    builder: OptionsGridDialog({
+      title: '选择月份',
+      options: this.monthOptions(),
+      onChange: (month: number) => {
+        this.time = dayjs(this.time).set('month', month).valueOf();
+      }
+    }),
+    customStyle: true,
+    alignment: DialogAlignment.Center
   })
 
   async aboutToAppear(): Promise<void> {
     this.firstUseTime = Number(await PreferenceUtil.getPreferenceValue(CONSTANTS.PREF_USER_FIRST_KEY, 0));
-    this.resetSelected();
   }
 
-  // 当账期类型切换时，重新定位到当前月/年
+  // 切换月/年账单时回到当前月/年
   onTypeChange(): void {
-    this.resetSelected();
+    this.time = dayjs().valueOf();
   }
 
-  getStatsTypeLabel(): string {
-    const found = this.statsTypeOptions.find((item: StatsTypeOption): boolean => item.value === this.type);
-    return found ? found.label : '';
-  }
-
-  getStatsTypeList(): OptionsItem<number>[] {
-    return StatsItem.getStatsTypeDateList(this.type, this.firstUseTime);
-  }
-
-  // 仅在初始化或账期类型切换时重置选中项，避免每次 build 都重置高亮
-  resetSelected(): void {
-    const typeList = this.getStatsTypeList();
-    const currentValue: number = this.type === StatsType.MONTH ? dayjs().month() : dayjs().year();
-    const index = typeList.findIndex((item: OptionsItem<number>): boolean => item.value === currentValue);
-    this.selected = index < 0 ? 0 : index;
-  }
-
-  selectAccountTime(item: OptionsItem<number>, index: number): void {
-    this.selected = index;
-    // 基于当前 time 修改月/年，保留月账单下已切换的年份
-    if (this.type === StatsType.MONTH) {
-      this.time = dayjs(this.time).set('month', item.value).valueOf();
-    } else {
-      this.time = dayjs(this.time).set('year', item.value).valueOf();
+  yearOptions(): OptionsItem<number>[] {
+    const startYear = dayjs(this.firstUseTime || '2020-01-01').year();
+    const currentYear = dayjs().year();
+    const list: OptionsItem<number>[] = [];
+    for (let year = currentYear; year >= startYear; year--) {
+      list.push({ label: `${year}年`, value: year });
     }
+    return list;
   }
 
-  // 年份切换范围：2020（与记账页日期选择器起点一致）~ 当前年
-  canChangeYear(delta: number): boolean {
-    const target = dayjs(this.time).add(delta, 'year').year();
-    const minYear = 2020;
-    const maxYear = dayjs().year();
-    return target >= minYear && target <= maxYear;
-  }
-
-  changeYear(delta: number): void {
-    if (!this.canChangeYear(delta)) {
-      return;
+  monthOptions(): OptionsItem<number>[] {
+    const list: OptionsItem<number>[] = [];
+    for (let i = 0; i < 12; i++) {
+      list.push({ label: `${i + 1}月`, value: i });
     }
-    this.time = dayjs(this.time).add(delta, 'year').valueOf();
+    return list;
   }
 
-  @Builder YearSwitcher() {
-    Row({ space: SPACE_SMALL }) {
-      Image($r('app.media.arrow_left'))
-        .width(10)
-        .objectFit(ImageFit.Contain)
-        .fillColor($r('app.color.font_1'))
-        .opacity(this.canChangeYear(-1) ? 1 : 0.3)
-        .padding(SPACE_TINY)
-        .onClick(() => {
-          this.changeYear(-1);
-        })
-      Text(dayjs(this.time).format('YYYY年'))
+  @Builder SegmentItem(label: ResourceStr, value: StatsType) {
+    Text(label)
+      .fontSize(14)
+      .fontWeight(this.type === value ? FontWeight.Medium : FontWeight.Normal)
+      .fontColor(this.type === value ? $r('app.color.green') : $r('app.color.font_2'))
+      .padding({ left: 16, right: 16, top: 6, bottom: 6 })
+      .backgroundColor(this.type === value ? $r('app.color.white') : $r('app.color.transparent'))
+      .borderRadius(SPACE_SMALL)
+      .onClick(() => {
+        this.type = value;
+      })
+  }
+
+  @Builder SegmentedControl() {
+    Row({ space: 2 }) {
+      this.SegmentItem($r('app.string.monthly_bill'), StatsType.MONTH)
+      this.SegmentItem($r('app.string.annual_bill'), StatsType.YEAR)
+    }
+    .padding(2)
+    .backgroundColor($r('app.color.grey_1'))
+    .borderRadius(10)
+  }
+
+  @Builder Chip(format: string, controller: CustomDialogController) {
+    Row({ space: SPACE_TINY }) {
+      Text(dayjs(this.time).format(format))
         .fontSize(14)
-        .lineHeight(18)
-        .fontColor($r('app.color.font_1'))
-      Image($r('app.media.arrow_left'))
-        .width(10)
+        .lineHeight(20)
+        .fontColor($r('app.color.font_3'))
+      Image($r('app.media.arrow_down'))
+        .width(12)
         .objectFit(ImageFit.Contain)
-        .rotate({ angle: 180 })
-        .fillColor($r('app.color.font_1'))
-        .opacity(this.canChangeYear(1) ? 1 : 0.3)
-        .padding(SPACE_TINY)
-        .onClick(() => {
-          this.changeYear(1);
-        })
-    }.padding({
-      left: SPACE_SMALL,
-      right: SPACE_SMALL,
-      top: SPACE_TINY,
-      bottom: SPACE_TINY
+        .fillColor($r('app.color.font_2'))
+    }
+    .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+    .backgroundColor($r('app.color.white'))
+    .borderRadius(10)
+    .onClick(() => {
+      controller.open();
     })
-    .backgroundColor($r('app.color.white_alpha'))
-    .borderRadius(12)
   }
 
   build() {
-    Row({ space: 16 }) {
-      Row({ space: 5 }) {
-        Text(this.getStatsTypeLabel())
-          .fontSize(18)
-          .lineHeight(25)
-          .fontColor($r('app.color.font_1'))
-        Image($r('app.media.arrow_down'))
-          .width(14)
-          .objectFit(ImageFit.Contain)
-          .fillColor($r('app.color.font_1'))
-      }.onClick(() => {
-        this.controller.open();
-      })
-      // 仅月账单需要年份切换，年账单的横向列表本身就是年份
+    Row({ space: SPACE_SMALL }) {
+      this.SegmentedControl()
+      Blank()
+      this.Chip('YYYY年', this.yearController)
       if (this.type === StatsType.MONTH) {
-        this.YearSwitcher()
+        this.Chip('M月', this.monthController)
       }
-      List({ space: 12, initialIndex: this.selected }) {
-        ForEach(this.getStatsTypeList(), (item: OptionsItem<number>, index: number) => {
-          ListItem() {
-            Text(item.label)
-              .fontSize(18)
-              .lineHeight(25)
-              .fontWeight(500)
-              .fontColor(this.selected === index ? $r('app.color.font_1') : $r('app.color.font_2'))
-              .padding({ left: 10, right: 10 })
-              .onClick(() => this.selectAccountTime(item, index))
-          }
-        })
-      }.listDirection(Axis.Horizontal)
-      .alignListItem(ListItemAlign.Center)
-      .layoutWeight(1)
-      .height('100%')
-    }.width('100%')
-    .height(44)
+    }
+    .width('100%')
   }
 }

@@ -433,8 +433,8 @@
       "value": "Recognition Engine"
     },
     {
-      "name": "recognizer_mock",
-      "value": "Local Mock"
+      "name": "recognizer_ocr",
+      "value": "On-device OCR"
     },
     {
       "name": "recognizer_cloud",
