@@ -16,3 +16,11 @@ export const DEDUP_QUERY_DAYS: number = 30;
 export const MAX_PICK_IMAGES: number = 9;
 // 批量识别：同时进行的请求上限
 export const RECOGNIZE_CONCURRENCY: number = 2;
+// 识别器组合：主识别器结果最小置信度低于该值时降级到备用识别器
+export const RECOGNIZE_CONFIDENCE_THRESHOLD: number = 0.6;
+// 识别器组合：失败重试次数（含首次共 maxAttempts 次尝试）
+export const RECOGNIZE_RETRY_MAX_ATTEMPTS: number = 2;
+// 识别器组合：重试间隔基数（毫秒），逐次翻倍
+export const RECOGNIZE_RETRY_BASE_DELAY_MS: number = 500;
+// 识别器组合：按图片内容哈希的结果缓存上限（条）
+export const RECOGNIZE_CACHE_SIZE: number = 20;
