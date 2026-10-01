@@ -24,6 +24,7 @@ const QUERY_COLUMNS: string[] = [
  * 基于关系型数据库的账单仓储实现
  */
 export class RdbAccountRepository implements AccountRepository {
+  // 不含主键：更新时主键不可变，插入时单独补充 id
   private buildValueBucket(record: AccountPO): relationalStore.ValuesBucket {
     const bucket: relationalStore.ValuesBucket = {
       'type': record.type,
@@ -41,7 +42,7 @@ export class RdbAccountRepository implements AccountRepository {
 
   private parseAccount(result: relationalStore.ResultSet): AccountPO {
     const po = new AccountPO();
-    po.id = result.getLong(result.getColumnIndex('id'));
+    po.id = result.getString(result.getColumnIndex('id'));
     po.type = result.getLong(result.getColumnIndex('type'));
     po.accountType = result.getLong(result.getColumnIndex('account_type'));
     po.amount = result.getDouble(result.getColumnIndex('amount'));
@@ -54,11 +55,14 @@ export class RdbAccountRepository implements AccountRepository {
     return po;
   }
 
-  async insert(record: AccountPO): Promise<number> {
-    return DBUtil.insert(ACCOUNT_TABLE_NAME, this.buildValueBucket(record));
+  async insert(record: AccountPO): Promise<void> {
+    const bucket = this.buildValueBucket(record);
+    // 主键为 UUID 文本，插入时显式写入，不再依赖自增
+    bucket.id = record.id;
+    await DBUtil.insert(ACCOUNT_TABLE_NAME, bucket);
   }
 
-  async deleteById(id: number): Promise<number> {
+  async deleteById(id: string): Promise<number> {
     const predicates = new relationalStore.RdbPredicates(ACCOUNT_TABLE_NAME);
     predicates.equalTo(ID_COLUMN, id);
     return DBUtil.delete(predicates);
@@ -94,7 +98,7 @@ export class RdbAccountRepository implements AccountRepository {
     return this.queryAccount(predicates);
   }
 
-  async update(id: number, record: AccountPO): Promise<number> {
+  async update(id: string, record: AccountPO): Promise<number> {
     const predicates = new relationalStore.RdbPredicates(ACCOUNT_TABLE_NAME);
     predicates.equalTo(ID_COLUMN, id);
     return DBUtil.update(predicates, this.buildValueBucket(record));

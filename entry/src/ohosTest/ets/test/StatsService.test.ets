@@ -5,7 +5,7 @@ import { AccountType, AccountExpensesType, AccountIncomeType } from '../../../ma
 
 function buildPo(type: number, accountType: number, amount: number, time: number): AccountPO {
   const po = new AccountPO();
-  po.id = time;
+  po.id = time.toString();
   po.type = type;
   po.accountType = accountType;
   po.amount = amount;

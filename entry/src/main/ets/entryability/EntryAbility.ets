@@ -5,11 +5,12 @@ import hilog from '@ohos.hilog';
 import window from '@ohos.window';
 import PreferenceUtil from '../utils/PreferenceUtil';
 import DBUtil from '../utils/DBUtil';
+import AuthService from '../service/AuthService';
+import CloudInit from '../data/CloudInit';
 import {
   ACCOUNT_CREATE_TABLE_SQL,
-  DB_VERSION,
   MERCHANT_CATEGORY_CREATE_TABLE_SQL,
-  MIGRATE_1_TO_2_SQLS
+  MIGRATION_STEPS
 } from '../data/schema';
 
 export default class EntryAbility extends UIAbility {
@@ -18,10 +19,16 @@ export default class EntryAbility extends UIAbility {
       // 依次等待首选项与数据库初始化完成
       await PreferenceUtil.loadPreference(this.context);
       await DBUtil.initDB(this.context);
-      // 先迁移老库补列，再建表（IF NOT EXISTS 对新装生效、对老库为无操作）
-      await DBUtil.migrateIfNeeded(DB_VERSION, MIGRATE_1_TO_2_SQLS);
+      // 先逐级迁移老库，再建表（IF NOT EXISTS 对新装生效、对老库为无操作）
+      await DBUtil.migrate(MIGRATION_STEPS);
       await DBUtil.createTable(ACCOUNT_CREATE_TABLE_SQL);
       await DBUtil.createTable(MERCHANT_CATEGORY_CREATE_TABLE_SQL);
+      // 认证服务初始化；若已登录则继续初始化云开发服务以启用云端双写
+      AuthService.init(this.context);
+      const uid = await AuthService.getCurrentUid();
+      if (uid) {
+        CloudInit.init();
+      }
     } catch (err) {
       const e = err as Error;
       hilog.error(0x0000, 'testTag', '初始化失败: %{private}s', e.message);

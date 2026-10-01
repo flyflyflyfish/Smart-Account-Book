@@ -3,9 +3,9 @@
  */
 export default class AccountPO {
   /**
-   * 记录id
+   * 记录id（UUID 文本主键）
    */
-  id: number = 0;
+  id: string = '';
   /**
    * 记录类型
    */

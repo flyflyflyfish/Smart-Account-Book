@@ -34,7 +34,7 @@ export default struct Home {
   // 批量删除模式
   @State batchMode: boolean = false;
   // 批量模式下勾选的账单 id
-  @State selectedIds: number[] = [];
+  @State selectedIds: string[] = [];
   // 账单增删后由 BillStore 通知刷新
   private billListener: BillChangeListener = () => {
     this.queryByDate();
@@ -88,7 +88,7 @@ export default struct Home {
     this.selectedIds = [];
   }
 
-  toggleSelect(id: number): void {
+  toggleSelect(id: string): void {
     const idx = this.selectedIds.indexOf(id);
     if (idx >= 0) {
       this.selectedIds.splice(idx, 1);
@@ -98,8 +98,8 @@ export default struct Home {
     this.selectedIds = this.selectedIds.slice();
   }
 
-  allRecordIds(): number[] {
-    const ids: number[] = [];
+  allRecordIds(): string[] {
+    const ids: string[] = [];
     for (const group of this.accountList) {
       for (const record of group.records) {
         ids.push(record.id);
@@ -153,7 +153,7 @@ export default struct Home {
     }
   }
 
-  deleteRecord(id: number): void {
+  deleteRecord(id: string): void {
     // 删除成功后由 BillStore 通知刷新，无需手动重新查询
     AccountService.deleteById(id).catch((err: Error): void => {
       Logger.error('删除记录失败', err.message);
@@ -191,6 +191,13 @@ export default struct Home {
     });
   }
 
+  // 跳转设置页
+  openSettings(): void {
+    router.pushUrl({ url: 'pages/Settings' }).catch((err: Error): void => {
+      Logger.error('跳转设置页失败', err.message);
+    });
+  }
+
   @Builder GroupHeaderBuilder(item: GroupByDate) {
     GroupHeader({ group: item })
   }
@@ -224,6 +231,12 @@ export default struct Home {
         this.showDatePicker();
       })
       Blank()
+      Text($r('app.string.settings'))
+        .fontSize(14)
+        .fontColor($r('app.color.font_1'))
+        .onClick(() => {
+          this.openSettings();
+        })
       Text(this.batchMode ? $r('app.string.cancel') : $r('app.string.batch_manage'))
         .fontSize(14)
         .fontColor($r('app.color.green'))
