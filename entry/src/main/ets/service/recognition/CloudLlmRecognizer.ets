@@ -3,7 +3,6 @@ import image from '@ohos.multimedia.image';
 import fs from '@ohos.file.fs';
 import util from '@ohos.util';
 import { BusinessError } from '@ohos.base';
-import dayjs from 'dayjs';
 import { AccountType } from '../../models/account/account';
 import { RecognitionResult } from '../../models/recognition/RecognitionResult';
 import {
@@ -13,11 +12,11 @@ import {
   ChatMessage,
   ChatRequest,
   ChatRequestHeader,
-  CloudLlmConfig,
-  LlmBillRaw
+  CloudLlmConfig
 } from '../../models/recognition/CloudLlmModels';
 import CategoryRegistry from '../../models/accountType/CategoryRegistry';
 import { Recognizer } from './Recognizer';
+import { CloudResultParser } from './CloudResultParser';
 import { Logger } from '../../utils/Logger';
 
 // 图片最长边限制：缩小到 1024 显著减小 base64 体积，加快上传与推理
@@ -35,6 +34,7 @@ const HTTP_ERROR_TIMEOUT: number = 2300028;
  */
 export class CloudLlmRecognizer implements Recognizer {
   private config: CloudLlmConfig;
+  private parser: CloudResultParser = new CloudResultParser();
 
   constructor(config: CloudLlmConfig) {
     this.config = config;
@@ -50,7 +50,11 @@ export class CloudLlmRecognizer implements Recognizer {
     const imagePart: ChatContent = { type: 'image_url', image_url: imageUrl };
     const message: ChatMessage = { role: 'user', content: [textPart, imagePart] };
     const content = await this.postChat([message]);
-    return this.parseResult(content);
+    try {
+      return this.parser.parseResult(content);
+    } catch (error) {
+      throw new Error(getContext().resourceManager.getStringSync($r('app.string.cloud_bad_result')));
+    }
   }
 
   // 连通性测试：发一条纯文本消息，验证地址、Key 与模型可用，返回模型回复文本
@@ -163,71 +167,5 @@ export class CloudLlmRecognizer implements Recognizer {
       throw new Error(getContext().resourceManager.getStringSync($r('app.string.cloud_bad_response')));
     }
     return parsed.choices[0].message.content;
-  }
-
-  // 模型可能包裹 markdown 代码块或在 JSON 前后输出多余文字，先清理再解析为数组
-  private parseResult(content: string): RecognitionResult[] {
-    let cleaned = content.trim();
-    if (cleaned.startsWith('```')) {
-      cleaned = cleaned.replace(/^```[a-zA-Z]*\s*/, '').replace(/```\s*$/, '').trim();
-    }
-    const start = cleaned.indexOf('[');
-    const end = cleaned.lastIndexOf(']');
-    if (start < 0 || end <= start) {
-      throw new Error(getContext().resourceManager.getStringSync($r('app.string.cloud_bad_result')));
-    }
-    let rawList: LlmBillRaw[];
-    try {
-      rawList = JSON.parse(cleaned.substring(start, end + 1)) as LlmBillRaw[];
-    } catch (error) {
-      throw new Error(getContext().resourceManager.getStringSync($r('app.string.cloud_bad_result')));
-    }
-    if (!Array.isArray(rawList)) {
-      throw new Error(getContext().resourceManager.getStringSync($r('app.string.cloud_bad_result')));
-    }
-    const results: RecognitionResult[] = [];
-    for (const raw of rawList) {
-      results.push(this.parseItem(raw));
-    }
-    return results;
-  }
-
-  // 单笔映射：金额与时间非法时回退默认值，交流水线与确认页兜底
-  private parseItem(raw: LlmBillRaw): RecognitionResult {
-    const accountType = raw.accountType === '收入' ? AccountType.INCOME : AccountType.EXPENSES;
-    const amount = typeof raw.amount === 'number' && raw.amount > 0 ? raw.amount : 0;
-    const merchant = typeof raw.merchant === 'string' ? raw.merchant : '';
-    const categoryName = this.normalizeCategory(typeof raw.category === 'string' ? raw.category : '', accountType);
-    const payTime = this.parsePayTime(typeof raw.payTime === 'string' ? raw.payTime : '');
-    const result: RecognitionResult = {
-      accountType: accountType,
-      amount: amount,
-      merchant: merchant,
-      payTime: payTime,
-      categoryName: categoryName,
-      confidence: 1,
-      isBill: true
-    };
-    return result;
-  }
-
-  // 分类名不在已有列表时回退为该收支侧的“其他”
-  private normalizeCategory(name: string, accountType: AccountType): string {
-    const names = CategoryRegistry.listNames(accountType);
-    if (names.indexOf(name) >= 0) {
-      return name;
-    }
-    return names[names.length - 1];
-  }
-
-  // 时间缺失或格式非法时用当前时间兜底
-  private parsePayTime(text: string): number {
-    if (text) {
-      const parsed = dayjs(text);
-      if (parsed.isValid()) {
-        return parsed.valueOf();
-      }
-    }
-    return Date.now();
   }
 }
