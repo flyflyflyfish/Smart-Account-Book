@@ -29,6 +29,11 @@ struct Index {
   async aboutToAppear() {
     this.breakpointSystem.register();
     this.registerKeyboardListener();
+    const quickTab = AppStorage.get<number>('quickTab');
+    if (typeof quickTab === 'number' && quickTab >= 0 && quickTab <= 3) {
+      this.currentTab = quickTab;
+      AppStorage.delete('quickTab');
+    }
     await DBUtil.ready;
     const firstUseTime = Number(await PreferenceUtil.getPreferenceValue(CONSTANTS.PREF_USER_FIRST_KEY, 0));
     if (!firstUseTime) {

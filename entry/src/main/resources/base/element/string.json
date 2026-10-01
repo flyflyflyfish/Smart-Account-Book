@@ -791,6 +791,30 @@
     {
       "name": "ocr_hint",
       "value": "端侧识别在设备本地完成，无需联网和 API Key；仅提取金额、商家与时间，无法识别分类。"
+    },
+    {
+      "name": "widget_name",
+      "value": "记账小组件"
+    },
+    {
+      "name": "widget_desc",
+      "value": "今日收支与快速记账"
+    },
+    {
+      "name": "today_expense_label",
+      "value": "今日支出"
+    },
+    {
+      "name": "today_income_label",
+      "value": "今日收入"
+    },
+    {
+      "name": "add_widget",
+      "value": "添加小组件"
+    },
+    {
+      "name": "add_widget_desc",
+      "value": "将记账卡片添加到桌面，快速记账"
     }
   ]
 }
