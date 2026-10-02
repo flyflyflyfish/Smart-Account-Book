@@ -1127,6 +1127,166 @@
     {
       "name": "budget_notif_additional",
       "value": "进入记账助手调整额度或查看消费明细"
+    },
+    {
+      "name": "recurring_bill_title",
+      "value": "重复性账单"
+    },
+    {
+      "name": "recurring_bill_settings_desc",
+      "value": "到点自动记入周期性收支，如每天地铁通勤"
+    },
+    {
+      "name": "recurring_bill_hint",
+      "value": "开启后，到达设定时间将自动添加一笔账单，无需手动记入；停用期间不会补记。"
+    },
+    {
+      "name": "recurring_bill_empty",
+      "value": "暂无重复性账单"
+    },
+    {
+      "name": "recurring_bill_empty_hint",
+      "value": "点击下方按钮新建，到期将自动记入"
+    },
+    {
+      "name": "recurring_bill_add",
+      "value": "新建重复账单"
+    },
+    {
+      "name": "recurring_bill_edit",
+      "value": "编辑重复账单"
+    },
+    {
+      "name": "recurring_delete_title",
+      "value": "删除重复账单"
+    },
+    {
+      "name": "recurring_delete_msg",
+      "value": "删除后该规则将不再自动记入，已记入的账单不受影响"
+    },
+    {
+      "name": "recurring_amount_label",
+      "value": "金额"
+    },
+    {
+      "name": "recurring_amount_placeholder",
+      "value": "请输入金额"
+    },
+    {
+      "name": "recurring_amount_invalid",
+      "value": "请输入正确的金额"
+    },
+    {
+      "name": "recurring_category_label",
+      "value": "分类"
+    },
+    {
+      "name": "recurring_repeat_label",
+      "value": "重复频率"
+    },
+    {
+      "name": "recurring_repeat_every_day",
+      "value": "每天"
+    },
+    {
+      "name": "recurring_repeat_weekdays",
+      "value": "周一至周五"
+    },
+    {
+      "name": "recurring_repeat_weekly",
+      "value": "每周"
+    },
+    {
+      "name": "recurring_repeat_monthly",
+      "value": "每月"
+    },
+    {
+      "name": "recurring_day_suffix",
+      "value": "日"
+    },
+    {
+      "name": "recurring_weekly_hint",
+      "value": "选择星期（可多选）"
+    },
+    {
+      "name": "recurring_monthly_hint",
+      "value": "选择日期（1-28日，可多选）"
+    },
+    {
+      "name": "recurring_weekly_empty",
+      "value": "请至少选择一个星期"
+    },
+    {
+      "name": "recurring_monthly_empty",
+      "value": "请至少选择一个日期"
+    },
+    {
+      "name": "recurring_weekday_0",
+      "value": "周日"
+    },
+    {
+      "name": "recurring_weekday_1",
+      "value": "周一"
+    },
+    {
+      "name": "recurring_weekday_2",
+      "value": "周二"
+    },
+    {
+      "name": "recurring_weekday_3",
+      "value": "周三"
+    },
+    {
+      "name": "recurring_weekday_4",
+      "value": "周四"
+    },
+    {
+      "name": "recurring_weekday_5",
+      "value": "周五"
+    },
+    {
+      "name": "recurring_weekday_6",
+      "value": "周六"
+    },
+    {
+      "name": "recurring_time_label",
+      "value": "记入时间"
+    },
+    {
+      "name": "recurring_notify_label",
+      "value": "记入成功通知"
+    },
+    {
+      "name": "recurring_notify_desc",
+      "value": "开启后，账单自动记入成功时接收消息通知提醒"
+    },
+    {
+      "name": "recurring_desc_label",
+      "value": "备注"
+    },
+    {
+      "name": "recurring_desc_placeholder",
+      "value": "选填，如：早高峰地铁"
+    },
+    {
+      "name": "recurring_next_label",
+      "value": "下次记入"
+    },
+    {
+      "name": "recurring_stopped",
+      "value": "已停用"
+    },
+    {
+      "name": "recurring_notif_title",
+      "value": "重复账单已自动记入"
+    },
+    {
+      "name": "recurring_notif_text",
+      "value": "「%s」已按重复规则自动记入，本期共 %s"
+    },
+    {
+      "name": "recurring_notif_additional",
+      "value": "打开记账助手查看账单明细"
     }
   ]
 }

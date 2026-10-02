@@ -759,6 +759,166 @@
     {
       "name": "export_preview_close",
       "value": "Close"
+    },
+    {
+      "name": "recurring_bill_title",
+      "value": "Recurring bills"
+    },
+    {
+      "name": "recurring_bill_settings_desc",
+      "value": "Auto-record periodic bills, like daily subway rides"
+    },
+    {
+      "name": "recurring_bill_hint",
+      "value": "Once enabled, a bill is added automatically at the scheduled time. Missed entries are not back-filled while disabled."
+    },
+    {
+      "name": "recurring_bill_empty",
+      "value": "No recurring bills yet"
+    },
+    {
+      "name": "recurring_bill_empty_hint",
+      "value": "Tap the button below to create one"
+    },
+    {
+      "name": "recurring_bill_add",
+      "value": "New recurring bill"
+    },
+    {
+      "name": "recurring_bill_edit",
+      "value": "Edit recurring bill"
+    },
+    {
+      "name": "recurring_delete_title",
+      "value": "Delete recurring bill"
+    },
+    {
+      "name": "recurring_delete_msg",
+      "value": "This rule will no longer record bills automatically. Already recorded bills are kept."
+    },
+    {
+      "name": "recurring_amount_label",
+      "value": "Amount"
+    },
+    {
+      "name": "recurring_amount_placeholder",
+      "value": "Enter amount"
+    },
+    {
+      "name": "recurring_amount_invalid",
+      "value": "Enter a valid amount"
+    },
+    {
+      "name": "recurring_category_label",
+      "value": "Category"
+    },
+    {
+      "name": "recurring_repeat_label",
+      "value": "Repeat"
+    },
+    {
+      "name": "recurring_repeat_every_day",
+      "value": "Daily"
+    },
+    {
+      "name": "recurring_repeat_weekdays",
+      "value": "Mon-Fri"
+    },
+    {
+      "name": "recurring_repeat_weekly",
+      "value": "Weekly"
+    },
+    {
+      "name": "recurring_repeat_monthly",
+      "value": "Monthly"
+    },
+    {
+      "name": "recurring_day_suffix",
+      "value": ""
+    },
+    {
+      "name": "recurring_weekly_hint",
+      "value": "Pick weekdays (multi-select)"
+    },
+    {
+      "name": "recurring_monthly_hint",
+      "value": "Pick days (1-28, multi-select)"
+    },
+    {
+      "name": "recurring_weekly_empty",
+      "value": "Pick at least one weekday"
+    },
+    {
+      "name": "recurring_monthly_empty",
+      "value": "Pick at least one day"
+    },
+    {
+      "name": "recurring_weekday_0",
+      "value": "Sun"
+    },
+    {
+      "name": "recurring_weekday_1",
+      "value": "Mon"
+    },
+    {
+      "name": "recurring_weekday_2",
+      "value": "Tue"
+    },
+    {
+      "name": "recurring_weekday_3",
+      "value": "Wed"
+    },
+    {
+      "name": "recurring_weekday_4",
+      "value": "Thu"
+    },
+    {
+      "name": "recurring_weekday_5",
+      "value": "Fri"
+    },
+    {
+      "name": "recurring_weekday_6",
+      "value": "Sat"
+    },
+    {
+      "name": "recurring_time_label",
+      "value": "Record at"
+    },
+    {
+      "name": "recurring_notify_label",
+      "value": "Notify on record"
+    },
+    {
+      "name": "recurring_notify_desc",
+      "value": "Get a notification each time a bill is recorded automatically"
+    },
+    {
+      "name": "recurring_desc_label",
+      "value": "Note"
+    },
+    {
+      "name": "recurring_desc_placeholder",
+      "value": "Optional, e.g. Morning subway"
+    },
+    {
+      "name": "recurring_next_label",
+      "value": "Next record"
+    },
+    {
+      "name": "recurring_stopped",
+      "value": "Disabled"
+    },
+    {
+      "name": "recurring_notif_title",
+      "value": "Recurring bill recorded"
+    },
+    {
+      "name": "recurring_notif_text",
+      "value": "\"%s\" was recorded automatically, %s in total"
+    },
+    {
+      "name": "recurring_notif_additional",
+      "value": "Open the app to see bill details"
     }
   ]
 }
