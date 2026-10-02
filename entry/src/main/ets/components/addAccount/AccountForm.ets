@@ -1,8 +1,10 @@
 import AccountTypeModel from '../../models/accountType/AccountTypeModel';
 import AccountService from '../../service/account';
 import { AccountInfo, AccountType, ItemRecordInfo } from '../../models/account/account';
+import learnedClassifier from '../../service/recognition/classifier/LearnedClassifier';
 import { Toast } from '../ToastDialog';
 import { Logger } from '../../utils/Logger';
+import { BusinessError } from '@ohos.base';
 import router from '@ohos.router';
 import dayjs from 'dayjs';
 import {
@@ -26,6 +28,8 @@ export default struct AccountForm {
   // 编辑模式：由首页经 AddAccount 传入，仅当收支类型匹配本表单时生效
   editRecord: ItemRecordInfo | undefined = undefined;
   @State selectedDate: number = dayjs().startOf('day').valueOf();
+  // 支付时间（精确到分）：默认所选日期叠加当前时分
+  @State payTime: number = dayjs().second(0).millisecond(0).valueOf();
   @State selectType: AccountTypeModel | undefined = undefined;
   @State amountText: string = '';
   @State description: string = '';
@@ -40,7 +44,19 @@ export default struct AccountForm {
       this.amountText = record.amount.toFixed(2);
       this.description = record.description ?? '';
       this.selectedDate = dayjs(record.time).startOf('day').valueOf();
+      this.payTime = record.payTime && record.payTime > 0 ? record.payTime : this.defaultPayTime(this.selectedDate);
     }
+  }
+
+  // 默认支付时间：所选日期叠加当前时分，保证同一天内的账单有先后顺序
+  defaultPayTime(dateTime: number): number {
+    const now = dayjs();
+    return dayjs(dateTime)
+      .hour(now.hour())
+      .minute(now.minute())
+      .second(0)
+      .millisecond(0)
+      .valueOf();
   }
 
   isEditing(): boolean {
@@ -56,6 +72,34 @@ export default struct AccountForm {
       selected: new Date(this.selectedDate),
       onDateAccept: (value: Date) => {
         this.selectedDate = dayjs(value).startOf('day').valueOf();
+        // 改日期保留已选时分
+        const origin = dayjs(this.payTime);
+        this.payTime = dayjs(this.selectedDate)
+          .hour(origin.hour())
+          .minute(origin.minute())
+          .second(0)
+          .millisecond(0)
+          .valueOf();
+      }
+    });
+  }
+
+  // 时分选择弹窗：24 小时制，日期保持不变
+  showTimePicker(): void {
+    this.showKeyboard = false;
+    this.getUIContext().showTimePickerDialog({
+      selected: new Date(this.payTime),
+      useMilitaryTime: true,
+      onAccept: (value: TimePickerResult) => {
+        if (value.hour === undefined || value.minute === undefined) {
+          return;
+        }
+        this.payTime = dayjs(this.selectedDate)
+          .hour(value.hour)
+          .minute(value.minute)
+          .second(0)
+          .millisecond(0)
+          .valueOf();
       }
     });
   }
@@ -111,21 +155,23 @@ export default struct AccountForm {
       type: selectType.id,
       amount: parseFloat(this.amountText),
       time: this.selectedDate,
-      description: this.description
+      description: this.description,
+      payTime: this.payTime
     };
     try {
       const record = this.editRecord;
       if (this.isEditing() && record) {
-        // 编辑时保留原有的商家、来源、支付时间与创建时间
+        // 编辑时保留原有的商家、来源与创建时间
         info.merchant = record.merchant ?? '';
         info.source = record.source ?? 0;
-        info.payTime = record.payTime ?? 0;
         info.createTime = record.createTime;
         await AccountService.update(record.id, info);
+        this.learnMerchantCategory(info, selectType);
         Toast.success($r('app.string.save_success'));
         router.back();
       } else {
         await AccountService.insert(info);
+        this.learnMerchantCategory(info, selectType);
         Toast.success($r('app.string.save_success'));
         this.resetAccountForm();
       }
@@ -135,11 +181,25 @@ export default struct AccountForm {
     }
   }
 
+  // 保存成功后记忆“商家→分类”：识别账单沿用其商家名，手动账单以备注为商家名
+  // 下次拍照识别遇到同一商家时优先复用该分类
+  learnMerchantCategory(info: AccountInfo, selectType: AccountTypeModel): void {
+    const preserved: string = info.merchant ?? '';
+    const merchantName: string = (preserved !== '' ? preserved : this.description).trim();
+    if (!merchantName) {
+      return;
+    }
+    learnedClassifier.learn(merchantName, selectType.id, this.accountType).catch((err: BusinessError): void => {
+      Logger.error('学习商家分类失败', err.message);
+    });
+  }
+
   resetAccountForm(): void {
     this.selectType = undefined;
     this.description = '';
     this.amountText = '';
     this.selectedDate = dayjs().startOf('day').valueOf();
+    this.payTime = this.defaultPayTime(this.selectedDate);
     this.showKeyboard = false;
   }
 
@@ -256,6 +316,17 @@ export default struct AccountForm {
                 .lineHeight(17)
             }.onClick(() => {
               this.showDatePicker();
+            })
+            Row({ space: 4 }) {
+              Image($r('app.media.date'))
+                .width(14)
+                .objectFit(ImageFit.Contain)
+              Text(dayjs(this.payTime).format('HH:mm'))
+                .fontSize(12)
+                .fontColor($r('app.color.font_3'))
+                .lineHeight(17)
+            }.onClick(() => {
+              this.showTimePicker();
             })
             TextInput({ placeholder: $r('app.string.description_placeholder'), text: this.description })
               .placeholderColor($r('app.color.font_2'))
