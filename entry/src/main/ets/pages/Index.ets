@@ -10,6 +10,8 @@ import DBUtil from '../utils/DBUtil';
 import * as CONSTANTS from '../common/constants';
 import BreakpointSystem from '../utils/BreakpointSystem';
 import BreakpointConstants from '../common/breakpoint';
+import BillStore, { BillChangeListener } from '../common/BillStore';
+import BudgetService, { BudgetStatus } from '../service/BudgetService';
 import { Logger } from '../utils/Logger';
 import { SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL } from '../common/dimens';
 
@@ -25,6 +27,14 @@ struct Index {
   @State keyboardVisible: boolean = false;
   private breakpointSystem: BreakpointSystem = new BreakpointSystem();
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
+  // 额度设置变更后重新检查是否超支
+  @StorageProp('budgetVersion')
+  @Watch('onBudgetChanged')
+  budgetVersion: number = 0;
+  // 账单增删后检查本月支出是否越过消费额度
+  private billListener: BillChangeListener = () => {
+    this.refreshBudgetAlert();
+  };
 
   async aboutToAppear() {
     this.breakpointSystem.register();
@@ -35,6 +45,8 @@ struct Index {
       AppStorage.delete('quickTab');
     }
     await DBUtil.ready;
+    BillStore.subscribe(this.billListener);
+    this.refreshBudgetAlert();
     const firstUseTime = Number(await PreferenceUtil.getPreferenceValue(CONSTANTS.PREF_USER_FIRST_KEY, 0));
     if (!firstUseTime) {
       PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_USER_FIRST_KEY, dayjs().valueOf());
@@ -43,6 +55,40 @@ struct Index {
 
   aboutToDisappear() {
     this.breakpointSystem.unRegister();
+    BillStore.unsubscribe(this.billListener);
+  }
+
+  onBudgetChanged(): void {
+    this.refreshBudgetAlert();
+  }
+
+  // 本月首次越过额度时弹窗提醒（系统通知由 BudgetService 发送）
+  async refreshBudgetAlert(): Promise<void> {
+    const status = await BudgetService.checkAndAlert(getContext(this));
+    if (status === null) {
+      return;
+    }
+    AlertDialog.show({
+      title: $r('app.string.budget_alert_title'),
+      message: $r('app.string.budget_alert_msg',
+        status.monthExpenses.toFixed(2), (status.monthExpenses - status.limit).toFixed(2)),
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      primaryButton: {
+        value: $r('app.string.confirm'),
+        action: () => {
+        }
+      },
+      secondaryButton: {
+        value: $r('app.string.budget_adjust_action'),
+        fontColor: $r('app.color.green'),
+        action: (): void => {
+          router.pushUrl({ url: 'pages/BudgetSettings' }).catch((err: Error): void => {
+            Logger.error('跳转消费额度设置失败', err.message);
+          });
+        }
+      }
+    });
   }
 
   // 键盘弹出时隐藏底部导航栏，避免导航栏被顶到键盘上方；收起时恢复
