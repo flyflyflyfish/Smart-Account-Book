@@ -1,5 +1,16 @@
+import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 @CustomDialog
 export default struct DatePickerDialog {
+
+  @StorageProp('themeSeq') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
   controller: CustomDialogController;
   selectedDate: Date = new Date();
   onChange?: (date: number) => void;
@@ -16,13 +27,13 @@ export default struct DatePickerDialog {
       Row({ space: 12 }) {
         Button($r('app.string.cancel'))
           .width(120)
-          .backgroundColor($r('app.color.grey_2'))
+          .backgroundColor(this.tk().outline)
           .onClick(() => {
             this.controller.close();
           })
         Button($r('app.string.submit'))
           .width(120)
-          .backgroundColor($r('app.color.green'))
+          .backgroundColor(this.tk().primary)
           .onClick(() => {
             if (this.onChange) {
               this.onChange(this.selectedDate.getTime())

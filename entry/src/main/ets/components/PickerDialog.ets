@@ -1,4 +1,5 @@
 import { StatsType } from '../models/stats/stats';
+import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
 export interface StatsTypeOption {
   label: string;
@@ -7,6 +8,16 @@ export interface StatsTypeOption {
 
 @CustomDialog
 export default struct PickerDialog {
+
+  @StorageProp('themeSeq') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
   controller: CustomDialogController;
   private options: StatsTypeOption[] = [];
   private onChange?: (value: StatsType) => void;
@@ -28,7 +39,7 @@ export default struct PickerDialog {
         Button($r('app.string.cancel'))
           .type(ButtonType.Normal)
           .borderRadius(4)
-          .backgroundColor($r('app.color.grey_3'))
+          .backgroundColor(this.tk().toastBg)
           .layoutWeight(1)
           .onClick(() => {
             this.controller.close()
@@ -36,7 +47,7 @@ export default struct PickerDialog {
         Button($r('app.string.confirm'))
           .type(ButtonType.Normal)
           .borderRadius(4)
-          .backgroundColor($r('app.color.green'))
+          .backgroundColor(this.tk().primary)
           .layoutWeight(1)
           .onClick(() => {
             if (this.onChange) {
@@ -48,6 +59,6 @@ export default struct PickerDialog {
     }.width('90%')
     .padding(24)
     .borderRadius(12)
-    .backgroundColor($r('app.color.white'))
+    .backgroundColor(this.tk().surface)
   }
 }

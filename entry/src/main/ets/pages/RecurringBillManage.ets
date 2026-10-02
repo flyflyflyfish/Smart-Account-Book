@@ -15,6 +15,7 @@ import {
   SPACE_TINY,
   SPACE_XLARGE
 } from '../common/dimens';
+import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
 /**
  * 重复性账单管理：查看全部规则、启停/编辑/删除，点击新建进入编辑页
@@ -22,6 +23,17 @@ import {
 @Entry
 @Component
 struct RecurringBillManage {
+
+  @StorageProp('themeSeq') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
+
   @State bills: RecurringBill[] = [];
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
 
@@ -124,7 +136,7 @@ struct RecurringBillManage {
       },
       secondaryButton: {
         value: $r('app.string.delete'),
-        fontColor: $r('app.color.red'),
+        fontColor: this.tk().danger,
         action: (): void => {
           RecurringBillService.remove(bill.id).then((): void => {
             this.refresh();
@@ -149,42 +161,42 @@ struct RecurringBillManage {
             .width(20)
             .height(20)
             .objectFit(ImageFit.Contain)
-            .fillColor($r('app.color.green'))
+            .fillColor(this.tk().primary)
         }
         .width(40)
         .height(40)
         .borderRadius(20)
-        .backgroundColor($r('app.color.green_alpha'))
+        .backgroundColor(this.tk().primarySoft)
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
 
         Column({ space: 2 }) {
           Row({ space: SPACE_SMALL }) {
             Text(this.categoryName(bill))
-              .fontSize(16)
+              .fontSize(this.fs(16))
               .fontWeight(FontWeight.Medium)
-              .fontColor($r('app.color.font_3'))
+              .fontColor(this.tk().textPrimary)
             if (bill.description.length > 0) {
               Text(bill.description)
-                .fontSize(12)
+                .fontSize(this.fs(12))
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
-                .fontColor($r('app.color.font_2'))
+                .fontColor(this.tk().textSecondary)
                 .constraintSize({ maxWidth: 120 })
             }
           }
           Text(this.repeatText(bill))
-            .fontSize(12)
-            .fontColor($r('app.color.font_2'))
+            .fontSize(this.fs(12))
+            .fontColor(this.tk().textSecondary)
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
 
         Column({ space: 2 }) {
           Text('¥ ' + bill.amount.toFixed(2))
-            .fontSize(15)
+            .fontSize(this.fs(15))
             .fontWeight(FontWeight.Medium)
-            .fontColor(this.isExpense(bill) ? $r('app.color.font_3') : $r('app.color.green'))
+            .fontColor(this.isExpense(bill) ? this.tk().textPrimary : this.tk().primary)
         }
         .alignItems(HorizontalAlign.End)
 
@@ -199,12 +211,12 @@ struct RecurringBillManage {
 
       Row({ space: SPACE_MEDIUM }) {
         Text(this.nextText(bill))
-          .fontSize(12)
-          .fontColor($r('app.color.font_2'))
+          .fontSize(this.fs(12))
+          .fontColor(this.tk().textSecondary)
           .layoutWeight(1)
         Text($r('app.string.delete'))
-          .fontSize(12)
-          .fontColor($r('app.color.red'))
+          .fontSize(this.fs(12))
+          .fontColor(this.tk().danger)
           .onClick(() => {
             this.confirmRemove(bill);
           })
@@ -213,8 +225,9 @@ struct RecurringBillManage {
     }
     .width('100%')
     .padding(SPACE_LARGE)
-    .backgroundColor($r('app.color.white'))
+    .backgroundColor(this.tk().surface)
     .borderRadius(RADIUS_CARD)
+    .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
     .onClick(() => {
       this.goEdit(bill);
     })
@@ -227,20 +240,20 @@ struct RecurringBillManage {
         Column({ space: SPACE_MEDIUM }) {
           Text($r('app.string.recurring_bill_hint'))
             .width('100%')
-            .fontSize(12)
-            .lineHeight(17)
-            .fontColor($r('app.color.font_2'))
+            .fontSize(this.fs(12))
+            .lineHeight(this.fs(17))
+            .fontColor(this.tk().textSecondary)
             .padding({ left: SPACE_TINY })
 
           if (this.bills.length === 0) {
             Column({ space: SPACE_SMALL }) {
               Text($r('app.string.recurring_bill_empty'))
-                .fontSize(15)
+                .fontSize(this.fs(15))
                 .fontWeight(FontWeight.Medium)
-                .fontColor($r('app.color.font_3'))
+                .fontColor(this.tk().textPrimary)
               Text($r('app.string.recurring_bill_empty_hint'))
-                .fontSize(12)
-                .fontColor($r('app.color.font_2'))
+                .fontSize(this.fs(12))
+                .fontColor(this.tk().textSecondary)
             }
             .width('100%')
             .padding({ top: SPACE_XLARGE, bottom: SPACE_XLARGE })
@@ -254,9 +267,9 @@ struct RecurringBillManage {
           Button($r('app.string.recurring_bill_add'))
             .width('100%')
             .height(44)
-            .fontSize(16)
-            .backgroundColor($r('app.color.green'))
-            .fontColor($r('app.color.white'))
+            .fontSize(this.fs(16))
+            .backgroundColor(this.tk().primary)
+            .fontColor(this.tk().surface)
             .type(ButtonType.Normal)
             .borderRadius(SPACE_SMALL)
             .margin({ top: SPACE_TINY })
@@ -273,6 +286,6 @@ struct RecurringBillManage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg'))
+    .backgroundColor(this.tk().background)
   }
 }

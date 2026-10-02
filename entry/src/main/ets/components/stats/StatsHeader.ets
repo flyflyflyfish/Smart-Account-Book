@@ -5,6 +5,7 @@ import { OptionsItem } from '../../models/stats/StatsItem';
 import PreferenceUtil from '../../utils/PreferenceUtil';
 import * as CONSTANTS from '../../common/constants';
 import { SPACE_SMALL, SPACE_TINY } from '../../common/dimens';
+import { ThemeKit, ThemePalette } from '../../common/theme/Theme';
 
 /**
  * 统计页头部：月账单/年账单用分段控件切换，年份、月份用下拉网格弹窗选择，
@@ -12,6 +13,16 @@ import { SPACE_SMALL, SPACE_TINY } from '../../common/dimens';
  */
 @Component
 export default struct StatsHeader {
+
+  @StorageProp('themeSeq') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
   @Link @Watch('onTypeChange') type: StatsType;
   @Link time: number;
   private firstUseTime: number = 0;
@@ -69,11 +80,11 @@ export default struct StatsHeader {
 
   @Builder SegmentItem(label: ResourceStr, value: StatsType) {
     Text(label)
-      .fontSize(14)
+      .fontSize(this.fs(14))
       .fontWeight(this.type === value ? FontWeight.Medium : FontWeight.Normal)
-      .fontColor(this.type === value ? $r('app.color.green') : $r('app.color.font_2'))
+      .fontColor(this.type === value ? this.tk().primary : this.tk().textSecondary)
       .padding({ left: 16, right: 16, top: 6, bottom: 6 })
-      .backgroundColor(this.type === value ? $r('app.color.white') : $r('app.color.transparent'))
+      .backgroundColor(this.type === value ? this.tk().surface : Color.Transparent)
       .borderRadius(SPACE_SMALL)
       .onClick(() => {
         this.type = value;
@@ -86,23 +97,23 @@ export default struct StatsHeader {
       this.SegmentItem($r('app.string.annual_bill'), StatsType.YEAR)
     }
     .padding(2)
-    .backgroundColor($r('app.color.grey_1'))
+    .backgroundColor(this.tk().surfaceVariant)
     .borderRadius(10)
   }
 
   @Builder Chip(format: string, controller: CustomDialogController) {
     Row({ space: SPACE_TINY }) {
       Text(dayjs(this.time).format(format))
-        .fontSize(14)
-        .lineHeight(20)
-        .fontColor($r('app.color.font_3'))
+        .fontSize(this.fs(14))
+        .lineHeight(this.fs(20))
+        .fontColor(this.tk().textPrimary)
       Image($r('app.media.arrow_down'))
         .width(12)
         .objectFit(ImageFit.Contain)
-        .fillColor($r('app.color.font_2'))
+        .fillColor(this.tk().textSecondary)
     }
     .padding({ left: 10, right: 10, top: 6, bottom: 6 })
-    .backgroundColor($r('app.color.white'))
+    .backgroundColor(this.tk().surface)
     .borderRadius(10)
     .onClick(() => {
       controller.open();

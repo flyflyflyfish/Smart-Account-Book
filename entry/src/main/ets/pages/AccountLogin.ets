@@ -5,10 +5,22 @@ import { Toast } from '../components/ToastDialog';
 import { Logger } from '../utils/Logger';
 import BreakpointConstants from '../common/breakpoint';
 import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL } from '../common/dimens';
+import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
 @Entry
 @Component
 struct AccountLogin {
+
+  @StorageProp('themeSeq') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
+
   @State signedIn: boolean = false;
   @State uid: string = '';
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
@@ -57,45 +69,46 @@ struct AccountLogin {
               Image($r('app.media.user'))
                 .width(28)
                 .height(28)
-                .fillColor($r('app.color.green'))
+                .fillColor(this.tk().primary)
             }
             .width(64)
             .height(64)
             .borderRadius(32)
-            .backgroundColor($r('app.color.green_alpha'))
+            .backgroundColor(this.tk().primarySoft)
             .justifyContent(FlexAlign.Center)
             .alignItems(HorizontalAlign.Center)
             Text(this.signedIn ? $r('app.string.signed_in') : $r('app.string.not_signed_in'))
-              .fontSize(18)
+              .fontSize(this.fs(18))
               .fontWeight(FontWeight.Medium)
-              .fontColor($r('app.color.font_3'))
+              .fontColor(this.tk().textPrimary)
             if (this.signedIn) {
               Text($r('app.string.uid_label') + ': ' + this.uid)
-                .fontSize(13)
-                .fontColor($r('app.color.font_2'))
+                .fontSize(this.fs(13))
+                .fontColor(this.tk().textSecondary)
             }
             Text($r('app.string.cloud_sync_hint'))
               .width('100%')
-              .fontSize(12)
-              .lineHeight(17)
-              .fontColor($r('app.color.font_2'))
+              .fontSize(this.fs(12))
+              .lineHeight(this.fs(17))
+              .fontColor(this.tk().textSecondary)
               .textAlign(TextAlign.Center)
           }
           .width('100%')
           .padding(SPACE_LARGE)
-          .backgroundColor($r('app.color.white'))
+          .backgroundColor(this.tk().surface)
           .borderRadius(RADIUS_CARD)
+          .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
 
           if (this.signedIn) {
             Button($r('app.string.sign_out'))
               .width('100%')
               .height(44)
-              .fontSize(15)
-              .fontColor($r('app.color.red'))
-              .backgroundColor($r('app.color.white'))
+              .fontSize(this.fs(15))
+              .fontColor(this.tk().danger)
+              .backgroundColor(this.tk().surface)
               .type(ButtonType.Normal)
               .borderRadius(SPACE_SMALL)
-              .border({ width: 1, color: $r('app.color.red') })
+              .border({ width: 1, color: this.tk().danger })
               .onClick(() => {
                 this.onSignOut();
               })
@@ -103,9 +116,9 @@ struct AccountLogin {
             Button($r('app.string.sign_in_huawei'))
               .width('100%')
               .height(44)
-              .fontSize(15)
-              .fontColor($r('app.color.white'))
-              .backgroundColor($r('app.color.green'))
+              .fontSize(this.fs(15))
+              .fontColor(this.tk().surface)
+              .backgroundColor(this.tk().primary)
               .type(ButtonType.Normal)
               .borderRadius(SPACE_SMALL)
               .onClick(() => {
@@ -122,6 +135,6 @@ struct AccountLogin {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg'))
+    .backgroundColor(this.tk().background)
   }
 }

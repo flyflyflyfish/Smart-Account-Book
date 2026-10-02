@@ -4,10 +4,22 @@ import CategoryStore from '../models/accountType/CategoryStore';
 import AccountTypeModel from '../models/accountType/AccountTypeModel';
 import { AccountType, ItemRecordInfo } from '../models/account/account';
 import BreakpointConstants from '../common/breakpoint';
+import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
 @Entry
 @Component
 struct AddAccount {
+
+  @StorageProp('themeSeq') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
+
   @State currentIndex: number = 0;
   // 首页点击账单条目时经 AppStorage 传入，非空则进入编辑模式
   @State editRecord: ItemRecordInfo | undefined = undefined;
@@ -29,13 +41,13 @@ struct AddAccount {
   @Builder TabBuilder(name: ResourceStr, index: number) {
     Column() {
       Text(name)
-        .fontColor(this.currentIndex === index ? $r('app.color.font_1') : $r('app.color.font_2'))
-        .fontSize(18)
-        .lineHeight(20)
+        .fontColor(this.currentIndex === index ? this.tk().textPrimary : this.tk().textSecondary)
+        .fontSize(this.fs(18))
+        .lineHeight(this.fs(20))
         .margin({ top: 17, bottom: 7 })
       Divider()
         .strokeWidth(2)
-        .color($r('app.color.font_1'))
+        .color(this.tk().textPrimary)
         .opacity(this.currentIndex === index ? 1 : 0)
     }.width('100%')
   }
@@ -63,6 +75,6 @@ struct AddAccount {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg'))
+    .backgroundColor(this.tk().background)
   }
 }

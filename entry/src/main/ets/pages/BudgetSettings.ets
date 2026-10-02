@@ -11,6 +11,7 @@ import {
   SPACE_TINY,
   SPACE_XLARGE
 } from '../common/dimens';
+import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
 const AMOUNT_PATTERN: RegExp = /^\d+(\.\d{1,2})?$/;
 
@@ -20,6 +21,17 @@ const AMOUNT_PATTERN: RegExp = /^\d+(\.\d{1,2})?$/;
 @Entry
 @Component
 struct BudgetSettings {
+
+  @StorageProp('themeSeq') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
+
   @State budgetOn: boolean = false;
   @State amountText: string = '';
   @State monthExpenses: number = 0;
@@ -65,12 +77,12 @@ struct BudgetSettings {
 
   progressColor(): ResourceColor {
     if (this.isOver()) {
-      return $r('app.color.red');
+      return this.tk().danger;
     }
     if (this.usagePercent() >= 80) {
-      return $r('app.color.orange');
+      return this.tk().warning;
     }
-    return $r('app.color.green');
+    return this.tk().primary;
   }
 
   async onSave(): Promise<void> {
@@ -94,8 +106,8 @@ struct BudgetSettings {
   @Builder SectionTitle(label: ResourceStr) {
     Text(label)
       .width('100%')
-      .fontSize(14)
-      .fontColor($r('app.color.font_3'))
+      .fontSize(this.fs(14))
+      .fontColor(this.tk().textPrimary)
       .margin({ bottom: SPACE_SMALL })
   }
 
@@ -107,47 +119,48 @@ struct BudgetSettings {
           Column({ space: SPACE_TINY }) {
             Row({ space: SPACE_MEDIUM }) {
               Text($r('app.string.budget_enable_label'))
-                .fontSize(15)
+                .fontSize(this.fs(15))
                 .fontWeight(FontWeight.Medium)
-                .fontColor($r('app.color.font_3'))
+                .fontColor(this.tk().textPrimary)
               Blank()
               Toggle({ type: ToggleType.Switch, isOn: $$this.budgetOn })
             }.width('100%')
             Text($r('app.string.budget_hint'))
               .width('100%')
-              .fontSize(12)
-              .lineHeight(17)
-              .fontColor($r('app.color.font_2'))
+              .fontSize(this.fs(12))
+              .lineHeight(this.fs(17))
+              .fontColor(this.tk().textSecondary)
           }
           .width('100%')
           .padding(SPACE_LARGE)
-          .backgroundColor($r('app.color.white'))
+          .backgroundColor(this.tk().surface)
           .borderRadius(RADIUS_CARD)
+          .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
 
           if (this.budgetOn) {
             Column({ space: SPACE_MEDIUM }) {
               this.SectionTitle($r('app.string.budget_amount_label'))
               TextInput({ text: this.amountText, placeholder: $r('app.string.budget_amount_placeholder') })
                 .type(InputType.NUMBER_DECIMAL)
-                .fontSize(14)
-                .fontColor($r('app.color.font_3'))
+                .fontSize(this.fs(14))
+                .fontColor(this.tk().textPrimary)
                 .height(44)
-                .backgroundColor($r('app.color.grey_1'))
+                .backgroundColor(this.tk().surfaceVariant)
                 .onChange((value: string) => {
                   this.amountText = value;
                 })
 
-              Divider().color($r('app.color.grey_1'))
+              Divider().color(this.tk().surfaceVariant)
 
               Row() {
                 Text($r('app.string.budget_month_spent_label') + '（' + dayjs().format('YYYY年M月') + '）')
-                  .fontSize(13)
-                  .fontColor($r('app.color.font_2'))
+                  .fontSize(this.fs(13))
+                  .fontColor(this.tk().textSecondary)
                 Blank()
                 Text('¥ ' + this.monthExpenses.toFixed(2))
-                  .fontSize(15)
+                  .fontSize(this.fs(15))
                   .fontWeight(FontWeight.Medium)
-                  .fontColor(this.isOver() ? $r('app.color.red') : $r('app.color.font_3'))
+                  .fontColor(this.isOver() ? this.tk().danger : this.tk().textPrimary)
               }.width('100%')
 
               if (this.effectiveLimit() > 0) {
@@ -159,40 +172,41 @@ struct BudgetSettings {
                 Row() {
                   Text($r('app.string.budget_usage_label',
                     this.monthExpenses.toFixed(2), this.effectiveLimit().toFixed(2)))
-                    .fontSize(12)
-                    .fontColor($r('app.color.font_2'))
+                    .fontSize(this.fs(12))
+                    .fontColor(this.tk().textSecondary)
                   Blank()
                   if (this.isOver()) {
                     Text($r('app.string.budget_over_row_label', this.overAmount().toFixed(2)))
-                      .fontSize(12)
+                      .fontSize(this.fs(12))
                       .fontWeight(FontWeight.Medium)
-                      .fontColor($r('app.color.red'))
+                      .fontColor(this.tk().danger)
                   } else {
                     Text($r('app.string.budget_remaining_label', this.remainingAmount().toFixed(2)))
-                      .fontSize(12)
+                      .fontSize(this.fs(12))
                       .fontWeight(FontWeight.Medium)
-                      .fontColor(this.usagePercent() >= 80 ? $r('app.color.orange') : $r('app.color.green'))
+                      .fontColor(this.usagePercent() >= 80 ? this.tk().warning : this.tk().primary)
                   }
                 }.width('100%')
               } else {
                 Text($r('app.string.budget_no_limit_tip'))
                   .width('100%')
-                  .fontSize(12)
-                  .fontColor($r('app.color.font_2'))
+                  .fontSize(this.fs(12))
+                  .fontColor(this.tk().textSecondary)
               }
             }
             .width('100%')
             .padding(SPACE_LARGE)
-            .backgroundColor($r('app.color.white'))
+            .backgroundColor(this.tk().surface)
             .borderRadius(RADIUS_CARD)
+            .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
           }
 
           Button($r('app.string.save'))
             .width('100%')
             .height(44)
-            .fontSize(16)
-            .backgroundColor($r('app.color.green'))
-            .fontColor($r('app.color.white'))
+            .fontSize(this.fs(16))
+            .backgroundColor(this.tk().primary)
+            .fontColor(this.tk().surface)
             .type(ButtonType.Normal)
             .borderRadius(SPACE_SMALL)
             .margin({ top: SPACE_TINY })
@@ -209,6 +223,6 @@ struct BudgetSettings {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg'))
+    .backgroundColor(this.tk().background)
   }
 }

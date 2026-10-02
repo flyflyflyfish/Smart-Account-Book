@@ -1,14 +1,17 @@
 import UIAbility from '@ohos.app.ability.UIAbility';
 import AbilityConstant from '@ohos.app.ability.AbilityConstant';
 import Want from '@ohos.app.ability.Want';
+import { Configuration } from '@ohos.app.ability.Configuration';
 import hilog from '@ohos.hilog';
 import window from '@ohos.window';
+import router from '@ohos.router';
 import PreferenceUtil from '../utils/PreferenceUtil';
 import DBUtil from '../utils/DBUtil';
 import CategoryStore from '../models/accountType/CategoryStore';
 import AuthService from '../service/AuthService';
 import CloudInit from '../data/CloudInit';
 import RecurringBillService from '../service/RecurringBillService';
+import { ThemeKit } from '../common/theme/Theme';
 import {
   ACCOUNT_CREATE_TABLE_SQL,
   MERCHANT_CATEGORY_CREATE_TABLE_SQL,
@@ -19,8 +22,9 @@ export default class EntryAbility extends UIAbility {
   private selectPage: string = '';
   private currentWindowStage: window.WindowStage | null = null;
 
-  // 解析卡片 router 事件传入的 targetPage 参数
+  // 解析卡片 router 事件传入的 targetPage 参数（无参数时清空，避免旧值残留）
   private readCardParam(want: Want): void {
+    this.selectPage = '';
     if (want && want.parameters) {
       const raw = want.parameters['params'];
       if (typeof raw === 'string') {
@@ -43,6 +47,8 @@ export default class EntryAbility extends UIAbility {
     try {
       // 依次等待首选项与数据库初始化完成
       await PreferenceUtil.loadPreference(this.context);
+      // 恢复用户主题/深浅色/字号设置（首选项就绪后、页面加载前）
+      await ThemeKit.init(this.context);
       // 加载用户自定义分类配置（增/减/恢复默认），页面加载前就绪
       await CategoryStore.init(this.context);
       await DBUtil.initDB(this.context);
@@ -80,22 +86,21 @@ export default class EntryAbility extends UIAbility {
 
     // 自定义分类配置就绪后再加载页面，避免首帧读到默认分类
     CategoryStore.init(this.context).then((): void => {
-      let targetPage = 'pages/Index';
-      if (this.selectPage === 'add') {
-        targetPage = 'pages/AddAccount';
-      } else if (this.selectPage === 'recognize') {
-        targetPage = 'pages/RecognizeBill';
-      } else if (this.selectPage === 'ai') {
+      if (this.selectPage === 'ai') {
         AppStorage.setOrCreate('quickTab', 1);
-        targetPage = 'pages/Index';
       }
-
-      windowStage.loadContent(targetPage, (err, data) => {
+      // 始终以 Index 为根页面，目标页用 router 压栈，保证返回键回到首页而非退出应用
+      windowStage.loadContent('pages/Index', (err, data) => {
         if (err.code) {
-          hilog.error(0x0000, 'testTag', 'Failed to load the content. Cause: %{private}s', JSON.stringify(err) ?? '');
+          hilog.error(0x0000, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err) ?? '');
           return;
         }
-        hilog.info(0x0000, 'testTag', 'Succeeded in loading the content. Data: %{private}s', JSON.stringify(data) ?? '');
+        hilog.info(0x0000, 'testTag', 'Succeeded in loading the content. Data: %{public}s', JSON.stringify(data) ?? '');
+        if (this.selectPage === 'add') {
+          router.pushUrl({ url: 'pages/AddAccount' });
+        } else if (this.selectPage === 'recognize') {
+          router.pushUrl({ url: 'pages/RecognizeBill' });
+        }
       });
     });
   }
@@ -103,14 +108,33 @@ export default class EntryAbility extends UIAbility {
   onNewWant(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     hilog.info(0x0000, 'testTag', '%{private}s', 'Ability onNewWant');
     this.readCardParam(want);
-    if (this.currentWindowStage !== null) {
-      this.onWindowStageCreate(this.currentWindowStage);
+    // 应用已存活：在现有页面栈上导航，不重建窗口
+    if (this.selectPage === 'add') {
+      if (router.getState().path !== 'pages/AddAccount') {
+        router.pushUrl({ url: 'pages/AddAccount' });
+      }
+    } else if (this.selectPage === 'recognize') {
+      if (router.getState().path !== 'pages/RecognizeBill') {
+        router.pushUrl({ url: 'pages/RecognizeBill' });
+      }
+    } else if (this.selectPage === 'ai') {
+      AppStorage.setOrCreate('quickTab', 1);
+      if (router.getState().path !== 'pages/Index') {
+        router.back({ url: 'pages/Index' });
+      }
     }
   }
 
   onWindowStageDestroy() {
     // Main window is destroyed, release UI related resources
     hilog.info(0x0000, 'testTag', '%{private}s', 'Ability onWindowStageDestroy');
+  }
+
+  onConfigurationUpdate(newConfig: Configuration): void {
+    // 系统深浅色变化时联动主题（仅“跟随系统”模式下生效）
+    if (newConfig.colorMode !== undefined) {
+      ThemeKit.onSystemColorModeChanged(newConfig.colorMode);
+    }
   }
 
   onForeground() {

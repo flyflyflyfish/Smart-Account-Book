@@ -1,6 +1,17 @@
 import router from '@ohos.router'
+import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 @Component
 export default struct AccountNavigator {
+
+  @StorageProp('themeSeq') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
   title: ResourceStr = $r('app.string.back');
 
   build() {
@@ -9,11 +20,11 @@ export default struct AccountNavigator {
         Image($r('app.media.arrow_left'))
           .height(14)
           .objectFit(ImageFit.Cover)
-          .fillColor($r('app.color.font_1'))
+          .fillColor(this.tk().textPrimary)
         Text(this.title)
-          .fontSize(16)
+          .fontSize(this.fs(16))
           .fontWeight(500)
-          .fontColor($r('app.color.font_1'))
+          .fontColor(this.tk().textPrimary)
       }.onClick(() => {
         router.back();
       })

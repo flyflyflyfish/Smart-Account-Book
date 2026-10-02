@@ -16,6 +16,7 @@ import {
   SPACE_TINY,
   SPACE_XLARGE
 } from '../common/dimens';
+import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
 const AMOUNT_PATTERN: RegExp = /^\d+(\.\d{1,2})?$/;
 // 分类区最多展示的行数：超出部分在 Grid 内部滚动
@@ -31,6 +32,17 @@ const MONTH_DAY_MAX: number = 28;
 @Entry
 @Component
 struct RecurringBillEdit {
+
+  @StorageProp('themeSeq') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
+
   @State accountType: number = AccountType.EXPENSES;
   @State selectedCategoryId: number = -1;
   @State amountText: string = '';
@@ -177,20 +189,20 @@ struct RecurringBillEdit {
   @Builder SectionTitle(label: ResourceStr) {
     Text(label)
       .width('100%')
-      .fontSize(14)
+      .fontSize(this.fs(14))
       .fontWeight(FontWeight.Medium)
-      .fontColor($r('app.color.font_3'))
+      .fontColor(this.tk().textPrimary)
   }
 
   @Builder TypeChip(label: ResourceStr, type: number) {
     Text(label)
-      .fontSize(14)
+      .fontSize(this.fs(14))
       .fontWeight(FontWeight.Medium)
-      .fontColor(this.accountType === type ? $r('app.color.white') : $r('app.color.font_3'))
+      .fontColor(this.accountType === type ? this.tk().surface : this.tk().textPrimary)
       .textAlign(TextAlign.Center)
       .height(34)
       .layoutWeight(1)
-      .backgroundColor(this.accountType === type ? $r('app.color.green') : $r('app.color.grey_1'))
+      .backgroundColor(this.accountType === type ? this.tk().primary : this.tk().surfaceVariant)
       .borderRadius(17)
       .onClick(() => {
         this.switchAccountType(type);
@@ -203,18 +215,18 @@ struct RecurringBillEdit {
         Image(item.icon)
           .width(16)
           .objectFit(ImageFit.Contain)
-          .fillColor(this.selectedCategoryId === item.id ? $r('app.color.white') : $r('app.color.font_2'))
+          .fillColor(this.selectedCategoryId === item.id ? this.tk().surface : this.tk().textSecondary)
       }
       .width(36)
       .height(36)
       .borderRadius(18)
       .alignItems(HorizontalAlign.Center)
       .justifyContent(FlexAlign.Center)
-      .backgroundColor(this.selectedCategoryId === item.id ? item.activeColor : $r('app.color.grey_1'))
+      .backgroundColor(this.selectedCategoryId === item.id ? item.activeColor : this.tk().surfaceVariant)
       Text(item.name)
-        .fontSize(12)
-        .fontColor(this.selectedCategoryId === item.id ? $r('app.color.font_3') : $r('app.color.font_2'))
-        .lineHeight(15)
+        .fontSize(this.fs(12))
+        .fontColor(this.selectedCategoryId === item.id ? this.tk().textPrimary : this.tk().textSecondary)
+        .lineHeight(this.fs(15))
     }
     .onClick(() => {
       this.selectedCategoryId = item.id;
@@ -223,12 +235,12 @@ struct RecurringBillEdit {
 
   @Builder ModeChip(label: ResourceStr, mode: number) {
     Text(label)
-      .fontSize(13)
-      .fontColor(this.repeatMode === mode ? $r('app.color.white') : $r('app.color.font_3'))
+      .fontSize(this.fs(13))
+      .fontColor(this.repeatMode === mode ? this.tk().surface : this.tk().textPrimary)
       .textAlign(TextAlign.Center)
       .height(32)
       .layoutWeight(1)
-      .backgroundColor(this.repeatMode === mode ? $r('app.color.green') : $r('app.color.grey_1'))
+      .backgroundColor(this.repeatMode === mode ? this.tk().primary : this.tk().surfaceVariant)
       .borderRadius(16)
       .onClick(() => {
         this.repeatMode = mode;
@@ -237,12 +249,12 @@ struct RecurringBillEdit {
 
   @Builder WeekChip(day: number) {
     Text(this.weekdayLabel(day))
-      .fontSize(13)
-      .fontColor(this.selectedWeekdays.indexOf(day) >= 0 ? $r('app.color.white') : $r('app.color.font_3'))
+      .fontSize(this.fs(13))
+      .fontColor(this.selectedWeekdays.indexOf(day) >= 0 ? this.tk().surface : this.tk().textPrimary)
       .textAlign(TextAlign.Center)
       .width(44)
       .height(32)
-      .backgroundColor(this.selectedWeekdays.indexOf(day) >= 0 ? $r('app.color.green') : $r('app.color.grey_1'))
+      .backgroundColor(this.selectedWeekdays.indexOf(day) >= 0 ? this.tk().primary : this.tk().surfaceVariant)
       .borderRadius(16)
       .onClick(() => {
         this.toggleWeekday(day);
@@ -251,12 +263,12 @@ struct RecurringBillEdit {
 
   @Builder MonthDayChip(day: number) {
     Text(day.toString())
-      .fontSize(13)
-      .fontColor(this.selectedMonthDays.indexOf(day) >= 0 ? $r('app.color.white') : $r('app.color.font_3'))
+      .fontSize(this.fs(13))
+      .fontColor(this.selectedMonthDays.indexOf(day) >= 0 ? this.tk().surface : this.tk().textPrimary)
       .textAlign(TextAlign.Center)
       .width(36)
       .height(30)
-      .backgroundColor(this.selectedMonthDays.indexOf(day) >= 0 ? $r('app.color.green') : $r('app.color.grey_1'))
+      .backgroundColor(this.selectedMonthDays.indexOf(day) >= 0 ? this.tk().primary : this.tk().surfaceVariant)
       .borderRadius(15)
       .onClick(() => {
         this.toggleMonthDay(day);
@@ -300,18 +312,19 @@ struct RecurringBillEdit {
             this.SectionTitle($r('app.string.recurring_amount_label'))
             TextInput({ text: this.amountText, placeholder: $r('app.string.recurring_amount_placeholder') })
               .type(InputType.NUMBER_DECIMAL)
-              .fontSize(14)
-              .fontColor($r('app.color.font_3'))
+              .fontSize(this.fs(14))
+              .fontColor(this.tk().textPrimary)
               .height(44)
-              .backgroundColor($r('app.color.grey_1'))
+              .backgroundColor(this.tk().surfaceVariant)
               .onChange((value: string) => {
                 this.amountText = value;
               })
           }
           .width('100%')
           .padding(SPACE_LARGE)
-          .backgroundColor($r('app.color.white'))
+          .backgroundColor(this.tk().surface)
           .borderRadius(RADIUS_CARD)
+          .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
 
           Column({ space: SPACE_MEDIUM }) {
             this.SectionTitle($r('app.string.recurring_category_label'))
@@ -329,8 +342,9 @@ struct RecurringBillEdit {
           }
           .width('100%')
           .padding(SPACE_LARGE)
-          .backgroundColor($r('app.color.white'))
+          .backgroundColor(this.tk().surface)
           .borderRadius(RADIUS_CARD)
+          .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
 
           Column({ space: SPACE_MEDIUM }) {
             this.SectionTitle($r('app.string.recurring_repeat_label'))
@@ -345,8 +359,8 @@ struct RecurringBillEdit {
             if (this.repeatMode === RecurringRepeatMode.WEEKLY) {
               Text($r('app.string.recurring_weekly_hint'))
                 .width('100%')
-                .fontSize(12)
-                .fontColor($r('app.color.font_2'))
+                .fontSize(this.fs(12))
+                .fontColor(this.tk().textSecondary)
               Flex({ wrap: FlexWrap.Wrap }) {
                 ForEach(this.weekdayOrder, (day: number) => {
                   this.WeekChip(day)
@@ -358,8 +372,8 @@ struct RecurringBillEdit {
             if (this.repeatMode === RecurringRepeatMode.MONTHLY) {
               Text($r('app.string.recurring_monthly_hint'))
                 .width('100%')
-                .fontSize(12)
-                .fontColor($r('app.color.font_2'))
+                .fontSize(this.fs(12))
+                .fontColor(this.tk().textSecondary)
               Flex({ wrap: FlexWrap.Wrap }) {
                 ForEach(this.monthDayOptions, (day: number) => {
                   this.MonthDayChip(day)
@@ -370,19 +384,19 @@ struct RecurringBillEdit {
 
             Row() {
               Text($r('app.string.recurring_time_label'))
-                .fontSize(14)
-                .fontColor($r('app.color.font_3'))
+                .fontSize(this.fs(14))
+                .fontColor(this.tk().textPrimary)
               Blank()
               Row({ space: SPACE_TINY }) {
                 Text(this.timeText())
-                  .fontSize(14)
+                  .fontSize(this.fs(14))
                   .fontWeight(FontWeight.Medium)
-                  .fontColor($r('app.color.green'))
+                  .fontColor(this.tk().primary)
                 Image($r('app.media.arrow_left'))
                   .width(12)
                   .objectFit(ImageFit.Contain)
                   .rotate({ angle: 180 })
-                  .fillColor($r('app.color.font_2'))
+                  .fillColor(this.tk().textSecondary)
               }
               .onClick(() => {
                 this.showTimePicker();
@@ -392,52 +406,55 @@ struct RecurringBillEdit {
           }
           .width('100%')
           .padding(SPACE_LARGE)
-          .backgroundColor($r('app.color.white'))
+          .backgroundColor(this.tk().surface)
           .borderRadius(RADIUS_CARD)
+          .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
 
           Column({ space: SPACE_TINY }) {
             Row() {
               Text($r('app.string.recurring_notify_label'))
-                .fontSize(15)
+                .fontSize(this.fs(15))
                 .fontWeight(FontWeight.Medium)
-                .fontColor($r('app.color.font_3'))
+                .fontColor(this.tk().textPrimary)
               Blank()
               Toggle({ type: ToggleType.Switch, isOn: $$this.notifyOn })
             }
             .width('100%')
             Text($r('app.string.recurring_notify_desc'))
               .width('100%')
-              .fontSize(12)
-              .lineHeight(17)
-              .fontColor($r('app.color.font_2'))
+              .fontSize(this.fs(12))
+              .lineHeight(this.fs(17))
+              .fontColor(this.tk().textSecondary)
           }
           .width('100%')
           .padding(SPACE_LARGE)
-          .backgroundColor($r('app.color.white'))
+          .backgroundColor(this.tk().surface)
           .borderRadius(RADIUS_CARD)
+          .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
 
           Column({ space: SPACE_MEDIUM }) {
             this.SectionTitle($r('app.string.recurring_desc_label'))
             TextInput({ text: this.description, placeholder: $r('app.string.recurring_desc_placeholder') })
-              .fontSize(14)
-              .fontColor($r('app.color.font_3'))
+              .fontSize(this.fs(14))
+              .fontColor(this.tk().textPrimary)
               .height(44)
-              .backgroundColor($r('app.color.grey_1'))
+              .backgroundColor(this.tk().surfaceVariant)
               .onChange((value: string) => {
                 this.description = value;
               })
           }
           .width('100%')
           .padding(SPACE_LARGE)
-          .backgroundColor($r('app.color.white'))
+          .backgroundColor(this.tk().surface)
           .borderRadius(RADIUS_CARD)
+          .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
 
           Button($r('app.string.save'))
             .width('100%')
             .height(44)
-            .fontSize(16)
-            .backgroundColor($r('app.color.green'))
-            .fontColor($r('app.color.white'))
+            .fontSize(this.fs(16))
+            .backgroundColor(this.tk().primary)
+            .fontColor(this.tk().surface)
             .type(ButtonType.Normal)
             .borderRadius(SPACE_SMALL)
             .margin({ top: SPACE_TINY, bottom: SPACE_LARGE })
@@ -454,6 +471,6 @@ struct RecurringBillEdit {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg'))
+    .backgroundColor(this.tk().background)
   }
 }
