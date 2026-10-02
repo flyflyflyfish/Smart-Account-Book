@@ -113,8 +113,10 @@ export class CloudLlmRecognizer implements Recognizer {
       '只输出一个 JSON 数组，不要输出任何解释文字或 markdown 代码块。' +
       '数组每个元素的格式：{"accountType": "支出 或 收入", "amount": number, ' +
       '"merchant": string, "payTime": "YYYY-MM-DD HH:mm 或空字符串", "category": string}。' +
+      'payTime 必须尽量精确到分钟：图片上印有交易时刻（如 14:32、09:05:11）时，必须把年月日和时分一并写入 payTime；' +
+      '只能看出日期时输出 YYYY-MM-DD；完全看不到时间信息才用空字符串，禁止用当前时间或拍照时间猜测。' +
       `支出分类只能取：${expenseNames}。收入分类只能取：${incomeNames}。` +
-      '非账单图片输出空数组 []；一张图包含多笔交易时输出多个元素；无法确定的字段不要猜测，用空字符串或 0。';
+      '非账单图片输出空数组 []；一张图包含多笔交易时输出多个元素；除 payTime 外无法确定的字段不要猜测，用空字符串或 0。';
   }
 
   // 调用 OpenAI 兼容的 chat/completions 接口，返回模型输出的文本
