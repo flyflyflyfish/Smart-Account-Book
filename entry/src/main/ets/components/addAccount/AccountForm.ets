@@ -16,6 +16,8 @@ import {
 const KEY_HEIGHT: number = 48;
 const KEY_ROWS: number = 4;
 const KEY_GAP: number = 8;
+// 分类区最多展示的行数：超出部分在 Grid 内部滚动，表单整体保持一屏
+const MAX_CATEGORY_ROWS: number = 4;
 
 @Component
 export default struct AccountForm {
@@ -145,9 +147,9 @@ export default struct AccountForm {
     return Math.ceil(this.accountTypeList.length / 4);
   }
 
-  // Grid 是滚动容器，在高度 100% 的 Column 中会被拉满剩余空间，必须显式给定高度
+  // Grid 是滚动容器：高度按内容行数计算并设上限，分类多时在内部滚动而不撑高表单
   getGridHeight(): number {
-    const rows = this.getRows();
+    const rows = Math.min(this.getRows(), MAX_CATEGORY_ROWS);
     if (rows <= 0) {
       return 0;
     }
@@ -194,8 +196,7 @@ export default struct AccountForm {
 
   build() {
     Stack({ alignContent: Alignment.Bottom }) {
-      Scroll() {
-        Column() {
+      Column() {
         Column() {
           Row() {
             Text($r('app.string.bill_amount'))
@@ -296,12 +297,9 @@ export default struct AccountForm {
             })
         }.width('100%')
         .margin({ top: SPACE_MEDIUM, bottom: SPACE_MEDIUM })
-        }.width('100%')
-      }
-      .scrollBar(BarState.Off)
-      .align(Alignment.Top)
-      .width('100%')
-      .height('100%')
+        }
+        .width('100%')
+        .height('100%')
 
       // 键盘浮层：覆盖在底部，点键盘外任意处收起
       if (this.showKeyboard) {

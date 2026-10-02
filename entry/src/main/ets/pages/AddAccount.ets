@@ -1,6 +1,7 @@
 import AccountNavigator from '../components/Navigator';
 import AccountForm from '../components/addAccount/AccountForm';
-import { expenses, incomes } from '../models/accountType/accountType';
+import CategoryStore from '../models/accountType/CategoryStore';
+import AccountTypeModel from '../models/accountType/AccountTypeModel';
 import { AccountType, ItemRecordInfo } from '../models/account/account';
 import BreakpointConstants from '../common/breakpoint';
 
@@ -11,6 +12,9 @@ struct AddAccount {
   // 首页点击账单条目时经 AppStorage 传入，非空则进入编辑模式
   @State editRecord: ItemRecordInfo | undefined = undefined;
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
+  // 分类列表来自分类存储，支持用户自定义分类
+  @State expenseTypeList: AccountTypeModel[] = CategoryStore.list(AccountType.EXPENSES);
+  @State incomeTypeList: AccountTypeModel[] = CategoryStore.list(AccountType.INCOME);
 
   aboutToAppear(): void {
     const record = AppStorage.get<ItemRecordInfo>('editRecord');
@@ -41,12 +45,12 @@ struct AddAccount {
       AccountNavigator()
       Tabs({ index: this.currentIndex }) {
         TabContent() {
-          AccountForm({ accountTypeList: expenses, accountType: AccountType.EXPENSES, editRecord: this.editRecord })
+          AccountForm({ accountTypeList: this.expenseTypeList, accountType: AccountType.EXPENSES, editRecord: this.editRecord })
             .height('100%')
             .padding({ top: 16 })
         }.tabBar(this.TabBuilder($r('app.string.expenditure'), 0))
         TabContent() {
-          AccountForm({ accountTypeList: incomes, accountType: AccountType.INCOME, editRecord: this.editRecord })
+          AccountForm({ accountTypeList: this.incomeTypeList, accountType: AccountType.INCOME, editRecord: this.editRecord })
             .height('100%')
             .padding({ top: 16 })
         }.tabBar(this.TabBuilder($r('app.string.income'), 1))
