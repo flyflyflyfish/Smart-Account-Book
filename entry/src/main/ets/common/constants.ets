@@ -1,9 +1,10 @@
 export const H_STORE = 'account_store';
 export const PREF_USER_FIRST_KEY = 'userFirstUsed';
 
-// 账单来源：手动录入 / 图片识别
+// 账单来源：手动录入 / 图片识别 / 重复性账单自动记入
 export const SOURCE_MANUAL: number = 0;
 export const SOURCE_IMAGE: number = 1;
+export const SOURCE_RECURRING: number = 2;
 
 // 云端识别配置与识别引擎开关的 Preferences 键
 export const PREF_CLOUD_BASE_URL = 'cloud_base_url';
@@ -24,6 +25,12 @@ export const PREF_BUDGET_ALERT_MONTH = 'budget_alert_month';
 
 // 超支系统通知的 requestId
 export const BUDGET_NOTIFICATION_ID: number = 1001;
+
+// 重复性账单规则（JSON 数组）的 Preferences 键
+export const PREF_RECURRING_BILLS = 'recurring_bills';
+
+// 重复性账单记入成功的系统通知 requestId
+export const RECURRING_NOTIFICATION_ID: number = 2001;
 
 // 分类名称（纯字符串，按 id 顺序），供识别/分类逻辑使用，避免依赖资源上下文
 export const EXPENSE_CATEGORY_NAMES: string[] = [

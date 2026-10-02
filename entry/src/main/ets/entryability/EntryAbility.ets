@@ -8,6 +8,7 @@ import DBUtil from '../utils/DBUtil';
 import CategoryStore from '../models/accountType/CategoryStore';
 import AuthService from '../service/AuthService';
 import CloudInit from '../data/CloudInit';
+import RecurringBillService from '../service/RecurringBillService';
 import {
   ACCOUNT_CREATE_TABLE_SQL,
   MERCHANT_CATEGORY_CREATE_TABLE_SQL,
@@ -62,10 +63,13 @@ export default class EntryAbility extends UIAbility {
       // 无论成功失败都决议 ready，避免页面一直等待
       DBUtil.markReady();
     }
+    // 重复性账单：启动时补记到期账单，并周期检查，应用存活期间到点自动记入
+    RecurringBillService.start(this.context);
     hilog.info(0x0000, 'testTag', '%{private}s', 'Ability onCreate');
   }
 
   onDestroy() {
+    RecurringBillService.stop();
     hilog.info(0x0000, 'testTag', '%{private}s', 'Ability onDestroy');
   }
 
@@ -111,6 +115,8 @@ export default class EntryAbility extends UIAbility {
 
   onForeground() {
     // Ability has brought to foreground
+    // 回前台立即检查一次重复性账单，避免后台期间错过的到点账单延迟记入
+    RecurringBillService.start(this.context);
     hilog.info(0x0000, 'testTag', '%{private}s', 'Ability onForeground');
   }
 
