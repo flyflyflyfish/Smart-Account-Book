@@ -299,8 +299,6 @@ export class VoiceBillParser {
         }
       }
     }
-    const otherName = accountType === AccountType.EXPENSES ? '其他支出' : '其他收入';
-    const otherModel = CategoryRegistry.getByName(otherName, accountType);
-    return otherModel ? otherModel.id : 0;
+    return CategoryRegistry.getOther(accountType).id;
   }
 }

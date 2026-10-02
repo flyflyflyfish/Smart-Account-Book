@@ -5,6 +5,7 @@ import hilog from '@ohos.hilog';
 import window from '@ohos.window';
 import PreferenceUtil from '../utils/PreferenceUtil';
 import DBUtil from '../utils/DBUtil';
+import CategoryStore from '../models/accountType/CategoryStore';
 import AuthService from '../service/AuthService';
 import CloudInit from '../data/CloudInit';
 import {
@@ -41,6 +42,8 @@ export default class EntryAbility extends UIAbility {
     try {
       // 依次等待首选项与数据库初始化完成
       await PreferenceUtil.loadPreference(this.context);
+      // 加载用户自定义分类配置（增/减/恢复默认），页面加载前就绪
+      await CategoryStore.init(this.context);
       await DBUtil.initDB(this.context);
       // 先逐级迁移老库，再建表（IF NOT EXISTS 对新装生效、对老库为无操作）
       await DBUtil.migrate(MIGRATION_STEPS);
@@ -71,22 +74,25 @@ export default class EntryAbility extends UIAbility {
     hilog.info(0x0000, 'testTag', '%{private}s', 'Ability onWindowStageCreate');
     this.currentWindowStage = windowStage;
 
-    let targetPage = 'pages/Index';
-    if (this.selectPage === 'add') {
-      targetPage = 'pages/AddAccount';
-    } else if (this.selectPage === 'recognize') {
-      targetPage = 'pages/RecognizeBill';
-    } else if (this.selectPage === 'ai') {
-      AppStorage.setOrCreate('quickTab', 1);
-      targetPage = 'pages/Index';
-    }
-
-    windowStage.loadContent(targetPage, (err, data) => {
-      if (err.code) {
-        hilog.error(0x0000, 'testTag', 'Failed to load the content. Cause: %{private}s', JSON.stringify(err) ?? '');
-        return;
+    // 自定义分类配置就绪后再加载页面，避免首帧读到默认分类
+    CategoryStore.init(this.context).then((): void => {
+      let targetPage = 'pages/Index';
+      if (this.selectPage === 'add') {
+        targetPage = 'pages/AddAccount';
+      } else if (this.selectPage === 'recognize') {
+        targetPage = 'pages/RecognizeBill';
+      } else if (this.selectPage === 'ai') {
+        AppStorage.setOrCreate('quickTab', 1);
+        targetPage = 'pages/Index';
       }
-      hilog.info(0x0000, 'testTag', 'Succeeded in loading the content. Data: %{private}s', JSON.stringify(data) ?? '');
+
+      windowStage.loadContent(targetPage, (err, data) => {
+        if (err.code) {
+          hilog.error(0x0000, 'testTag', 'Failed to load the content. Cause: %{private}s', JSON.stringify(err) ?? '');
+          return;
+        }
+        hilog.info(0x0000, 'testTag', 'Succeeded in loading the content. Data: %{private}s', JSON.stringify(data) ?? '');
+      });
     });
   }
 
