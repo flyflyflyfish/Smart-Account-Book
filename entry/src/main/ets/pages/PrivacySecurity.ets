@@ -5,10 +5,22 @@ import { Toast } from '../components/ToastDialog';
 import { Logger } from '../utils/Logger';
 import BreakpointConstants from '../common/breakpoint';
 import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_XLARGE } from '../common/dimens';
+import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
 @Entry
 @Component
 struct PrivacySecurity {
+
+  @StorageProp('themeSeq') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
+
   @State cloudConsent: boolean = false;
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
 
@@ -43,7 +55,7 @@ struct PrivacySecurity {
       },
       secondaryButton: {
         value: $r('app.string.clear_learned_confirm'),
-        fontColor: $r('app.color.red'),
+        fontColor: this.tk().danger,
         action: () => {
           this.clearLearned();
         }
@@ -71,24 +83,24 @@ struct PrivacySecurity {
             Row({ space: SPACE_MEDIUM }) {
               Column({ space: 2 }) {
                 Text($r('app.string.cloud_consent_label'))
-                  .fontSize(15)
+                  .fontSize(this.fs(15))
                   .fontWeight(FontWeight.Medium)
-                  .fontColor($r('app.color.font_3'))
+                  .fontColor(this.tk().textPrimary)
                 Text(this.cloudConsent ? $r('app.string.consent_granted') : $r('app.string.consent_not_granted'))
-                  .fontSize(12)
-                  .fontColor($r('app.color.font_2'))
+                  .fontSize(this.fs(12))
+                  .fontColor(this.tk().textSecondary)
               }
               .alignItems(HorizontalAlign.Start)
               .layoutWeight(1)
               if (this.cloudConsent) {
                 Button($r('app.string.revoke_consent'))
                   .height(32)
-                  .fontSize(13)
-                  .fontColor($r('app.color.red'))
-                  .backgroundColor($r('app.color.white'))
+                  .fontSize(this.fs(13))
+                  .fontColor(this.tk().danger)
+                  .backgroundColor(this.tk().surface)
                   .type(ButtonType.Normal)
                   .borderRadius(SPACE_SMALL)
-                  .border({ width: 1, color: $r('app.color.red') })
+                  .border({ width: 1, color: this.tk().danger })
                   .onClick(() => {
                     this.onRevokeConsent();
                   })
@@ -97,18 +109,19 @@ struct PrivacySecurity {
           }
           .width('100%')
           .padding(SPACE_LARGE)
-          .backgroundColor($r('app.color.white'))
+          .backgroundColor(this.tk().surface)
           .borderRadius(RADIUS_CARD)
+          .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
 
           Button($r('app.string.clear_learned'))
             .width('100%')
             .height(44)
-            .fontSize(15)
-            .fontColor($r('app.color.red'))
-            .backgroundColor($r('app.color.white'))
+            .fontSize(this.fs(15))
+            .fontColor(this.tk().danger)
+            .backgroundColor(this.tk().surface)
             .type(ButtonType.Normal)
             .borderRadius(SPACE_SMALL)
-            .border({ width: 1, color: $r('app.color.red') })
+            .border({ width: 1, color: this.tk().danger })
             .onClick(() => {
               this.confirmClearLearned();
             })
@@ -122,6 +135,6 @@ struct PrivacySecurity {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg'))
+    .backgroundColor(this.tk().background)
   }
 }

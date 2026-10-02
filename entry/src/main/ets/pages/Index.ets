@@ -14,6 +14,8 @@ import BillStore, { BillChangeListener } from '../common/BillStore';
 import BudgetService, { BudgetStatus } from '../service/BudgetService';
 import { Logger } from '../utils/Logger';
 import { SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL } from '../common/dimens';
+import { ThemeKit, ThemePalette } from '../common/theme/Theme';
+import WidgetUpdater from '../common/widget/WidgetUpdater';
 
 interface RecognizeSourceParam {
   source: string;
@@ -22,6 +24,17 @@ interface RecognizeSourceParam {
 @Entry
 @Component
 struct Index {
+
+  @StorageProp('themeSeq') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
+
   @State currentTab: number = 0;
   @State showAddMenu: boolean = false;
   @State keyboardVisible: boolean = false;
@@ -31,9 +44,14 @@ struct Index {
   @StorageProp('budgetVersion')
   @Watch('onBudgetChanged')
   budgetVersion: number = 0;
-  // 账单增删后检查本月支出是否越过消费额度
+  // 卡片/外部拉起指定 Tab：应用存活时也能响应 quickTab 变化
+  @StorageProp('quickTab')
+  @Watch('onQuickTabChanged')
+  quickTabWatch: number = -1;
+  // 账单增删后检查本月支出是否越过消费额度，并同步刷新桌面小组件
   private billListener: BillChangeListener = () => {
     this.refreshBudgetAlert();
+    WidgetUpdater.refreshAllForms(getContext(this), ThemeKit.palette());
   };
 
   async aboutToAppear() {
@@ -47,6 +65,7 @@ struct Index {
     await DBUtil.ready;
     BillStore.subscribe(this.billListener);
     this.refreshBudgetAlert();
+    WidgetUpdater.refreshAllForms(getContext(this), ThemeKit.palette());
     const firstUseTime = Number(await PreferenceUtil.getPreferenceValue(CONSTANTS.PREF_USER_FIRST_KEY, 0));
     if (!firstUseTime) {
       PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_USER_FIRST_KEY, dayjs().valueOf());
@@ -60,6 +79,13 @@ struct Index {
 
   onBudgetChanged(): void {
     this.refreshBudgetAlert();
+  }
+
+  onQuickTabChanged(): void {
+    if (this.quickTabWatch >= 0 && this.quickTabWatch <= 3) {
+      this.currentTab = this.quickTabWatch;
+    }
+    AppStorage.delete('quickTab');
   }
 
   // 本月首次越过额度时弹窗提醒（系统通知由 BudgetService 发送）
@@ -81,7 +107,7 @@ struct Index {
       },
       secondaryButton: {
         value: $r('app.string.budget_adjust_action'),
-        fontColor: $r('app.color.green'),
+        fontColor: this.tk().primary,
         action: (): void => {
           router.pushUrl({ url: 'pages/BudgetSettings' }).catch((err: Error): void => {
             Logger.error('跳转消费额度设置失败', err.message);
@@ -119,10 +145,10 @@ struct Index {
       Image(icon)
         .width(22)
         .height(22)
-        .fillColor(this.currentTab === index ? $r('app.color.green') : $r('app.color.font_2'))
+        .fillColor(this.currentTab === index ? this.tk().primary : this.tk().textSecondary)
       Text(label)
-        .fontSize(11)
-        .fontColor(this.currentTab === index ? $r('app.color.green') : $r('app.color.font_2'))
+        .fontSize(this.fs(11))
+        .fontColor(this.currentTab === index ? this.tk().primary : this.tk().textSecondary)
     }
     .layoutWeight(1)
     .height('100%')
@@ -137,37 +163,38 @@ struct Index {
       Image($r('app.media.add'))
         .width(26)
         .height(26)
-        .fillColor($r('app.color.white'))
+        .fillColor(this.tk().surface)
     }
     .width(52)
     .height(52)
     .borderRadius(26)
-    .backgroundColor($r('app.color.green'))
+    .backgroundColor(this.tk().primary)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .shadow({ radius: 12, color: '#3313C791', offsetX: 0, offsetY: 4 })
+    .shadow({ radius: 12, color: this.tk().primaryShadow, offsetX: 0, offsetY: 4 })
     .onClick(() => {
       this.showAddMenu = true;
     })
   }
 
-  @Builder AddMenuOption(icon: ResourceStr, label: ResourceStr, action: () => void) {
+  @Builder AddMenuOption(icon: ResourceStr, label: ResourceStr, action: () => void,
+    accent: string, accentSoft: string) {
     Row({ space: SPACE_MEDIUM }) {
       Column() {
         Image(icon)
           .width(22)
           .height(22)
-          .fillColor($r('app.color.green'))
+          .fillColor(accent)
       }
       .width(40)
       .height(40)
       .borderRadius(20)
-      .backgroundColor($r('app.color.green_alpha'))
+      .backgroundColor(accentSoft)
       .justifyContent(FlexAlign.Center)
       .alignItems(HorizontalAlign.Center)
       Text(label)
-        .fontSize(16)
-        .fontColor($r('app.color.font_3'))
+        .fontSize(this.fs(16))
+        .fontColor(this.tk().textPrimary)
         .layoutWeight(1)
     }
     .width('100%')
@@ -181,33 +208,33 @@ struct Index {
       Column()
         .width('100%')
         .layoutWeight(1)
-        .backgroundColor('#66000000')
+        .backgroundColor(this.tk().scrim)
         .onClick(() => {
           this.showAddMenu = false;
         })
       Column({ space: SPACE_SMALL }) {
         Text($r('app.string.add_menu_title'))
-          .fontSize(16)
+          .fontSize(this.fs(16))
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.font_3'))
+          .fontColor(this.tk().textPrimary)
           .width('100%')
           .textAlign(TextAlign.Center)
           .padding({ top: SPACE_MEDIUM, bottom: SPACE_SMALL })
         this.AddMenuOption($r('app.media.add'), $r('app.string.add_menu_manual'), (): void => {
           this.goAddAccount();
-        })
+        }, this.tk().primary, this.tk().primarySoft)
         this.AddMenuOption($r('app.media.camera'), $r('app.string.pick_from_camera'), (): void => {
           this.goRecognize('camera');
-        })
+        }, this.tk().accentBlue, this.tk().accentBlueSoft)
         this.AddMenuOption($r('app.media.gallery'), $r('app.string.pick_from_gallery'), (): void => {
           this.goRecognize('gallery');
-        })
+        }, this.tk().accentOrange, this.tk().accentOrangeSoft)
         Button($r('app.string.cancel'))
           .width('100%')
           .height(44)
-          .fontSize(15)
-          .fontColor($r('app.color.font_2'))
-          .backgroundColor($r('app.color.grey_1'))
+          .fontSize(this.fs(15))
+          .fontColor(this.tk().textSecondary)
+          .backgroundColor(this.tk().surfaceVariant)
           .type(ButtonType.Normal)
           .borderRadius(SPACE_SMALL)
           .margin({ left: SPACE_LARGE, right: SPACE_LARGE, bottom: SPACE_LARGE })
@@ -216,7 +243,7 @@ struct Index {
           })
       }
       .width('100%')
-      .backgroundColor($r('app.color.white'))
+      .backgroundColor(this.tk().surface)
       .borderRadius({ topLeft: 20, topRight: 20 })
     }
     .width('100%')
@@ -251,13 +278,13 @@ struct Index {
           .width('100%')
           .height(60)
           .padding({ left: SPACE_SMALL, right: SPACE_SMALL })
-          .backgroundColor($r('app.color.white'))
+          .backgroundColor(this.tk().surface)
         }
       }
       .width('100%')
       .height('100%')
       .alignItems(HorizontalAlign.Center)
-      .backgroundColor($r('app.color.bg'))
+      .backgroundColor(this.tk().background)
 
       if (this.showAddMenu) {
         this.AddMenu()

@@ -2,67 +2,67 @@
   "color": [
     {
       "name": "start_window_background",
-      "value": "#ffffff"
+      "value": "#F3F5F4"
     },
     {
       "name": "bg",
-      "value": "#F4F5F7"
+      "value": "#F3F5F4"
     },
     {
       "name": "font_1",
-      "value": "#1F2329"
+      "value": "#1D221F"
     },
     {
       "name": "font_2",
-      "value": "#999999"
+      "value": "#5F6660"
     },
     {
       "name": "font_3",
-      "value": "#333333"
+      "value": "#1D221F"
     },
     {
       "name": "green",
-      "value": "#13C791"
+      "value": "#2E9E73"
     },
     {
       "name": "green_alpha",
-      "value": "#3313C791"
+      "value": "#292E9E73"
     },
     {
       "name": "blue",
-      "value": "#2EA6FD"
+      "value": "#3B82D6"
     },
     {
       "name": "orange",
-      "value": "#FD852E"
+      "value": "#E5833A"
     },
     {
       "name": "yellow",
-      "value": "#FDC32E"
+      "value": "#B5983F"
     },
     {
       "name": "red",
-      "value": "#FF5454"
+      "value": "#C4534A"
     },
     {
       "name": "red_alpha",
-      "value": "#33FF5454"
+      "value": "#24C4534A"
     },
     {
       "name": "purple",
-      "value": "#AA3DFF"
+      "value": "#8A6FA8"
     },
     {
       "name": "grey_1",
-      "value": "#F0F0F0"
+      "value": "#ECEEEA"
     },
     {
       "name": "grey_2",
-      "value": "#FF999999"
+      "value": "#D2D6D1"
     },
     {
       "name": "grey_3",
-      "value": "#BE2D2D2D"
+      "value": "#E61F1F1F"
     },
     {
       "name": "white",

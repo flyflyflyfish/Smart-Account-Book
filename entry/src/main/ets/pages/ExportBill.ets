@@ -12,6 +12,7 @@ import AccountPO from '../models/account/accountPO';
 import { Toast } from '../components/ToastDialog';
 import { Logger } from '../utils/Logger';
 import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_TINY } from '../common/dimens';
+import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
 // 导出格式：0 Word 文档，1 PDF 文档
 const FORMAT_WORD: number = 0;
@@ -25,6 +26,17 @@ interface PresetOption {
 @Entry
 @Component
 struct ExportBill {
+
+  @StorageProp('themeSeq') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
+
   @State startDate: number = dayjs().startOf('month').valueOf();
   @State endDate: number = dayjs().valueOf();
   @State activePreset: string = 'month';
@@ -337,10 +349,10 @@ struct ExportBill {
     Row({ space: SPACE_SMALL }) {
       ForEach(this.presets, (item: PresetOption) => {
         Text(item.label)
-          .fontSize(13)
-          .fontColor(this.activePreset === item.key ? $r('app.color.white') : $r('app.color.font_3'))
+          .fontSize(this.fs(13))
+          .fontColor(this.activePreset === item.key ? this.tk().surface : this.tk().textPrimary)
           .padding({ left: 14, right: 14, top: 7, bottom: 7 })
-          .backgroundColor(this.activePreset === item.key ? $r('app.color.green') : $r('app.color.grey_1'))
+          .backgroundColor(this.activePreset === item.key ? this.tk().primary : this.tk().surfaceVariant)
           .borderRadius(18)
           .onClick(() => {
             this.applyPreset(item);
@@ -353,41 +365,41 @@ struct ExportBill {
     Row({ space: SPACE_SMALL }) {
       Row({ space: SPACE_TINY }) {
         Text(this.fmtDate(this.startDate))
-          .fontSize(15)
+          .fontSize(this.fs(15))
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.font_1'))
+          .fontColor(this.tk().textPrimary)
         Image($r('app.media.arrow_down'))
           .width(12)
           .objectFit(ImageFit.Contain)
-          .fillColor($r('app.color.font_2'))
+          .fillColor(this.tk().textSecondary)
       }
       .layoutWeight(1)
       .justifyContent(FlexAlign.Center)
       .padding(SPACE_MEDIUM)
-      .backgroundColor($r('app.color.bg'))
+      .backgroundColor(this.tk().background)
       .borderRadius(SPACE_SMALL)
       .onClick(() => {
         this.pickStartDate();
       })
 
       Text('~')
-        .fontSize(14)
-        .fontColor($r('app.color.font_2'))
+        .fontSize(this.fs(14))
+        .fontColor(this.tk().textSecondary)
 
       Row({ space: SPACE_TINY }) {
         Text(this.fmtDate(this.endDate))
-          .fontSize(15)
+          .fontSize(this.fs(15))
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.font_1'))
+          .fontColor(this.tk().textPrimary)
         Image($r('app.media.arrow_down'))
           .width(12)
           .objectFit(ImageFit.Contain)
-          .fillColor($r('app.color.font_2'))
+          .fillColor(this.tk().textSecondary)
       }
       .layoutWeight(1)
       .justifyContent(FlexAlign.Center)
       .padding(SPACE_MEDIUM)
-      .backgroundColor($r('app.color.bg'))
+      .backgroundColor(this.tk().background)
       .borderRadius(SPACE_SMALL)
       .onClick(() => {
         this.pickEndDate();
@@ -401,30 +413,30 @@ struct ExportBill {
         Image(icon)
           .width(22)
           .height(22)
-          .fillColor(this.formatIndex === index ? $r('app.color.green') : $r('app.color.font_2'))
+          .fillColor(this.formatIndex === index ? this.tk().primary : this.tk().textSecondary)
       }
       .width(44)
       .height(44)
       .borderRadius(12)
-      .backgroundColor(this.formatIndex === index ? $r('app.color.green_alpha') : $r('app.color.grey_1'))
+      .backgroundColor(this.formatIndex === index ? this.tk().primarySoft : this.tk().surfaceVariant)
       .justifyContent(FlexAlign.Center)
       .alignItems(HorizontalAlign.Center)
       Column({ space: 2 }) {
         Text(label)
-          .fontSize(15)
+          .fontSize(this.fs(15))
           .fontWeight(FontWeight.Medium)
-          .fontColor(this.formatIndex === index ? $r('app.color.font_1') : $r('app.color.font_3'))
+          .fontColor(this.formatIndex === index ? this.tk().textPrimary : this.tk().textPrimary)
         Text(desc)
-          .fontSize(12)
-          .fontColor($r('app.color.font_2'))
+          .fontSize(this.fs(12))
+          .fontColor(this.tk().textSecondary)
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
       if (this.formatIndex === index) {
         Text('✓')
-          .fontSize(16)
+          .fontSize(this.fs(16))
           .fontWeight(FontWeight.Bold)
-          .fontColor($r('app.color.green'))
+          .fontColor(this.tk().primary)
       }
     }
     .width('100%')
@@ -432,9 +444,9 @@ struct ExportBill {
     .borderRadius(SPACE_SMALL)
     .border({
       width: 1.5,
-      color: this.formatIndex === index ? $r('app.color.green') : $r('app.color.grey_1')
+      color: this.formatIndex === index ? this.tk().primary : this.tk().surfaceVariant
     })
-    .backgroundColor($r('app.color.white'))
+    .backgroundColor(this.tk().surface)
     .onClick(() => {
       this.formatIndex = index;
     })
@@ -444,18 +456,18 @@ struct ExportBill {
     Row({ space: SPACE_MEDIUM }) {
       Column({ space: 2 }) {
         Text(label)
-          .fontSize(15)
+          .fontSize(this.fs(15))
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.font_1'))
+          .fontColor(this.tk().textPrimary)
         Text(desc)
-          .fontSize(12)
-          .fontColor($r('app.color.font_2'))
+          .fontSize(this.fs(12))
+          .fontColor(this.tk().textSecondary)
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
 
       Toggle({ type: ToggleType.Switch, isOn: isOn })
-        .selectedColor($r('app.color.green'))
+        .selectedColor(this.tk().primary)
         .onChange((value: boolean) => {
           onToggle(value);
         })
@@ -466,8 +478,8 @@ struct ExportBill {
 
   @Builder SectionCard(title: ResourceStr) {
     Text(title)
-      .fontSize(13)
-      .fontColor($r('app.color.font_2'))
+      .fontSize(this.fs(13))
+      .fontColor(this.tk().textSecondary)
       .width('100%')
   }
 
@@ -485,8 +497,9 @@ struct ExportBill {
           }
           .width('100%')
           .padding(SPACE_LARGE)
-          .backgroundColor($r('app.color.white'))
+          .backgroundColor(this.tk().surface)
           .borderRadius(RADIUS_CARD)
+          .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
 
           // 导出格式
           Column({ space: SPACE_MEDIUM }) {
@@ -498,8 +511,9 @@ struct ExportBill {
           }
           .width('100%')
           .padding(SPACE_LARGE)
-          .backgroundColor($r('app.color.white'))
+          .backgroundColor(this.tk().surface)
           .borderRadius(RADIUS_CARD)
+          .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
 
           // 导出内容
           Column({ space: SPACE_MEDIUM }) {
@@ -525,8 +539,9 @@ struct ExportBill {
           }
           .width('100%')
           .padding(SPACE_LARGE)
-          .backgroundColor($r('app.color.white'))
+          .backgroundColor(this.tk().surface)
           .borderRadius(RADIUS_CARD)
+          .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
 
           // 汇总预览
           Column({ space: SPACE_MEDIUM }) {
@@ -534,53 +549,54 @@ struct ExportBill {
             Row() {
               Column({ space: SPACE_TINY }) {
                 Text($r('app.string.export_total_expense'))
-                  .fontSize(12)
-                  .fontColor($r('app.color.font_2'))
+                  .fontSize(this.fs(12))
+                  .fontColor(this.tk().textSecondary)
                 Text('¥ ' + this.summaryExpenses.toFixed(2))
-                  .fontSize(18)
+                  .fontSize(this.fs(18))
                   .fontWeight(FontWeight.Bold)
-                  .fontColor($r('app.color.red'))
+                  .fontColor(this.tk().danger)
               }
               .layoutWeight(1)
               .alignItems(HorizontalAlign.Center)
               Column({ space: SPACE_TINY }) {
                 Text($r('app.string.export_total_income'))
-                  .fontSize(12)
-                  .fontColor($r('app.color.font_2'))
+                  .fontSize(this.fs(12))
+                  .fontColor(this.tk().textSecondary)
                 Text('¥ ' + this.summaryIncome.toFixed(2))
-                  .fontSize(18)
+                  .fontSize(this.fs(18))
                   .fontWeight(FontWeight.Bold)
-                  .fontColor($r('app.color.green'))
+                  .fontColor(this.tk().primary)
               }
               .layoutWeight(1)
               .alignItems(HorizontalAlign.Center)
               Column({ space: SPACE_TINY }) {
                 Text($r('app.string.export_balance'))
-                  .fontSize(12)
-                  .fontColor($r('app.color.font_2'))
+                  .fontSize(this.fs(12))
+                  .fontColor(this.tk().textSecondary)
                 Text('¥ ' + this.summaryBalance.toFixed(2))
-                  .fontSize(18)
+                  .fontSize(this.fs(18))
                   .fontWeight(FontWeight.Bold)
-                  .fontColor($r('app.color.font_1'))
+                  .fontColor(this.tk().textPrimary)
               }
               .layoutWeight(1)
               .alignItems(HorizontalAlign.Center)
             }.width('100%')
             Row() {
               Text($r('app.string.export_total_count', this.summaryCount))
-                .fontSize(12)
-                .fontColor($r('app.color.font_2'))
+                .fontSize(this.fs(12))
+                .fontColor(this.tk().textSecondary)
             }.width('100%')
           }
           .width('100%')
           .padding(SPACE_LARGE)
-          .backgroundColor($r('app.color.white'))
+          .backgroundColor(this.tk().surface)
           .borderRadius(RADIUS_CARD)
+          .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
 
           if (this.formatIndex === FORMAT_PDF) {
             Text($r('app.string.export_pdf_hint'))
-              .fontSize(12)
-              .fontColor($r('app.color.font_2'))
+              .fontSize(this.fs(12))
+              .fontColor(this.tk().textSecondary)
               .width('100%')
           }
         }
@@ -596,10 +612,10 @@ struct ExportBill {
         Button($r('app.string.export_do'))
           .width('100%')
           .height(48)
-          .fontSize(16)
+          .fontSize(this.fs(16))
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.white'))
-          .backgroundColor($r('app.color.green'))
+          .fontColor(this.tk().surface)
+          .backgroundColor(this.tk().primary)
           .type(ButtonType.Normal)
           .borderRadius(SPACE_SMALL)
           .onClick(() => {
@@ -608,9 +624,9 @@ struct ExportBill {
         Button($r('app.string.export_share'))
           .width('100%')
           .height(44)
-          .fontSize(15)
-          .fontColor($r('app.color.green'))
-          .backgroundColor($r('app.color.green_alpha'))
+          .fontSize(this.fs(15))
+          .fontColor(this.tk().primary)
+          .backgroundColor(this.tk().primarySoft)
           .type(ButtonType.Normal)
           .borderRadius(SPACE_SMALL)
           .onClick(() => {
@@ -619,24 +635,24 @@ struct ExportBill {
       }
       .width('100%')
       .padding({ left: SPACE_LARGE, right: SPACE_LARGE, top: SPACE_MEDIUM, bottom: SPACE_LARGE })
-      .backgroundColor($r('app.color.white'))
+      .backgroundColor(this.tk().surface)
       }
       .width('100%')
       .height('100%')
-      .backgroundColor($r('app.color.bg'))
+      .backgroundColor(this.tk().background)
 
       // PDF 全屏预览：可见 Web 承载账单 HTML，加载完成后自动调起打印
       if (this.pdfPreview) {
         Column() {
           Row() {
             Text($r('app.string.export_preview_title'))
-              .fontSize(16)
+              .fontSize(this.fs(16))
               .fontWeight(FontWeight.Medium)
-              .fontColor($r('app.color.font_1'))
+              .fontColor(this.tk().textPrimary)
               .layoutWeight(1)
             Text($r('app.string.export_preview_close'))
-              .fontSize(14)
-              .fontColor($r('app.color.font_2'))
+              .fontSize(this.fs(14))
+              .fontColor(this.tk().textSecondary)
               .padding({ left: SPACE_MEDIUM, right: SPACE_LARGE, top: SPACE_SMALL, bottom: SPACE_SMALL })
               .onClick(() => {
                 this.pendingPdfAction = '';
@@ -659,11 +675,11 @@ struct ExportBill {
         }
         .width('100%')
         .height('100%')
-        .backgroundColor($r('app.color.white'))
+        .backgroundColor(this.tk().surface)
       }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg'))
+    .backgroundColor(this.tk().background)
   }
 }

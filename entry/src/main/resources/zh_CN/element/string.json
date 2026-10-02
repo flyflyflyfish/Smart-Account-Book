@@ -919,6 +919,158 @@
     {
       "name": "recurring_notif_additional",
       "value": "打开记账助手查看账单明细"
+    },
+    {
+      "name": "appearance_title",
+      "value": "显示与外观"
+    },
+    {
+      "name": "appearance_tab_theme",
+      "value": "主题"
+    },
+    {
+      "name": "appearance_tab_font",
+      "value": "字体与排版"
+    },
+    {
+      "name": "appearance_tab_motion",
+      "value": "流式动效"
+    },
+    {
+      "name": "appearance_tab_glow",
+      "value": "光感"
+    },
+    {
+      "name": "appearance_mode_system",
+      "value": "跟随系统"
+    },
+    {
+      "name": "appearance_mode_light",
+      "value": "浅色"
+    },
+    {
+      "name": "appearance_mode_dark",
+      "value": "深色"
+    },
+    {
+      "name": "appearance_theme_section",
+      "value": "主题色"
+    },
+    {
+      "name": "theme_name_pine",
+      "value": "松雾绿"
+    },
+    {
+      "name": "theme_desc_pine",
+      "value": "低饱和 · 清新自然"
+    },
+    {
+      "name": "theme_name_claude",
+      "value": "暖棕"
+    },
+    {
+      "name": "theme_desc_claude",
+      "value": "温润 · 沉稳氛围"
+    },
+    {
+      "name": "theme_name_sky",
+      "value": "清爽蓝"
+    },
+    {
+      "name": "theme_desc_sky",
+      "value": "明快 · 干净通透"
+    },
+    {
+      "name": "theme_name_violet",
+      "value": "雾紫"
+    },
+    {
+      "name": "theme_desc_violet",
+      "value": "柔和 · 静谧优雅"
+    },
+    {
+      "name": "theme_name_notion",
+      "value": "极简灰"
+    },
+    {
+      "name": "theme_desc_notion",
+      "value": "极简 · 黑白灰"
+    },
+    {
+      "name": "theme_name_stone",
+      "value": "曜石黑"
+    },
+    {
+      "name": "theme_desc_stone",
+      "value": "中性 · 低调内敛"
+    },
+    {
+      "name": "appearance_theme_custom",
+      "value": "自定义"
+    },
+    {
+      "name": "appearance_theme_custom_desc",
+      "value": "打造你的专属配色"
+    },
+    {
+      "name": "appearance_theme_custom_toast",
+      "value": "自定义主题即将支持，敬请期待"
+    },
+    {
+      "name": "appearance_font_section",
+      "value": "字体大小"
+    },
+    {
+      "name": "appearance_font_small",
+      "value": "小"
+    },
+    {
+      "name": "appearance_font_default",
+      "value": "默认"
+    },
+    {
+      "name": "appearance_font_large",
+      "value": "大"
+    },
+    {
+      "name": "appearance_font_xlarge",
+      "value": "特大"
+    },
+    {
+      "name": "appearance_font_preview_label",
+      "value": "预览"
+    },
+    {
+      "name": "appearance_font_preview_text",
+      "value": "账单与统计的正文会跟随缩放"
+    },
+    {
+      "name": "appearance_font_preview_amount",
+      "value": "支出合计"
+    },
+    {
+      "name": "appearance_motion_placeholder",
+      "value": "流式动效设置即将上线，可控制页面过渡与列表动画"
+    },
+    {
+      "name": "appearance_glow_placeholder",
+      "value": "调节卡片与按钮的阴影浓度，让界面更有层次"
+    },
+    {
+      "name": "appearance_glow_section",
+      "value": "阴影浓度"
+    },
+    {
+      "name": "glow_soft",
+      "value": "柔和"
+    },
+    {
+      "name": "glow_standard",
+      "value": "标准"
+    },
+    {
+      "name": "glow_strong",
+      "value": "浓郁"
     }
   ]
 }

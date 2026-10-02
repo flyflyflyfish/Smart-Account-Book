@@ -18,15 +18,25 @@ import {
   SPACE_SMALL,
   SPACE_TINY
 } from '../common/dimens';
+import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
 @Extend(Text) function infoFont(fontSize: number, lineHeight: number) {
   .fontSize(fontSize)
   .lineHeight(lineHeight)
-  .fontColor($r('app.color.font_1'))
 }
 
 @Component
 export default struct Home {
+
+  @StorageProp('themeSeq') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
   @State accountList: GroupByDate[] = [];
   @State expenses: number = 0;
   @State income: number = 0;
@@ -100,12 +110,12 @@ export default struct Home {
 
   budgetProgressColor(): ResourceColor {
     if (this.budgetOver()) {
-      return $r('app.color.red');
+      return this.tk().danger;
     }
     if (this.budgetNear()) {
-      return $r('app.color.orange');
+      return this.tk().warning;
     }
-    return $r('app.color.green');
+    return this.tk().primary;
   }
 
   aboutToAppear(): void {
@@ -195,7 +205,7 @@ export default struct Home {
       },
       secondaryButton: {
         value: $r('app.string.delete'),
-        fontColor: $r('app.color.red'),
+        fontColor: this.tk().danger,
         action: () => {
           this.batchDelete();
         }
@@ -236,7 +246,7 @@ export default struct Home {
       },
       secondaryButton: {
         value: $r('app.string.delete'),
-        fontColor: $r('app.color.red'),
+        fontColor: this.tk().danger,
         action: () => {
           this.deleteRecord(record.id);
         }
@@ -261,7 +271,7 @@ export default struct Home {
       Button($r('app.string.delete'))
         .type(ButtonType.Normal)
         .padding({ left: 12, right: 12 })
-        .backgroundColor($r('app.color.red'))
+        .backgroundColor(this.tk().danger)
         .onClick(() => {
           this.confirmDelete(record)
         })
@@ -273,21 +283,21 @@ export default struct Home {
     Row({ space: SPACE_SMALL }) {
       Row({ space: SPACE_SMALL }) {
         Text(this.isToday() ? $r('app.string.today') : dayjs(this.selectedDate).format('YYYY-MM-DD'))
-          .fontSize(16)
+          .fontSize(this.fs(16))
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.font_1'))
+          .fontColor(this.tk().textPrimary)
         Image($r('app.media.arrow_down'))
           .width(14)
           .objectFit(ImageFit.Contain)
-          .fillColor($r('app.color.font_2'))
+          .fillColor(this.tk().textSecondary)
       }
       .onClick(() => {
         this.showDatePicker();
       })
       Blank()
       Text(this.batchMode ? $r('app.string.cancel') : $r('app.string.batch_manage'))
-        .fontSize(14)
-        .fontColor($r('app.color.green'))
+        .fontSize(this.fs(14))
+        .fontColor(this.tk().primary)
         .onClick(() => {
           this.toggleBatchMode();
         })
@@ -299,9 +309,9 @@ export default struct Home {
       Button(this.selectedIds.length === this.allRecordIds().length ? $r('app.string.cancel_select_all') : $r('app.string.select_all'))
         .layoutWeight(1)
         .height(40)
-        .fontSize(15)
-        .backgroundColor($r('app.color.white'))
-        .fontColor($r('app.color.font_3'))
+        .fontSize(this.fs(15))
+        .backgroundColor(this.tk().surface)
+        .fontColor(this.tk().textPrimary)
         .type(ButtonType.Normal)
         .borderRadius(SPACE_SMALL)
         .onClick(() => {
@@ -310,9 +320,9 @@ export default struct Home {
       Button($r('app.string.batch_delete_count', this.selectedIds.length))
         .layoutWeight(1)
         .height(40)
-        .fontSize(15)
-        .backgroundColor($r('app.color.red'))
-        .fontColor($r('app.color.white'))
+        .fontSize(this.fs(15))
+        .backgroundColor(this.tk().danger)
+        .fontColor(this.tk().surface)
         .type(ButtonType.Normal)
         .borderRadius(SPACE_SMALL)
         .onClick(() => {
@@ -324,21 +334,21 @@ export default struct Home {
   @Builder BalanceBadge() {
     Row({ space: SPACE_TINY }) {
       Text($r('app.string.day_balance_label'))
-        .fontSize(12)
-        .lineHeight(15)
-        .fontColor(this.balance() >= 0 ? $r('app.color.green') : $r('app.color.red'))
+        .fontSize(this.fs(12))
+        .lineHeight(this.fs(15))
+        .fontColor(this.balance() >= 0 ? this.tk().primary : this.tk().danger)
       Text((this.balance() >= 0 ? '+' : '-') + '¥ ' + Math.abs(this.balance()).toFixed(2))
-        .fontSize(12)
-        .lineHeight(15)
+        .fontSize(this.fs(12))
+        .lineHeight(this.fs(15))
         .fontWeight(FontWeight.Medium)
-        .fontColor(this.balance() >= 0 ? $r('app.color.green') : $r('app.color.red'))
+        .fontColor(this.balance() >= 0 ? this.tk().primary : this.tk().danger)
     }.padding({
       left: SPACE_SMALL,
       right: SPACE_SMALL,
       top: SPACE_TINY,
       bottom: SPACE_TINY
     })
-    .backgroundColor(this.balance() >= 0 ? $r('app.color.green_alpha') : $r('app.color.red_alpha'))
+    .backgroundColor(this.balance() >= 0 ? this.tk().primarySoft : this.tk().dangerSoft)
     .borderRadius(RADIUS_BADGE)
   }
 
@@ -346,19 +356,19 @@ export default struct Home {
     Column({ space: SPACE_SMALL }) {
       Row() {
         Text($r('app.string.budget_card_title'))
-          .fontSize(13)
-          .fontColor($r('app.color.font_2'))
+          .fontSize(this.fs(13))
+          .fontColor(this.tk().textSecondary)
         Blank()
         if (this.budgetOver()) {
           Text($r('app.string.budget_over_row_label', this.budgetOverAmount().toFixed(2)))
-            .fontSize(13)
+            .fontSize(this.fs(13))
             .fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.red'))
+            .fontColor(this.tk().danger)
         } else {
           Text($r('app.string.budget_remaining_label', this.budgetRemaining().toFixed(2)))
-            .fontSize(13)
+            .fontSize(this.fs(13))
             .fontWeight(FontWeight.Medium)
-            .fontColor(this.budgetNear() ? $r('app.color.orange') : $r('app.color.green'))
+            .fontColor(this.budgetNear() ? this.tk().warning : this.tk().primary)
         }
       }.width('100%')
       Progress({ value: this.budgetUsagePercent(), total: 100, type: ProgressType.Linear })
@@ -369,26 +379,27 @@ export default struct Home {
       Row() {
         Text($r('app.string.budget_usage_label',
           this.budgetMonthExpenses.toFixed(2), this.budgetLimit.toFixed(2)))
-          .fontSize(12)
-          .fontColor($r('app.color.font_2'))
+          .fontSize(this.fs(12))
+          .fontColor(this.tk().textSecondary)
         Blank()
         Text(this.budgetUsagePercent().toFixed(0) + '%')
-          .fontSize(12)
+          .fontSize(this.fs(12))
           .fontWeight(FontWeight.Medium)
           .fontColor(this.budgetProgressColor())
       }.width('100%')
       if (this.budgetOver()) {
         Text($r('app.string.budget_over_banner', this.budgetOverAmount().toFixed(2)))
           .width('100%')
-          .fontSize(12)
-          .lineHeight(17)
-          .fontColor($r('app.color.red'))
+          .fontSize(this.fs(12))
+          .lineHeight(this.fs(17))
+          .fontColor(this.tk().danger)
       }
     }
     .width('100%')
     .padding(SPACE_MEDIUM)
-    .backgroundColor(this.budgetOver() ? $r('app.color.red_alpha') : $r('app.color.white'))
+    .backgroundColor(this.budgetOver() ? this.tk().dangerSoft : this.tk().surface)
     .borderRadius(RADIUS_CARD)
+    .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
   }
 
   @Builder EmptyView() {
@@ -398,13 +409,13 @@ export default struct Home {
         .objectFit(ImageFit.Contain)
       Column({ space: SPACE_SMALL }) {
         Text($r('app.string.empty_tip'))
-          .fontSize(13)
-          .lineHeight(18)
-          .fontColor($r('app.color.font_2'))
+          .fontSize(this.fs(13))
+          .lineHeight(this.fs(18))
+          .fontColor(this.tk().textSecondary)
         Text($r('app.string.empty_tip_sub'))
-          .fontSize(12)
-          .lineHeight(17)
-          .fontColor($r('app.color.font_2'))
+          .fontSize(this.fs(12))
+          .lineHeight(this.fs(17))
+          .fontColor(this.tk().textSecondary)
           .opacity(0.7)
       }
     }.width('100%')
@@ -415,18 +426,18 @@ export default struct Home {
     Column({ space: SPACE_MEDIUM }) {
       this.DateSelector()
       Text($r('app.string.day_expenses'))
-        .infoFont(12, 15)
+        .infoFont(this.fs(12), this.fs(15))
         .opacity(0.7)
       Text('¥ ' + this.expenses.toFixed(2))
-        .infoFont(36, 44)
+        .infoFont(this.fs(36), this.fs(44))
         .fontWeight(FontWeight.Bold)
       Row({ space: SPACE_MEDIUM }) {
         Row({ space: SPACE_TINY }) {
           Text($r('app.string.day_income_label'))
-            .infoFont(12, 15)
+            .infoFont(this.fs(12), this.fs(15))
             .opacity(0.7)
           Text('¥ ' + this.income.toFixed(2))
-            .infoFont(14, 18)
+            .infoFont(this.fs(14), this.fs(18))
         }.alignItems(VerticalAlign.Center)
         this.BalanceBadge()
       }.alignItems(VerticalAlign.Center)
@@ -460,17 +471,18 @@ export default struct Home {
                     }
                   })
                 })
-              }.divider({ strokeWidth: 1, color: $r('app.color.grey_1') })
+              }.divider({ strokeWidth: 1, color: this.tk().surfaceVariant })
             })
-          }.divider({ strokeWidth: 1, color: $r('app.color.grey_1') })
-          Divider().color($r('app.color.grey_1'))
+          }.divider({ strokeWidth: 1, color: this.tk().surfaceVariant })
+          Divider().color(this.tk().surfaceVariant)
         } else {
           this.EmptyView()
         }
       }.width('100%')
-      .backgroundColor($r('app.color.white'))
+      .backgroundColor(this.tk().surface)
       .layoutWeight(1)
       .borderRadius(RADIUS_CARD)
+      .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
       .padding(SPACE_LARGE)
       if (this.batchMode) {
         this.BatchOperateBar()

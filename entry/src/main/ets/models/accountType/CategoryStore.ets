@@ -30,15 +30,13 @@ export class CategoryIconOption {
 }
 
 /**
- * 分类颜色候选项：key 持久化存储，color 供 UI 展示
+ * 分类颜色候选项：key 持久化存储，展示色运行时经主题解析
  */
 export class CategoryColorOption {
   key: string;
-  color: ResourceStr;
 
-  constructor(key: string, color: ResourceStr) {
+  constructor(key: string) {
     this.key = key;
-    this.color = color;
   }
 }
 
@@ -89,12 +87,12 @@ export const CATEGORY_ICON_OPTIONS: CategoryIconOption[] = [
 ];
 
 export const CATEGORY_COLOR_OPTIONS: CategoryColorOption[] = [
-  new CategoryColorOption('green', $r('app.color.green')),
-  new CategoryColorOption('blue', $r('app.color.blue')),
-  new CategoryColorOption('yellow', $r('app.color.yellow')),
-  new CategoryColorOption('orange', $r('app.color.orange')),
-  new CategoryColorOption('red', $r('app.color.red')),
-  new CategoryColorOption('purple', $r('app.color.purple'))
+  new CategoryColorOption('green'),
+  new CategoryColorOption('blue'),
+  new CategoryColorOption('yellow'),
+  new CategoryColorOption('orange'),
+  new CategoryColorOption('red'),
+  new CategoryColorOption('purple')
 ];
 
 /**
@@ -233,9 +231,9 @@ class CategoryStore {
     return matched ? matched.icon : $r('app.media.other');
   }
 
-  static colorByKey(key: string): ResourceStr {
+  static colorByKey(key: string): string {
     const matched = CATEGORY_COLOR_OPTIONS.find((option: CategoryColorOption): boolean => option.key === key);
-    return matched ? matched.color : $r('app.color.green');
+    return matched ? matched.key : 'green';
   }
 
   // 该收支侧当前可选分类

@@ -13,6 +13,7 @@ import {
   SPACE_SMALL,
   SPACE_LARGE
 } from '../../common/dimens';
+import { ThemeKit, ThemePalette } from '../../common/theme/Theme';
 
 // 数字键盘布局常量
 const KEY_HEIGHT: number = 48;
@@ -23,6 +24,16 @@ const MAX_CATEGORY_ROWS: number = 4;
 
 @Component
 export default struct AccountForm {
+
+  @StorageProp('themeSeq') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
   private accountTypeList: AccountTypeModel[] = [];
   private accountType: AccountType = AccountType.EXPENSES;
   // 编辑模式：由首页经 AddAccount 传入，仅当收支类型匹配本表单时生效
@@ -223,12 +234,12 @@ export default struct AccountForm {
   @Builder KeyButton(label: string) {
     Text(label)
       .fontSize(label === '删' ? 16 : 20)
-      .fontColor($r('app.color.font_3'))
+      .fontColor(this.tk().textPrimary)
       .fontWeight(FontWeight.Medium)
       .textAlign(TextAlign.Center)
       .width('100%')
       .height(KEY_HEIGHT)
-      .backgroundColor($r('app.color.white'))
+      .backgroundColor(this.tk().surface)
       .borderRadius(SPACE_SMALL)
       .onClick(() => {
         this.onKeyPress(label);
@@ -251,7 +262,7 @@ export default struct AccountForm {
     }
     .width('100%')
     .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM, top: SPACE_MEDIUM, bottom: SPACE_MEDIUM })
-    .backgroundColor($r('app.color.bg'))
+    .backgroundColor(this.tk().background)
   }
 
   build() {
@@ -260,12 +271,12 @@ export default struct AccountForm {
         Column() {
           Row() {
             Text($r('app.string.bill_amount'))
-              .fontSize(14)
-              .fontColor($r('app.color.font_3'))
+              .fontSize(this.fs(14))
+              .fontColor(this.tk().textPrimary)
             Text(this.amountText.length ? '¥ ' + this.amountText : '¥ 0.00')
-              .fontSize(24)
+              .fontSize(this.fs(24))
               .fontWeight(FontWeight.Bold)
-              .fontColor(this.amountText.length ? $r('app.color.font_3') : $r('app.color.font_2'))
+              .fontColor(this.amountText.length ? this.tk().textPrimary : this.tk().textSecondary)
               .textAlign(TextAlign.End)
               .layoutWeight(1)
           }.width('100%')
@@ -273,7 +284,7 @@ export default struct AccountForm {
           .onClick(() => {
             this.showKeyboard = !this.showKeyboard;
           })
-          Divider().color($r('app.color.grey_1'))
+          Divider().color(this.tk().surfaceVariant)
             .margin({ top: 14, bottom: 14 })
           Grid() {
             ForEach(this.accountTypeList, (item: AccountTypeModel) => {
@@ -283,16 +294,16 @@ export default struct AccountForm {
                     Image(item.icon)
                       .width(16)
                       .objectFit(ImageFit.Contain)
-                      .fillColor(this.selectType?.id === item.id ? $r('app.color.white') : $r('app.color.font_2'))
+                      .fillColor(this.selectType?.id === item.id ? this.tk().surface : this.tk().textSecondary)
                   }.width(36)
                   .height(36)
                   .borderRadius(18)
                   .alignItems(HorizontalAlign.Center)
                   .justifyContent(FlexAlign.Center)
-                  .backgroundColor(this.selectType?.id === item.id ? item.activeColor : $r('app.color.grey_1'))
-                  Text(item.name).fontSize(12)
-                    .fontColor(this.selectType?.id === item.id ? $r('app.color.font_3') : $r('app.color.font_2'))
-                    .lineHeight(15)
+                  .backgroundColor(this.selectType?.id === item.id ? item.activeColor : this.tk().surfaceVariant)
+                  Text(item.name).fontSize(this.fs(12))
+                    .fontColor(this.selectType?.id === item.id ? this.tk().textPrimary : this.tk().textSecondary)
+                    .lineHeight(this.fs(15))
                 }.onClick(() => {
                   this.selectType = item;
                   this.showKeyboard = false;
@@ -303,7 +314,7 @@ export default struct AccountForm {
           .rowsGap(16)
           .width('100%')
           .height(this.getGridHeight())
-          Divider().color($r('app.color.grey_1'))
+          Divider().color(this.tk().surfaceVariant)
             .margin({ top: 14, bottom: 4 })
           Row({ space: 20 }) {
             Row({ space: 4 }) {
@@ -311,9 +322,9 @@ export default struct AccountForm {
                 .width(14)
                 .objectFit(ImageFit.Contain)
               Text(dayjs(this.selectedDate).format('YYYY-MM-DD'))
-                .fontSize(12)
-                .fontColor($r('app.color.font_3'))
-                .lineHeight(17)
+                .fontSize(this.fs(12))
+                .fontColor(this.tk().textPrimary)
+                .lineHeight(this.fs(17))
             }.onClick(() => {
               this.showDatePicker();
             })
@@ -322,18 +333,18 @@ export default struct AccountForm {
                 .width(14)
                 .objectFit(ImageFit.Contain)
               Text(dayjs(this.payTime).format('HH:mm'))
-                .fontSize(12)
-                .fontColor($r('app.color.font_3'))
-                .lineHeight(17)
+                .fontSize(this.fs(12))
+                .fontColor(this.tk().textPrimary)
+                .lineHeight(this.fs(17))
             }.onClick(() => {
               this.showTimePicker();
             })
             TextInput({ placeholder: $r('app.string.description_placeholder'), text: this.description })
-              .placeholderColor($r('app.color.font_2'))
+              .placeholderColor(this.tk().textSecondary)
               .placeholderFont({ size: 12 })
-              .fontSize(12)
+              .fontSize(this.fs(12))
               .layoutWeight(1)
-              .backgroundColor($r('app.color.white'))
+              .backgroundColor(this.tk().surface)
               .onChange((val: string) => {
                 this.description = val;
               })
@@ -341,17 +352,18 @@ export default struct AccountForm {
                 this.showKeyboard = false;
               })
           }.height(40).padding({ left: 10 })
-          Divider().color($r('app.color.grey_1'))
+          Divider().color(this.tk().surfaceVariant)
             .margin({ top: 4 })
         }.width('100%')
         .padding(SPACE_LARGE)
-        .backgroundColor($r('app.color.white'))
+        .backgroundColor(this.tk().surface)
         .borderRadius(RADIUS_CARD)
+        .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
 
         Row({ space: SPACE_MEDIUM }) {
           Button($r('app.string.save'))
-            .backgroundColor($r('app.color.green'))
-            .fontColor($r('app.color.white'))
+            .backgroundColor(this.tk().primary)
+            .fontColor(this.tk().surface)
             .type(ButtonType.Normal)
             .borderRadius(4)
             .layoutWeight(1)
@@ -359,8 +371,8 @@ export default struct AccountForm {
               this.onSave();
             })
           Button($r('app.string.clear'))
-            .backgroundColor($r('app.color.grey_2'))
-            .fontColor($r('app.color.white'))
+            .backgroundColor(this.tk().outline)
+            .fontColor(this.tk().surface)
             .type(ButtonType.Normal)
             .borderRadius(4)
             .onClick(() => {
