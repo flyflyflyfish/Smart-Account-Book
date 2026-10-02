@@ -17,6 +17,14 @@ export const PREF_CLOUD_CONSENT = 'cloud_consent';
 // 自定义分类配置（JSON：新增的自定义分类 + 被隐藏的默认分类 id）的 Preferences 键
 export const PREF_CATEGORY_CONFIG = 'category_config';
 
+// 月度消费额度：开关 / 金额 / 当月已提醒标记（YYYY-MM）的 Preferences 键
+export const PREF_BUDGET_ENABLED = 'budget_enabled';
+export const PREF_BUDGET_LIMIT = 'budget_limit';
+export const PREF_BUDGET_ALERT_MONTH = 'budget_alert_month';
+
+// 超支系统通知的 requestId
+export const BUDGET_NOTIFICATION_ID: number = 1001;
+
 // 分类名称（纯字符串，按 id 顺序），供识别/分类逻辑使用，避免依赖资源上下文
 export const EXPENSE_CATEGORY_NAMES: string[] = [
   '早午晚餐', '医疗', '交通运输', '住房', '零食烟酒', '学习', '通讯', '社交', '投资支出', '购物', '娱乐', '外借', '其他支出'

@@ -137,6 +137,8 @@ export default struct SettingsView {
             $r('app.string.appearance_desc'), 'pages/Appearance')
           this.MenuRow($r('app.media.shoping'), $r('app.string.category_manage'),
             $r('app.string.category_manage_desc'), 'pages/CategoryManage')
+          this.MenuRow($r('app.media.budget'), $r('app.string.budget_settings'),
+            $r('app.string.budget_settings_desc'), 'pages/BudgetSettings')
           this.MenuRow($r('app.media.stats'), $r('app.string.export_bill'),
             $r('app.string.export_bill_desc'), 'pages/ExportBill')
           this.MenuRow($r('app.media.shield'), $r('app.string.privacy_security'),
