@@ -963,6 +963,90 @@
     {
       "name": "export_preview_close",
       "value": "关闭"
+    },
+    {
+      "name": "category_manage",
+      "value": "分类管理"
+    },
+    {
+      "name": "category_manage_desc",
+      "value": "自定义账单的支出与收入分类"
+    },
+    {
+      "name": "category_add",
+      "value": "添加分类"
+    },
+    {
+      "name": "category_restore",
+      "value": "恢复默认分类"
+    },
+    {
+      "name": "category_default_tag",
+      "value": "默认"
+    },
+    {
+      "name": "category_custom_tag",
+      "value": "自定义"
+    },
+    {
+      "name": "category_add_name_label",
+      "value": "分类名称"
+    },
+    {
+      "name": "category_add_name_placeholder",
+      "value": "最多6个字"
+    },
+    {
+      "name": "category_add_icon_label",
+      "value": "图标"
+    },
+    {
+      "name": "category_add_color_label",
+      "value": "颜色"
+    },
+    {
+      "name": "category_delete_confirm_title",
+      "value": "删除分类"
+    },
+    {
+      "name": "category_delete_confirm_msg",
+      "value": "删除后该分类不再出现在记账选择中，已记录的账单不受影响"
+    },
+    {
+      "name": "category_restore_confirm_title",
+      "value": "恢复默认"
+    },
+    {
+      "name": "category_restore_confirm_msg",
+      "value": "将恢复当前收支类型的默认分类，并清除自定义分类，确定吗？"
+    },
+    {
+      "name": "category_name_required",
+      "value": "请输入分类名称"
+    },
+    {
+      "name": "category_name_too_long",
+      "value": "分类名称最多6个字"
+    },
+    {
+      "name": "category_name_duplicated",
+      "value": "已存在同名分类"
+    },
+    {
+      "name": "category_delete_last",
+      "value": "至少保留一个分类"
+    },
+    {
+      "name": "category_add_success",
+      "value": "添加成功"
+    },
+    {
+      "name": "category_delete_success",
+      "value": "已删除该分类"
+    },
+    {
+      "name": "category_restore_success",
+      "value": "已恢复默认分类"
     }
   ]
 }

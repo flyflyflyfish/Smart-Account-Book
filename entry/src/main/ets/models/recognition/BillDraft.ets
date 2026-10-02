@@ -43,13 +43,12 @@ export class BillDraft {
     return draft;
   }
 
-  // 分类名映射到注册表，映射不到时回退该收支侧的最后一项“其他”
+  // 分类名映射到注册表，映射不到时回退该收支侧的“其他”
   static matchCategory(name: string, accountType: AccountType): AccountTypeModel | undefined {
     const matched = CategoryRegistry.getByName(name, accountType);
     if (matched) {
       return matched;
     }
-    const list = CategoryRegistry.list(accountType);
-    return list[list.length - 1];
+    return CategoryRegistry.getOther(accountType);
   }
 }

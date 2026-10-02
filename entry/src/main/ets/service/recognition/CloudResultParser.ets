@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import { AccountType } from '../../models/account/account';
 import { RecognitionResult } from '../../models/recognition/RecognitionResult';
 import { LlmBillRaw } from '../../models/recognition/CloudLlmModels';
-import { EXPENSE_CATEGORY_NAMES, INCOME_CATEGORY_NAMES } from '../../common/constants';
+import CategoryStore from '../../models/accountType/CategoryStore';
 
 // 云端返回内容无法解析为账单数组时的错误标记，由调用方转成资源字符串
 const BAD_RESULT_ERROR: string = 'cloud_bad_result';
@@ -58,13 +58,13 @@ export class CloudResultParser {
     return result;
   }
 
-  // 分类名不在已有列表时回退为该收支侧的“其他”
+  // 分类名不在当前可选列表时回退为该收支侧的“其他”
   normalizeCategory(name: string, accountType: AccountType): string {
-    const names = accountType === AccountType.EXPENSES ? EXPENSE_CATEGORY_NAMES : INCOME_CATEGORY_NAMES;
+    const names = CategoryStore.listNames(accountType);
     if (names.indexOf(name) >= 0) {
       return name;
     }
-    return names[names.length - 1];
+    return CategoryStore.otherName(accountType);
   }
 
   // 时间缺失或格式非法时用当前时间兜底

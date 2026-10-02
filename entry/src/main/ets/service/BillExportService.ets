@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import util from '@ohos.util';
 import { AccountType } from '../models/account/account';
 import AccountPO from '../models/account/accountPO';
-import { EXPENSE_CATEGORY_NAMES, INCOME_CATEGORY_NAMES } from '../common/constants';
+import CategoryStore from '../models/accountType/CategoryStore';
 
 const WEEK_CN: string[] = ['日', '一', '二', '三', '四', '五', '六'];
 
@@ -69,10 +69,9 @@ interface ZipEntry {
  * - Web 模式：供隐藏 Web 组件加载后交给 Print Kit 生成 PDF。
  */
 class BillExportService {
-  // 分类名：纯字符串映射，避免依赖资源上下文
+  // 分类名：经分类存储解析，支持用户自定义分类
   private categoryName(type: number, accountType: number): string {
-    const names = accountType === AccountType.EXPENSES ? EXPENSE_CATEGORY_NAMES : INCOME_CATEGORY_NAMES;
-    return names[type] ?? '其他';
+    return CategoryStore.nameText(type, accountType);
   }
 
   // HTML 转义，防止备注/商家中的特殊字符破坏文档结构
