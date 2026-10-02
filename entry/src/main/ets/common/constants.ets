@@ -44,6 +44,16 @@ export const INCOME_CATEGORY_NAMES: string[] = [
 export const WARN_AMOUNT_INVALID: string = '识别金额无效，请手动填写金额';
 export const WARN_PAYTIME_INVALID: string = '支付时间未识别，已使用当前时间';
 
+// 小组件：已添加卡片 formId 列表（逗号分隔）与单卡尺寸的 Preferences 键
+export const PREF_FORM_IDS = 'widget_form_ids';
+export const FORM_DIM_PREFIX = 'form_dim_';
+
+// 显示与外观：主题 / 深浅色模式 / 字号缩放 / 光感（阴影浓度）的 Preferences 键
+export const PREF_THEME_ID = 'theme_id';
+export const PREF_COLOR_MODE = 'theme_color_mode';
+export const PREF_FONT_SCALE = 'theme_font_scale';
+export const PREF_GLOW_LEVEL = 'theme_glow_level';
+
 // 云数据库存储区名称与 schema 文件名，需与 AGC 控制台配置保持一致
 export const CLOUD_ZONE_NAME: string = 'AccountZone';
 export const CLOUD_SCHEMA_FILE: string = 'schema.json';

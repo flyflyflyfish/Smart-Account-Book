@@ -6,12 +6,24 @@ import { Toast } from '../components/ToastDialog';
 import { Logger } from '../utils/Logger';
 import BreakpointConstants from '../common/breakpoint';
 import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_TINY, SPACE_XLARGE } from '../common/dimens';
+import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
 const REPLY_DISPLAY_MAX: number = 50;
 
 @Entry
 @Component
 struct ModelSettings {
+
+  @StorageProp('themeSeq') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
+
   @State baseUrl: string = '';
   @State apiKey: string = '';
   @State model: string = '';
@@ -87,7 +99,7 @@ struct ModelSettings {
       },
       secondaryButton: {
         value: $r('app.string.clear_config'),
-        fontColor: $r('app.color.red'),
+        fontColor: this.tk().danger,
         action: () => {
           this.clearConfig();
         }
@@ -142,8 +154,8 @@ struct ModelSettings {
   @Builder SectionTitle(label: ResourceStr) {
     Text(label)
       .width('100%')
-      .fontSize(14)
-      .fontColor($r('app.color.font_3'))
+      .fontSize(this.fs(14))
+      .fontColor(this.tk().textPrimary)
       .margin({ bottom: SPACE_SMALL })
   }
 
@@ -152,14 +164,14 @@ struct ModelSettings {
     Row() {
       Text(label)
         .width(72)
-        .fontSize(14)
-        .fontColor($r('app.color.font_3'))
+        .fontSize(this.fs(14))
+        .fontColor(this.tk().textPrimary)
       TextInput({ text: value, placeholder: placeholder })
         .type(isPassword ? InputType.Password : InputType.Normal)
-        .fontSize(14)
-        .fontColor($r('app.color.font_3'))
+        .fontSize(this.fs(14))
+        .fontColor(this.tk().textPrimary)
         .layoutWeight(1)
-        .backgroundColor($r('app.color.white'))
+        .backgroundColor(this.tk().surface)
         .onChange(onValueChange)
     }.width('100%').height(44)
   }
@@ -168,11 +180,11 @@ struct ModelSettings {
     Row() {
       Text(label)
         .width(72)
-        .fontSize(14)
-        .fontColor($r('app.color.font_2'))
+        .fontSize(this.fs(14))
+        .fontColor(this.tk().textSecondary)
       Text(value)
-        .fontSize(14)
-        .fontColor($r('app.color.font_3'))
+        .fontSize(this.fs(14))
+        .fontColor(this.tk().textPrimary)
         .layoutWeight(1)
         .textAlign(TextAlign.End)
         .maxLines(1)
@@ -190,39 +202,40 @@ struct ModelSettings {
             Column({ space: SPACE_TINY }) {
               Row({ space: SPACE_MEDIUM }) {
                 Text($r('app.string.recognizer_ocr'))
-                  .fontSize(15)
+                  .fontSize(this.fs(15))
                   .fontWeight(FontWeight.Medium)
-                  .fontColor($r('app.color.font_3'))
+                  .fontColor(this.tk().textPrimary)
                 Blank()
                 Toggle({ type: ToggleType.Switch, isOn: $$this.ocrEnabled })
               }.width('100%')
               Text($r('app.string.ocr_hint'))
                 .width('100%')
-                .fontSize(12)
-                .lineHeight(17)
-                .fontColor($r('app.color.font_2'))
+                .fontSize(this.fs(12))
+                .lineHeight(this.fs(17))
+                .fontColor(this.tk().textSecondary)
             }.width('100%')
-            Divider().color($r('app.color.grey_1'))
+            Divider().color(this.tk().surfaceVariant)
             Column({ space: SPACE_TINY }) {
               Row({ space: SPACE_MEDIUM }) {
                 Text($r('app.string.recognizer_cloud'))
-                  .fontSize(15)
+                  .fontSize(this.fs(15))
                   .fontWeight(FontWeight.Medium)
-                  .fontColor($r('app.color.font_3'))
+                  .fontColor(this.tk().textPrimary)
                 Blank()
                 Toggle({ type: ToggleType.Switch, isOn: $$this.cloudEnabled })
               }.width('100%')
               Text($r('app.string.cloud_hint'))
                 .width('100%')
-                .fontSize(12)
-                .lineHeight(17)
-                .fontColor($r('app.color.font_2'))
+                .fontSize(this.fs(12))
+                .lineHeight(this.fs(17))
+                .fontColor(this.tk().textSecondary)
             }.width('100%')
           }
           .width('100%')
           .padding(SPACE_LARGE)
-          .backgroundColor($r('app.color.white'))
+          .backgroundColor(this.tk().surface)
           .borderRadius(RADIUS_CARD)
+          .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
 
           if (this.cloudEnabled) {
             Column() {
@@ -231,12 +244,12 @@ struct ModelSettings {
                 (value: string) => {
                   this.baseUrl = value;
                 })
-              Divider().color($r('app.color.grey_1'))
+              Divider().color(this.tk().surfaceVariant)
               this.FormRow($r('app.string.api_key_label'), $r('app.string.api_key_placeholder'), this.apiKey, true,
                 (value: string) => {
                   this.apiKey = value;
                 })
-              Divider().color($r('app.color.grey_1'))
+              Divider().color(this.tk().surfaceVariant)
               this.FormRow($r('app.string.model_label'), $r('app.string.model_placeholder'), this.model, false,
                 (value: string) => {
                   this.model = value;
@@ -244,8 +257,9 @@ struct ModelSettings {
             }
             .width('100%')
             .padding(SPACE_LARGE)
-            .backgroundColor($r('app.color.white'))
+            .backgroundColor(this.tk().surface)
             .borderRadius(RADIUS_CARD)
+            .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
 
             Column({ space: SPACE_SMALL }) {
               this.SectionTitle($r('app.string.saved_config_title'))
@@ -256,12 +270,12 @@ struct ModelSettings {
                 Button($r('app.string.clear_config'))
                   .width('100%')
                   .height(36)
-                  .fontSize(14)
-                  .fontColor($r('app.color.red'))
-                  .backgroundColor($r('app.color.white'))
+                  .fontSize(this.fs(14))
+                  .fontColor(this.tk().danger)
+                  .backgroundColor(this.tk().surface)
                   .type(ButtonType.Normal)
                   .borderRadius(SPACE_SMALL)
-                  .border({ width: 1, color: $r('app.color.red') })
+                  .border({ width: 1, color: this.tk().danger })
                   .margin({ top: SPACE_SMALL })
                   .onClick(() => {
                     this.confirmClear();
@@ -269,14 +283,15 @@ struct ModelSettings {
               } else {
                 Text($r('app.string.no_saved_config'))
                   .width('100%')
-                  .fontSize(13)
-                  .fontColor($r('app.color.font_2'))
+                  .fontSize(this.fs(13))
+                  .fontColor(this.tk().textSecondary)
               }
             }
             .width('100%')
             .padding(SPACE_LARGE)
-            .backgroundColor($r('app.color.white'))
+            .backgroundColor(this.tk().surface)
             .borderRadius(RADIUS_CARD)
+            .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
 
             Column({ space: SPACE_MEDIUM }) {
               if (this.testing) {
@@ -284,21 +299,21 @@ struct ModelSettings {
                   LoadingProgress()
                     .width(24)
                     .height(24)
-                    .color($r('app.color.green'))
+                    .color(this.tk().primary)
                   Text($r('app.string.testing_connection'))
-                    .fontSize(14)
-                    .fontColor($r('app.color.font_2'))
+                    .fontSize(this.fs(14))
+                    .fontColor(this.tk().textSecondary)
                 }.width('100%').height(44).justifyContent(FlexAlign.Center)
               } else {
                 Button($r('app.string.test_connection'))
                   .width('100%')
                   .height(44)
-                  .fontSize(16)
-                  .backgroundColor($r('app.color.white'))
-                  .fontColor($r('app.color.green'))
+                  .fontSize(this.fs(16))
+                  .backgroundColor(this.tk().surface)
+                  .fontColor(this.tk().primary)
                   .type(ButtonType.Normal)
                   .borderRadius(SPACE_SMALL)
-                  .border({ width: 1, color: $r('app.color.green') })
+                  .border({ width: 1, color: this.tk().primary })
                   .onClick(() => {
                     this.onTestConnection();
                   })
@@ -306,23 +321,24 @@ struct ModelSettings {
               if (this.testResult.length > 0) {
                 Text(this.testResult)
                   .width('100%')
-                  .fontSize(13)
-                  .lineHeight(18)
-                  .fontColor(this.testSuccess ? $r('app.color.green') : $r('app.color.red'))
+                  .fontSize(this.fs(13))
+                  .lineHeight(this.fs(18))
+                  .fontColor(this.testSuccess ? this.tk().primary : this.tk().danger)
               }
             }
             .width('100%')
             .padding(SPACE_LARGE)
-            .backgroundColor($r('app.color.white'))
+            .backgroundColor(this.tk().surface)
             .borderRadius(RADIUS_CARD)
+            .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
           }
 
           Button($r('app.string.save'))
             .width('100%')
             .height(44)
-            .fontSize(16)
-            .backgroundColor($r('app.color.green'))
-            .fontColor($r('app.color.white'))
+            .fontSize(this.fs(16))
+            .backgroundColor(this.tk().primary)
+            .fontColor(this.tk().surface)
             .type(ButtonType.Normal)
             .borderRadius(SPACE_SMALL)
             .onClick(() => {
@@ -338,6 +354,6 @@ struct ModelSettings {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg'))
+    .backgroundColor(this.tk().background)
   }
 }

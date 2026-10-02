@@ -1,11 +1,22 @@
 import { OptionsItem } from '../models/stats/StatsItem';
 import { SPACE_MEDIUM } from '../common/dimens';
+import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
 /**
  * 通用选项网格弹窗：用于年/月等离散选项的快速选择，紧凑美观
  */
 @CustomDialog
 export default struct OptionsGridDialog {
+
+  @StorageProp('themeSeq') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
   controller: CustomDialogController;
   title: string = '';
   options: OptionsItem<number>[] = [];
@@ -25,19 +36,19 @@ export default struct OptionsGridDialog {
       Text(this.title)
         .width('100%')
         .textAlign(TextAlign.Center)
-        .fontSize(16)
+        .fontSize(this.fs(16))
         .fontWeight(FontWeight.Medium)
-        .fontColor($r('app.color.font_3'))
+        .fontColor(this.tk().textPrimary)
       Grid() {
         ForEach(this.options, (item: OptionsItem<number>) => {
           GridItem() {
             Text(item.label)
-              .fontSize(15)
-              .fontColor($r('app.color.font_3'))
+              .fontSize(this.fs(15))
+              .fontColor(this.tk().textPrimary)
               .textAlign(TextAlign.Center)
               .width('100%')
               .height(40)
-              .backgroundColor($r('app.color.grey_1'))
+              .backgroundColor(this.tk().surfaceVariant)
               .borderRadius(10)
               .onClick(() => {
                 if (this.onChange) {
@@ -56,9 +67,9 @@ export default struct OptionsGridDialog {
       Button($r('app.string.cancel'))
         .width('100%')
         .height(40)
-        .fontSize(15)
-        .fontColor($r('app.color.font_2'))
-        .backgroundColor($r('app.color.grey_1'))
+        .fontSize(this.fs(15))
+        .fontColor(this.tk().textSecondary)
+        .backgroundColor(this.tk().surfaceVariant)
         .type(ButtonType.Normal)
         .borderRadius(20)
         .onClick(() => {
@@ -68,6 +79,6 @@ export default struct OptionsGridDialog {
     .width('78%')
     .padding({ left: 20, right: 20, top: 20, bottom: 16 })
     .borderRadius(20)
-    .backgroundColor($r('app.color.white'))
+    .backgroundColor(this.tk().surface)
   }
 }

@@ -3,6 +3,7 @@ import util from '@ohos.util';
 import { AccountType } from '../models/account/account';
 import AccountPO from '../models/account/accountPO';
 import CategoryStore from '../models/accountType/CategoryStore';
+import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
 const WEEK_CN: string[] = ['日', '一', '二', '三', '四', '五', '六'];
 
@@ -254,6 +255,16 @@ class BillExportService {
     return `<div class="card"><div class="day-head">${head}</div><table class="items">${rows}</table></div>`;
   }
 
+  // 导出文档主题色：固定当前主题浅色套，保证打印/文档可读性
+  private docTheme(): ThemePalette {
+    return ThemeKit.lightPalette();
+  }
+
+  // docx 颜色格式：不带 # 的 RRGGBB
+  private docHex(color: string): string {
+    return color.substring(1);
+  }
+
   private buildWebHtml(records: AccountPO[], startTime: number, endTime: number, options: ExportOptions): string {
     const summary = this.summarize(records);
     const range = `${dayjs(startTime).format('YYYY-MM-DD')} ~ ${dayjs(endTime).format('YYYY-MM-DD')}`;
@@ -300,7 +311,7 @@ class BillExportService {
   * { margin:0; padding:0; box-sizing:border-box; }
   body { background:#FFFFFF; color:#1F2329; font-family:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif; }
   .page { max-width:680px; margin:0 auto; padding:16px; }
-  .header { background:#13C791; background:linear-gradient(135deg,#13C791,#0FA97C); color:#fff; padding:24px 20px; border-radius:16px; }
+  .header { background:${this.docTheme().primary}; background:linear-gradient(135deg,${this.docTheme().primary},${this.docTheme().onPrimaryContainer}); color:#fff; padding:24px 20px; border-radius:16px; }
   .header .brand { font-size:13px; opacity:.88; }
   .header .title { font-size:26px; font-weight:bold; margin-top:8px; }
   .header .range { font-size:13px; margin-top:8px; opacity:.92; }
@@ -308,8 +319,8 @@ class BillExportService {
   table.summary td { background:#fff; border:1px solid #F0F0F0; border-radius:12px; padding:16px 10px; text-align:center; }
   .summary .label { font-size:12px; color:#999; }
   .summary .value { font-size:20px; font-weight:bold; margin-top:8px; }
-  .exp { color:#FF5454; }
-  .inc { color:#13C791; }
+  .exp { color:${this.docTheme().danger}; }
+  .inc { color:${this.docTheme().success}; }
   .bal { color:#1F2329; }
   .card { background:#fff; border:1px solid #F0F0F0; border-radius:16px; padding:14px 18px; margin-top:10px; }
   .section-title { font-size:15px; font-weight:bold; margin:18px 4px 4px; color:#333; }
@@ -320,19 +331,19 @@ class BillExportService {
   table.bar-bg { width:100%; border-collapse:collapse; }
   table.bar-bg td { padding:0; border:none; }
   .bar-bg { background:#F0F0F0; height:6px; border-radius:3px; }
-  .bar-fill { height:6px; border-radius:3px; background:#13C791; }
+  .bar-fill { height:6px; border-radius:3px; background:${this.docTheme().primary}; }
   .day-head { background:#F4F5F7; font-size:13px; color:#333; font-weight:bold; padding:8px 10px; border-radius:8px; }
   table.items { width:100%; border-collapse:collapse; }
   table.items td { padding:10px 6px; border-bottom:1px solid #F0F0F0; font-size:14px; vertical-align:middle; }
   table.items tr:last-child td { border-bottom:none; }
   .item-main { line-height:1.5; }
-  .cat-badge { display:inline-block; padding:2px 8px; border-radius:10px; background:#EAF9F3; color:#0FA97C; font-size:12px; margin-right:8px; }
+  .cat-badge { display:inline-block; padding:2px 8px; border-radius:10px; background:${this.docTheme().primaryContainer}; color:${this.docTheme().onPrimaryContainer}; font-size:12px; margin-right:8px; }
   .desc { color:#1F2329; }
   .merchant { color:#999; font-size:12px; }
   .time { color:#999; font-size:12px; text-align:center; width:52px; }
   .time-wide { width:78px; }
-  .amt-exp { color:#FF5454; font-weight:bold; text-align:right; width:110px; }
-  .amt-inc { color:#13C791; font-weight:bold; text-align:right; width:110px; }
+  .amt-exp { color:${this.docTheme().danger}; font-weight:bold; text-align:right; width:110px; }
+  .amt-inc { color:${this.docTheme().success}; font-weight:bold; text-align:right; width:110px; }
   .empty { color:#999; text-align:center; padding:40px 0; }
   .footer { text-align:center; color:#999; font-size:12px; margin:24px 0 12px; }
 </style>
@@ -355,7 +366,7 @@ class BillExportService {
 
   private wordHeader(range: string, count: number): string {
     return `<table width="100%" cellspacing="0" cellpadding="0"><tr>` +
-      `<td bgcolor="#13C791" style="padding:16pt 18pt;">` +
+      `<td bgcolor="${this.docTheme().primary}" style="padding:16pt 18pt;">` +
       `<div style="font-size:9pt;color:#D8FBF0;">记账助手</div>` +
       `<div style="font-size:19pt;font-weight:bold;color:#FFFFFF;margin-top:2pt;">账单明细</div>` +
       `<div style="font-size:10pt;color:#EAFFF5;margin-top:4pt;">${this.escapeHtml(range)} · 共 ${count} 笔</div>` +
@@ -366,10 +377,10 @@ class BillExportService {
     return `<table width="100%" cellspacing="8" cellpadding="0" style="margin-top:4pt;"><tr>` +
       `<td width="33%" align="center" style="border:1pt solid #E8E8E8;padding:10pt 6pt;">` +
       `<div style="font-size:9pt;color:#999999;">总支出</div>` +
-      `<div style="font-size:14pt;font-weight:bold;color:#E5484D;margin-top:3pt;">¥ ${this.money(summary.expenses)}</div></td>` +
+      `<div style="font-size:14pt;font-weight:bold;color:${this.docTheme().danger};margin-top:3pt;">¥ ${this.money(summary.expenses)}</div></td>` +
       `<td width="33%" align="center" style="border:1pt solid #E8E8E8;padding:10pt 6pt;">` +
       `<div style="font-size:9pt;color:#999999;">总收入</div>` +
-      `<div style="font-size:14pt;font-weight:bold;color:#0FA97C;margin-top:3pt;">¥ ${this.money(summary.income)}</div></td>` +
+      `<div style="font-size:14pt;font-weight:bold;color:${this.docTheme().success};margin-top:3pt;">¥ ${this.money(summary.income)}</div></td>` +
       `<td width="33%" align="center" style="border:1pt solid #E8E8E8;padding:10pt 6pt;">` +
       `<div style="font-size:9pt;color:#999999;">结余</div>` +
       `<div style="font-size:14pt;font-weight:bold;color:#1F2329;margin-top:3pt;">¥ ${this.money(summary.balance)}</div></td>` +
@@ -494,8 +505,8 @@ td { vertical-align:middle; }
 td.cell { padding:5pt 8pt; border-bottom:0.75pt solid #EEEEEE; font-size:10.5pt; }
 td.headcell { padding:5pt 8pt; font-size:9pt; color:#666666; }
 .muted { color:#999999; }
-.exp { color:#E5484D; }
-.inc { color:#0FA97C; }
+.exp { color:${this.docTheme().danger}; }
+.inc { color:${this.docTheme().success}; }
 </style>
 </head>
 <body><div class="WordSection1">${body}</div></body>
@@ -596,8 +607,8 @@ td.headcell { padding:5pt 8pt; font-size:9pt; color:#666666; }
 
   private wSummaryTable(summary: BillSummary): string {
     const rows: string[][] = [[
-      this.wSummaryCell('总支出', `¥ ${this.money(summary.expenses)}`, 'E5484D'),
-      this.wSummaryCell('总收入', `¥ ${this.money(summary.income)}`, '0FA97C'),
+      this.wSummaryCell('总支出', `¥ ${this.money(summary.expenses)}`, this.docHex(this.docTheme().danger)),
+      this.wSummaryCell('总收入', `¥ ${this.money(summary.income)}`, this.docHex(this.docTheme().success)),
       this.wSummaryCell('结余', `¥ ${this.money(summary.balance)}`, '1F2329')
     ]];
     return this.wTable(rows);
@@ -645,7 +656,7 @@ td.headcell { padding:5pt 8pt; font-size:9pt; color:#666666; }
     for (const record of list) {
       const name = this.categoryName(record.type, record.accountType);
       const title = record.description || record.merchant || name;
-      const color = record.accountType === AccountType.EXPENSES ? 'E5484D' : '0FA97C';
+      const color = this.docHex(record.accountType === AccountType.EXPENSES ? this.docTheme().danger : this.docTheme().success);
       const amountText = this.sign(record) + this.money(record.amount);
       rows.push([
         this.wPara(this.wRun(dayjs(this.recordTime(record)).format('MM-DD HH:mm'), { sz: 18, color: '808080' }),
@@ -673,7 +684,7 @@ td.headcell { padding:5pt 8pt; font-size:9pt; color:#666666; }
     const generatedAt = dayjs().format('YYYY-MM-DD HH:mm');
 
     const body: string[] = [];
-    body.push(this.wPara(this.wRun('记账助手 · 账单明细', { bold: true, sz: 36, color: '13C791' }),
+    body.push(this.wPara(this.wRun('记账助手 · 账单明细', { bold: true, sz: 36, color: this.docHex(this.docTheme().primary) }),
       { align: 'center', spacingAfter: 80 }));
     body.push(this.wPara(this.wRun(`${range} · 共 ${summary.count} 笔`, { sz: 20, color: '808080' }),
       { align: 'center', spacingAfter: 200 }));

@@ -21,6 +21,7 @@ import { SOURCE_MANUAL } from '../common/constants';
 import { Toast } from '../components/ToastDialog';
 import { Logger } from '../utils/Logger';
 import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_TINY } from '../common/dimens';
+import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
 const AI_GREETING: string = '你好，我是你的记账助手，可以帮你记一笔，也能分析消费、生成小结。';
 
@@ -60,6 +61,16 @@ interface AiBookResponse {
  */
 @Component
 export default struct AiAssistant {
+
+  @StorageProp('themeSeq') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
   @State chatList: ChatBubble[] = [];
   @State inputText: string = '';
   @State loading: boolean = false;
@@ -538,19 +549,19 @@ export default struct AiAssistant {
       if (bubble.role === 'user') {
         Blank()
         Text(bubble.content)
-          .fontSize(15)
-          .fontColor($r('app.color.white'))
+          .fontSize(this.fs(15))
+          .fontColor(this.tk().surface)
           .textAlign(TextAlign.Start)
-          .backgroundColor($r('app.color.green'))
+          .backgroundColor(this.tk().primary)
           .borderRadius({ topLeft: 14, topRight: 14, bottomLeft: 14, bottomRight: 4 })
           .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM, top: SPACE_SMALL, bottom: SPACE_SMALL })
           .constraintSize({ maxWidth: '80%' })
       } else {
         Text(this.stripMarkdown(bubble.content))
-          .fontSize(15)
-          .fontColor($r('app.color.font_3'))
+          .fontSize(this.fs(15))
+          .fontColor(this.tk().textPrimary)
           .textAlign(TextAlign.Start)
-          .backgroundColor($r('app.color.white'))
+          .backgroundColor(this.tk().surface)
           .borderRadius({ topLeft: 14, topRight: 14, bottomLeft: 4, bottomRight: 14 })
           .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM, top: SPACE_SMALL, bottom: SPACE_SMALL })
           .constraintSize({ maxWidth: '80%' })
@@ -565,15 +576,15 @@ export default struct AiAssistant {
       Row({ space: SPACE_SMALL }) {
         Text($r('app.string.amount_label'))
           .width(56)
-          .fontSize(14)
-          .fontColor($r('app.color.font_2'))
+          .fontSize(this.fs(14))
+          .fontColor(this.tk().textSecondary)
         TextInput({ text: this.editAmountText, placeholder: $r('app.string.amount_placeholder') })
           .type(InputType.NUMBER_DECIMAL)
-          .fontSize(15)
-          .fontColor($r('app.color.font_3'))
+          .fontSize(this.fs(15))
+          .fontColor(this.tk().textPrimary)
           .textAlign(TextAlign.End)
           .layoutWeight(1)
-          .backgroundColor($r('app.color.white'))
+          .backgroundColor(this.tk().surface)
           .onChange((value: string) => {
             this.editAmountText = value;
           })
@@ -582,14 +593,14 @@ export default struct AiAssistant {
       Row({ space: SPACE_SMALL }) {
         Text($r('app.string.merchant_label'))
           .width(56)
-          .fontSize(14)
-          .fontColor($r('app.color.font_2'))
+          .fontSize(this.fs(14))
+          .fontColor(this.tk().textSecondary)
         TextInput({ text: this.editMerchant, placeholder: $r('app.string.merchant_placeholder') })
-          .fontSize(15)
-          .fontColor($r('app.color.font_3'))
+          .fontSize(this.fs(15))
+          .fontColor(this.tk().textPrimary)
           .textAlign(TextAlign.End)
           .layoutWeight(1)
-          .backgroundColor($r('app.color.white'))
+          .backgroundColor(this.tk().surface)
           .onChange((value: string) => {
             this.editMerchant = value;
           })
@@ -599,9 +610,9 @@ export default struct AiAssistant {
         Button($r('app.string.expenditure'))
           .layoutWeight(1)
           .height(36)
-          .fontSize(14)
-          .fontColor(this.editAccountType === AccountType.EXPENSES ? $r('app.color.white') : $r('app.color.font_2'))
-          .backgroundColor(this.editAccountType === AccountType.EXPENSES ? $r('app.color.green') : $r('app.color.grey_1'))
+          .fontSize(this.fs(14))
+          .fontColor(this.editAccountType === AccountType.EXPENSES ? this.tk().surface : this.tk().textSecondary)
+          .backgroundColor(this.editAccountType === AccountType.EXPENSES ? this.tk().primary : this.tk().surfaceVariant)
           .type(ButtonType.Normal)
           .borderRadius(SPACE_SMALL)
           .onClick(() => {
@@ -611,9 +622,9 @@ export default struct AiAssistant {
         Button($r('app.string.income'))
           .layoutWeight(1)
           .height(36)
-          .fontSize(14)
-          .fontColor(this.editAccountType === AccountType.INCOME ? $r('app.color.white') : $r('app.color.font_2'))
-          .backgroundColor(this.editAccountType === AccountType.INCOME ? $r('app.color.green') : $r('app.color.grey_1'))
+          .fontSize(this.fs(14))
+          .fontColor(this.editAccountType === AccountType.INCOME ? this.tk().surface : this.tk().textSecondary)
+          .backgroundColor(this.editAccountType === AccountType.INCOME ? this.tk().primary : this.tk().surfaceVariant)
           .type(ButtonType.Normal)
           .borderRadius(SPACE_SMALL)
           .onClick(() => {
@@ -630,17 +641,17 @@ export default struct AiAssistant {
                 Image(item.icon)
                   .width(16)
                   .height(16)
-                  .fillColor(this.editCategory?.id === item.id ? $r('app.color.white') : $r('app.color.font_2'))
+                  .fillColor(this.editCategory?.id === item.id ? this.tk().surface : this.tk().textSecondary)
               }
               .width(32)
               .height(32)
               .borderRadius(16)
-              .backgroundColor(this.editCategory?.id === item.id ? item.activeColor : $r('app.color.grey_1'))
+              .backgroundColor(this.editCategory?.id === item.id ? item.activeColor : this.tk().surfaceVariant)
               .justifyContent(FlexAlign.Center)
               .alignItems(HorizontalAlign.Center)
               Text(item.name)
-                .fontSize(11)
-                .fontColor(this.editCategory?.id === item.id ? $r('app.color.font_3') : $r('app.color.font_2'))
+                .fontSize(this.fs(11))
+                .fontColor(this.editCategory?.id === item.id ? this.tk().textPrimary : this.tk().textSecondary)
             }
             .onClick(() => {
               this.editCategory = item;
@@ -656,21 +667,21 @@ export default struct AiAssistant {
 
       Row({ space: SPACE_SMALL }) {
         Text(dayjs(this.editTime).format('YYYY-MM-DD HH:mm'))
-          .fontSize(13)
-          .fontColor($r('app.color.font_3'))
+          .fontSize(this.fs(13))
+          .fontColor(this.tk().textPrimary)
           .onClick(() => {
             this.showEditDatePicker();
           })
         Blank()
         Text($r('app.string.cancel'))
-          .fontSize(13)
-          .fontColor($r('app.color.font_2'))
+          .fontSize(this.fs(13))
+          .fontColor(this.tk().textSecondary)
           .onClick(() => {
             this.cancelEdit();
           })
         Text($r('app.string.finish'))
-          .fontSize(13)
-          .fontColor($r('app.color.green'))
+          .fontSize(this.fs(13))
+          .fontColor(this.tk().primary)
           .onClick(() => {
             this.saveEdit();
           })
@@ -678,7 +689,7 @@ export default struct AiAssistant {
     }
     .width('100%')
     .padding(SPACE_MEDIUM)
-    .backgroundColor($r('app.color.grey_1'))
+    .backgroundColor(this.tk().surfaceVariant)
     .borderRadius(SPACE_SMALL)
     .margin({ top: SPACE_SMALL })
   }
@@ -687,12 +698,12 @@ export default struct AiAssistant {
     Column({ space: SPACE_SMALL }) {
       Row() {
         Text($r('app.string.voice_result_title'))
-          .fontSize(14)
-          .fontColor($r('app.color.font_2'))
+          .fontSize(this.fs(14))
+          .fontColor(this.tk().textSecondary)
         Blank()
         Text($r('app.string.cancel'))
-          .fontSize(13)
-          .fontColor($r('app.color.font_2'))
+          .fontSize(this.fs(13))
+          .fontColor(this.tk().textSecondary)
           .onClick(() => {
             this.cancelBillDrafts();
           })
@@ -705,7 +716,7 @@ export default struct AiAssistant {
               Image(draft.category.icon)
                 .width(20)
                 .height(20)
-                .fillColor($r('app.color.white'))
+                .fillColor(this.tk().surface)
             }
             .width(36)
             .height(36)
@@ -716,13 +727,13 @@ export default struct AiAssistant {
 
             Column({ space: 2 }) {
               Text(draft.category.name)
-                .fontSize(15)
+                .fontSize(this.fs(15))
                 .fontWeight(FontWeight.Medium)
-                .fontColor($r('app.color.font_3'))
+                .fontColor(this.tk().textPrimary)
               if (draft.merchant.length > 0) {
                 Text(draft.merchant)
-                  .fontSize(12)
-                  .fontColor($r('app.color.font_2'))
+                  .fontSize(this.fs(12))
+                  .fontColor(this.tk().textSecondary)
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
               }
@@ -731,20 +742,20 @@ export default struct AiAssistant {
             .layoutWeight(1)
 
             Text((draft.accountType === AccountType.EXPENSES ? '-' : '+') + '¥' + draft.amountText)
-              .fontSize(16)
+              .fontSize(this.fs(16))
               .fontWeight(FontWeight.Medium)
-              .fontColor(draft.accountType === AccountType.EXPENSES ? $r('app.color.font_3') : $r('app.color.green'))
+              .fontColor(draft.accountType === AccountType.EXPENSES ? this.tk().textPrimary : this.tk().primary)
 
             Text($r('app.string.edit'))
-              .fontSize(12)
-              .fontColor($r('app.color.green'))
+              .fontSize(this.fs(12))
+              .fontColor(this.tk().primary)
               .onClick(() => {
                 this.startEdit(index);
               })
 
             Text($r('app.string.delete'))
-              .fontSize(12)
-              .fontColor($r('app.color.red'))
+              .fontSize(this.fs(12))
+              .fontColor(this.tk().danger)
               .onClick(() => {
                 this.removeBillDraft(index);
               })
@@ -759,9 +770,9 @@ export default struct AiAssistant {
       Button($r('app.string.confirm_save'))
         .width('100%')
         .height(40)
-        .fontSize(15)
-        .fontColor($r('app.color.white'))
-        .backgroundColor($r('app.color.green'))
+        .fontSize(this.fs(15))
+        .fontColor(this.tk().surface)
+        .backgroundColor(this.tk().primary)
         .type(ButtonType.Normal)
         .borderRadius(SPACE_SMALL)
         .margin({ top: SPACE_TINY })
@@ -771,8 +782,9 @@ export default struct AiAssistant {
     }
     .width('100%')
     .padding(SPACE_MEDIUM)
-    .backgroundColor($r('app.color.white'))
+    .backgroundColor(this.tk().surface)
     .borderRadius(RADIUS_CARD)
+    .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
     .margin({ left: SPACE_LARGE, right: SPACE_LARGE, bottom: SPACE_SMALL })
   }
 
@@ -780,22 +792,22 @@ export default struct AiAssistant {
     Column() {
       Text($r('app.string.ai_assistant'))
         .width('100%')
-        .fontSize(24)
+        .fontSize(this.fs(24))
         .fontWeight(FontWeight.Bold)
-        .fontColor($r('app.color.font_1'))
+        .fontColor(this.tk().textPrimary)
         .padding({ left: SPACE_LARGE, right: SPACE_LARGE, top: SPACE_LARGE })
 
       if (this.configMissing) {
         Row({ space: SPACE_SMALL }) {
           Text($r('app.string.ai_config_missing'))
-            .fontSize(13)
-            .fontColor($r('app.color.font_2'))
+            .fontSize(this.fs(13))
+            .fontColor(this.tk().textSecondary)
             .layoutWeight(1)
           Button($r('app.string.ai_configure_model'))
             .height(30)
-            .fontSize(13)
-            .fontColor($r('app.color.white'))
-            .backgroundColor($r('app.color.green'))
+            .fontSize(this.fs(13))
+            .fontColor(this.tk().surface)
+            .backgroundColor(this.tk().primary)
             .type(ButtonType.Normal)
             .borderRadius(SPACE_SMALL)
             .onClick(() => {
@@ -804,9 +816,10 @@ export default struct AiAssistant {
         }
         .width('100%')
         .padding(SPACE_MEDIUM)
-        .backgroundColor($r('app.color.white'))
+        .backgroundColor(this.tk().surface)
         .margin({ left: SPACE_LARGE, right: SPACE_LARGE, bottom: SPACE_SMALL })
         .borderRadius(RADIUS_CARD)
+        .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
       }
 
       List({ space: SPACE_SMALL, scroller: this.scroller }) {
@@ -830,12 +843,12 @@ export default struct AiAssistant {
           Image($r('app.media.mic'))
             .width(20)
             .height(20)
-            .fillColor(this.listening ? $r('app.color.white') : $r('app.color.green'))
+            .fillColor(this.listening ? this.tk().surface : this.tk().primary)
         }
         .width(40)
         .height(40)
         .borderRadius(20)
-        .backgroundColor(this.listening ? $r('app.color.red') : $r('app.color.green_alpha'))
+        .backgroundColor(this.listening ? this.tk().danger : this.tk().primarySoft)
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
         .onTouch((event: TouchEvent) => {
@@ -849,19 +862,19 @@ export default struct AiAssistant {
           placeholder: this.listening ? $r('app.string.voice_listening') : $r('app.string.ai_input_hint'),
           text: this.listening ? this.partialText : this.inputText
         })
-          .fontSize(15)
-          .fontColor($r('app.color.font_3'))
+          .fontSize(this.fs(15))
+          .fontColor(this.tk().textPrimary)
           .layoutWeight(1)
-          .backgroundColor($r('app.color.white'))
+          .backgroundColor(this.tk().surface)
           .borderRadius(20)
           .onChange((value: string) => {
             this.inputText = value;
           })
         Button(this.loading ? $r('app.string.ai_thinking') : $r('app.string.ai_send'))
           .height(40)
-          .fontSize(14)
-          .fontColor($r('app.color.white'))
-          .backgroundColor(this.configMissing || this.loading ? $r('app.color.grey_2') : $r('app.color.green'))
+          .fontSize(this.fs(14))
+          .fontColor(this.tk().surface)
+          .backgroundColor(this.configMissing || this.loading ? this.tk().outline : this.tk().primary)
           .type(ButtonType.Normal)
           .borderRadius(20)
           .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM })
@@ -871,10 +884,10 @@ export default struct AiAssistant {
       }
       .width('100%')
       .padding({ left: SPACE_LARGE, right: SPACE_LARGE, top: SPACE_SMALL, bottom: SPACE_LARGE })
-      .backgroundColor($r('app.color.white'))
+      .backgroundColor(this.tk().surface)
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg'))
+    .backgroundColor(this.tk().background)
   }
 }

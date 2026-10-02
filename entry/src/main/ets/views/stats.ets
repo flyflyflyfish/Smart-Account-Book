@@ -10,6 +10,7 @@ import BillStore, { BillChangeListener } from '../common/BillStore';
 import { AccountDetailParams } from '../pages/AccountDetail';
 import { Logger } from '../utils/Logger';
 import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_TINY } from '../common/dimens';
+import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
 @Extend(Text) function fontBasicStyle(size: number, lineHeight: number, color: ResourceStr) {
   .fontSize(size)
@@ -24,6 +25,16 @@ const PIE_INNER_RADIUS: number = 56;
 
 @Component
 export default struct Stats {
+
+  @StorageProp('themeSeq') @Watch('onThemeChanged') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
   @State @Watch('statsAccountData') statsType: StatsType = StatsType.MONTH;
   @State @Watch('statsAccountData') time: number = dayjs().valueOf();
   @State accountType: AccountType = AccountType.EXPENSES;
@@ -87,19 +98,18 @@ export default struct Stats {
     return this.accountType === AccountType.EXPENSES ? this.expenses : this.income;
   }
 
-  // Canvas fillStyle 直接给数值色值可能解析异常，统一转成 #RRGGBB 字符串
-  resolveColor(color: ResourceStr): string {
-    if (typeof color === 'string') {
-      return color;
-    }
-    // 平台色值为 0xAARRGGBB，取低 24 位拼成 Canvas 可识别的 #RRGGBB
-    const colorNum: number = typeof color === 'number'
-      ? color
-      : getContext(this).resourceManager.getColorSync(color);
-    return '#' + (colorNum & 0xFFFFFF).toString(16).padStart(6, '0');
+  // 主题切换后重绘饼图，保证画布色值与当前调色板一致
+  onThemeChanged(): void {
+    this.drawPie();
   }
 
-  // 自绘环形饼图：按分类占比分段，颜色取分类激活色
+  // 图表色阶：按序取主色不同明度，超出档位后循环
+  chartColor(index: number): string {
+    const chart = this.tk().chart;
+    return chart[index % chart.length];
+  }
+
+  // 自绘环形饼图：按分类占比分段，颜色取主色明度阶梯
   drawPie(): void {
     if (!this.pieReady || this.categoryType !== CategoryType.TYPE) {
       return;
@@ -120,11 +130,11 @@ export default struct Stats {
       const ringRadius = (PIE_OUTER_RADIUS + PIE_INNER_RADIUS) / 2;
       ctx.lineWidth = PIE_OUTER_RADIUS - PIE_INNER_RADIUS;
       let startAngle = -Math.PI / 2;
-      list.forEach((item: StatsByType) => {
+      list.forEach((item: StatsByType, index: number) => {
         const endAngle = startAngle + item.amount / total * Math.PI * 2;
         ctx.beginPath();
         ctx.arc(center, center, ringRadius, startAngle, endAngle);
-        ctx.strokeStyle = this.resolveColor(item.info.activeColor);
+        ctx.strokeStyle = this.chartColor(index);
         ctx.stroke();
         startAngle = endAngle;
       });
@@ -159,9 +169,9 @@ export default struct Stats {
     Row() {
       Column({ space: 8 }) {
         Text(this.statsType === StatsType.MONTH ? $r('app.string.month_expense_label') : $r('app.string.year_expense_label'))
-          .fontBasicStyle(12, 14, this.accountType === AccountType.EXPENSES ? $r('app.color.font_1') : $r('app.color.font_2'))
+          .fontBasicStyle(this.fs(12), this.fs(14), this.accountType === AccountType.EXPENSES ? this.tk().textPrimary : this.tk().textSecondary)
         Text('¥ ' + this.expenses.toFixed(2))
-          .fontBasicStyle(24, 30, this.accountType === AccountType.EXPENSES ? $r('app.color.font_1') : $r('app.color.font_2'))
+          .fontBasicStyle(this.fs(24), this.fs(30), this.accountType === AccountType.EXPENSES ? this.tk().textPrimary : this.tk().textSecondary)
       }.layoutWeight(1)
       .onClick(() => {
         this.accountType = AccountType.EXPENSES;
@@ -169,9 +179,9 @@ export default struct Stats {
       })
       Column({ space: 8 }) {
         Text(this.statsType === StatsType.MONTH ? $r('app.string.month_income_label') : $r('app.string.year_income_label'))
-          .fontBasicStyle(12, 14, this.accountType === AccountType.INCOME ? $r('app.color.font_1') : $r('app.color.font_2'))
+          .fontBasicStyle(this.fs(12), this.fs(14), this.accountType === AccountType.INCOME ? this.tk().textPrimary : this.tk().textSecondary)
         Text('¥ ' + this.income.toFixed(2))
-          .fontBasicStyle(24, 30, this.accountType === AccountType.INCOME ? $r('app.color.font_1') : $r('app.color.font_2'))
+          .fontBasicStyle(this.fs(24), this.fs(30), this.accountType === AccountType.INCOME ? this.tk().textPrimary : this.tk().textSecondary)
       }.layoutWeight(1)
       .onClick(() => {
         this.accountType = AccountType.INCOME;
@@ -184,39 +194,39 @@ export default struct Stats {
     Row({ space: 20 }) {
       Column({ space: 2 }) {
         Text(dayjs(item.time).format(this.statsType === StatsType.MONTH ? 'DD日' : 'MM月'))
-          .fontBasicStyle(16, 22, $r('app.color.font_3'))
+          .fontBasicStyle(this.fs(16), this.fs(22), this.tk().textPrimary)
           .fontWeight(500)
         Text(dayjs(item.time).format(this.statsType === StatsType.MONTH ? 'YYYY.MM' : 'YYYY'))
-          .fontBasicStyle(12, 15, $r('app.color.font_2'))
+          .fontBasicStyle(this.fs(12), this.fs(15), this.tk().textSecondary)
       }.alignItems(HorizontalAlign.Start)
       Column({ space: 4 }) {
         Text(this.accountType === AccountType.EXPENSES ? '-' + item.expenses.toFixed(2) : item.income.toFixed(2))
-          .fontBasicStyle(16, 20, $r('app.color.font_3'))
+          .fontBasicStyle(this.fs(16), this.fs(20), this.tk().textPrimary)
           .fontWeight(500)
         Row({ space: 8 }) {
           Text(this.accountType === AccountType.EXPENSES ? $r('app.string.all_expenses') : $r('app.string.all_income'))
-            .fontBasicStyle(12, 15, this.accountType === AccountType.EXPENSES ? $r('app.color.green') : $r('app.color.orange'))
+            .fontBasicStyle(this.fs(12), this.fs(15), this.tk().primary)
           Text(this.accountType === AccountType.EXPENSES ? this.expenses.toFixed(2) : this.income.toFixed(2))
-            .fontBasicStyle(12, 15, $r('app.color.font_2'))
+            .fontBasicStyle(this.fs(12), this.fs(15), this.tk().textSecondary)
         }
       }.alignItems(HorizontalAlign.Start).layoutWeight(1)
       Image($r('app.media.arrow_left'))
         .rotate({ angle: 180 })
         .height(14)
         .objectFit(ImageFit.Contain)
-        .fillColor($r('app.color.font_2'))
+        .fillColor(this.tk().textSecondary)
     }.width('100%')
     .padding({ top: 10, bottom: 10 })
     .onClick(() => this.toAccountDetail(item.time))
   }
 
-  @Builder TypeStatsItem(item: StatsByType) {
+  @Builder TypeStatsItem(item: StatsByType, index: number) {
     Row({ space: 8 }) {
       Column() {
         Image(item.info.icon)
           .height(14)
           .objectFit(ImageFit.Contain)
-          .fillColor($r('app.color.white'))
+          .fillColor(this.tk().surface)
       }.width(30)
       .height(30)
       .backgroundColor(item.info.activeColor)
@@ -226,13 +236,13 @@ export default struct Stats {
       Column({ space: 4 }) {
         Row({ space: 8 }) {
           Text(item.info.name)
-            .fontBasicStyle(16, 22, $r('app.color.font_3'))
+            .fontBasicStyle(this.fs(16), this.fs(22), this.tk().textPrimary)
             .fontWeight(500)
           Text($r('app.string.count_unit', item.count))
-            .fontBasicStyle(12, 15, $r('app.color.font_2'))
+            .fontBasicStyle(this.fs(12), this.fs(15), this.tk().textSecondary)
           Blank()
           Text(item.amount.toFixed(2))
-            .fontBasicStyle(16, 22, $r('app.color.font_3'))
+            .fontBasicStyle(this.fs(16), this.fs(22), this.tk().textPrimary)
             .fontWeight(500)
         }.width('100%')
         Progress({
@@ -240,7 +250,7 @@ export default struct Stats {
           type: ProgressType.Linear,
           total: 100,
         }).width('100%')
-          .color(item.info.activeColor)
+          .color(this.chartColor(index))
           .style({ strokeWidth: 4 })
       }.layoutWeight(1)
     }.width('100%')
@@ -258,12 +268,12 @@ export default struct Stats {
         })
       Column({ space: SPACE_TINY }) {
         Text(this.accountType === AccountType.EXPENSES ? $r('app.string.all_expenses') : $r('app.string.all_income'))
-          .fontSize(12)
-          .fontColor($r('app.color.font_2'))
+          .fontSize(this.fs(12))
+          .fontColor(this.tk().textSecondary)
         Text('¥ ' + this.currentTotal().toFixed(2))
-          .fontSize(16)
+          .fontSize(this.fs(16))
           .fontWeight(FontWeight.Bold)
-          .fontColor($r('app.color.font_3'))
+          .fontColor(this.tk().textPrimary)
       }
     }.width(PIE_SIZE)
     .height(PIE_SIZE)
@@ -285,31 +295,32 @@ export default struct Stats {
         })
         if (this.categoryType === CategoryType.DATE) {
           if (this.currentDateStats().length) {
-            Divider().color($r('app.color.grey_1')).margin({ top: 14 })
+            Divider().color(this.tk().surfaceVariant).margin({ top: 14 })
             List() {
               ForEach(this.currentDateStats(), (item: StatsByDate) => {
                 ListItem() {
                   this.DateStatsItem(item);
                 }
               })
-            }.divider({ color: $r('app.color.grey_1'), strokeWidth: 1 })
+            }.divider({ color: this.tk().surfaceVariant, strokeWidth: 1 })
           }
         } else {
           if (this.currentTypeStats().length) {
             this.PieChart()
-            Divider().color($r('app.color.grey_1')).margin({ top: 14 })
+            Divider().color(this.tk().surfaceVariant).margin({ top: 14 })
             List() {
-              ForEach(this.currentTypeStats(), (item: StatsByType) => {
+              ForEach(this.currentTypeStats(), (item: StatsByType, index: number) => {
                 ListItem() {
-                  this.TypeStatsItem(item)
+                  this.TypeStatsItem(item, index)
                 }
               })
-            }.divider({ color: $r('app.color.grey_1'), strokeWidth: 1 })
+            }.divider({ color: this.tk().surfaceVariant, strokeWidth: 1 })
           }
         }
       }.width('100%')
-      .backgroundColor($r('app.color.white'))
+      .backgroundColor(this.tk().surface)
       .borderRadius(RADIUS_CARD)
+      .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
       .padding(SPACE_LARGE)
         }
         .width('100%')

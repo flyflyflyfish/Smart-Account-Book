@@ -10,6 +10,7 @@ import { Toast } from '../components/ToastDialog';
 import BreakpointConstants from '../common/breakpoint';
 import { Logger } from '../utils/Logger';
 import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_XLARGE } from '../common/dimens';
+import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
 /**
  * 账单详情页路由参数
@@ -23,6 +24,17 @@ export interface AccountDetailParams {
 @Entry
 @Component
 struct AccountDetail {
+
+  @StorageProp('themeSeq') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
+
   @State accountType: number = AccountType.EXPENSES;
   @State accountList: GroupByDate[] = [];
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
@@ -78,7 +90,7 @@ struct AccountDetail {
       },
       secondaryButton: {
         value: $r('app.string.delete'),
-        fontColor: $r('app.color.red'),
+        fontColor: this.tk().danger,
         action: () => {
           this.deleteRecord(record.id);
         }
@@ -103,7 +115,7 @@ struct AccountDetail {
       Button($r('app.string.delete'))
         .type(ButtonType.Normal)
         .padding({ left: 12, right: 12 })
-        .backgroundColor($r('app.color.red'))
+        .backgroundColor(this.tk().danger)
         .onClick(() => {
           this.confirmDelete(record)
         })
@@ -117,9 +129,9 @@ struct AccountDetail {
         .width(100)
         .objectFit(ImageFit.Contain)
       Text($r('app.string.detail_empty_tip'))
-        .fontSize(13)
-        .lineHeight(18)
-        .fontColor($r('app.color.font_2'))
+        .fontSize(this.fs(13))
+        .lineHeight(this.fs(18))
+        .fontColor(this.tk().textSecondary)
     }.width('100%')
     .padding({ top: 60, bottom: 60 })
   }
@@ -143,21 +155,22 @@ struct AccountDetail {
                       this.openEditPage(record);
                     })
                   })
-                }.divider({ strokeWidth: 1, color: $r('app.color.grey_1') })
+                }.divider({ strokeWidth: 1, color: this.tk().surfaceVariant })
               })
-            }.divider({ strokeWidth: 1, color: $r('app.color.grey_1') })
-            Divider().color($r('app.color.grey_1'))
+            }.divider({ strokeWidth: 1, color: this.tk().surfaceVariant })
+            Divider().color(this.tk().surfaceVariant)
           } else {
             this.EmptyView()
           }
         }.width(BreakpointConstants.max_content_size.getValue(this.currentBreakpoint))
-        .backgroundColor($r('app.color.white'))
+        .backgroundColor(this.tk().surface)
         .borderRadius(RADIUS_CARD)
+        .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
         .padding(SPACE_LARGE)
       }.padding({ left: SPACE_XLARGE, right: SPACE_XLARGE })
       .margin({ top: SPACE_LARGE })
     }.width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg'))
+    .backgroundColor(this.tk().background)
   }
 }

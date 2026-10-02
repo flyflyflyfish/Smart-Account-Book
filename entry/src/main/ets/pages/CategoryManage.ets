@@ -11,6 +11,7 @@ import { AccountType } from '../models/account/account';
 import { Toast } from '../components/ToastDialog';
 import BreakpointConstants from '../common/breakpoint';
 import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_TINY, SPACE_XLARGE } from '../common/dimens';
+import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
 /**
  * 分类管理：账单的支出/收入分类支持自定义
@@ -21,6 +22,17 @@ import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_TINY, SPACE_
 @Entry
 @Component
 struct CategoryManage {
+
+  @StorageProp('themeSeq') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
+
   @State currentIndex: number = 0;
   @State expenseList: AccountTypeModel[] = CategoryStore.list(AccountType.EXPENSES);
   @State incomeList: AccountTypeModel[] = CategoryStore.list(AccountType.INCOME);
@@ -97,7 +109,7 @@ struct CategoryManage {
       },
       secondaryButton: {
         value: $r('app.string.delete'),
-        fontColor: $r('app.color.red'),
+        fontColor: this.tk().danger,
         action: () => {
           this.deleteCategory(item);
         }
@@ -128,7 +140,7 @@ struct CategoryManage {
       },
       secondaryButton: {
         value: $r('app.string.confirm'),
-        fontColor: $r('app.color.red'),
+        fontColor: this.tk().danger,
         action: () => {
           CategoryStore.restoreDefaults(this.currentAccountType());
           this.refresh();
@@ -142,16 +154,16 @@ struct CategoryManage {
   @Builder SideTab(name: ResourceStr, index: number) {
     Column() {
       Text(name)
-        .fontSize(15)
+        .fontSize(this.fs(15))
         .fontWeight(FontWeight.Medium)
-        .fontColor(this.currentIndex === index ? $r('app.color.font_1') : $r('app.color.font_2'))
+        .fontColor(this.currentIndex === index ? this.tk().textPrimary : this.tk().textSecondary)
     }
     .layoutWeight(1)
     .height(40)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
     .borderRadius(SPACE_MEDIUM)
-    .backgroundColor(this.currentIndex === index ? $r('app.color.green_alpha') : Color.Transparent)
+    .backgroundColor(this.currentIndex === index ? this.tk().primarySoft : Color.Transparent)
     .onClick(() => {
       this.switchSide(index);
     })
@@ -168,26 +180,26 @@ struct CategoryManage {
       .width(40)
       .height(40)
       .borderRadius(20)
-      .backgroundColor($r('app.color.green_alpha'))
+      .backgroundColor(this.tk().primarySoft)
       .justifyContent(FlexAlign.Center)
       .alignItems(HorizontalAlign.Center)
 
       Text(item.name)
-        .fontSize(16)
+        .fontSize(this.fs(16))
         .fontWeight(FontWeight.Medium)
-        .fontColor($r('app.color.font_3'))
+        .fontColor(this.tk().textPrimary)
         .layoutWeight(1)
 
       Text(CategoryStore.isCustom(item.id) ? $r('app.string.category_custom_tag') : $r('app.string.category_default_tag'))
-        .fontSize(11)
-        .fontColor($r('app.color.font_2'))
+        .fontSize(this.fs(11))
+        .fontColor(this.tk().textSecondary)
         .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-        .backgroundColor($r('app.color.grey_1'))
+        .backgroundColor(this.tk().surfaceVariant)
         .borderRadius(SPACE_SMALL)
 
       Text($r('app.string.delete'))
-        .fontSize(13)
-        .fontColor($r('app.color.red'))
+        .fontSize(this.fs(13))
+        .fontColor(this.tk().danger)
         .padding({ left: SPACE_MEDIUM, right: SPACE_SMALL, top: SPACE_SMALL, bottom: SPACE_SMALL })
         .onClick(() => {
           this.confirmDelete(item);
@@ -195,8 +207,9 @@ struct CategoryManage {
     }
     .width('100%')
     .padding({ left: SPACE_LARGE, right: SPACE_LARGE, top: SPACE_MEDIUM, bottom: SPACE_MEDIUM })
-    .backgroundColor($r('app.color.white'))
+    .backgroundColor(this.tk().surface)
     .borderRadius(RADIUS_CARD)
+    .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
   }
 
   @Builder IconOptionItem(option: CategoryIconOption) {
@@ -204,17 +217,17 @@ struct CategoryManage {
       Image(option.icon)
         .width(22)
         .height(22)
-        .fillColor(this.selectedIconKey === option.key ? $r('app.color.green') : $r('app.color.font_2'))
+        .fillColor(this.selectedIconKey === option.key ? this.tk().primary : this.tk().textSecondary)
     }
     .width(44)
     .height(44)
     .borderRadius(22)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor(this.selectedIconKey === option.key ? $r('app.color.green_alpha') : $r('app.color.grey_1'))
+    .backgroundColor(this.selectedIconKey === option.key ? this.tk().primarySoft : this.tk().surfaceVariant)
     .border({
       width: this.selectedIconKey === option.key ? 2 : 0,
-      color: $r('app.color.green')
+      color: this.tk().primary
     })
     .margin(SPACE_TINY)
     .onClick(() => {
@@ -227,10 +240,10 @@ struct CategoryManage {
       .width(30)
       .height(30)
       .borderRadius(15)
-      .backgroundColor(option.color)
+      .backgroundColor(this.tk().accent(option.key))
       .border({
         width: this.selectedColorKey === option.key ? 3 : 0,
-        color: $r('app.color.font_1')
+        color: this.tk().textPrimary
       })
       .margin(SPACE_TINY)
       .onClick(() => {
@@ -241,18 +254,18 @@ struct CategoryManage {
   @Builder AddSheetBuilder() {
     Column({ space: SPACE_LARGE }) {
       Text($r('app.string.category_add'))
-        .fontSize(17)
+        .fontSize(this.fs(17))
         .fontWeight(FontWeight.Bold)
-        .fontColor($r('app.color.font_1'))
+        .fontColor(this.tk().textPrimary)
 
       Column({ space: SPACE_SMALL }) {
         Text($r('app.string.category_add_name_label'))
-          .fontSize(14)
-          .fontColor($r('app.color.font_2'))
+          .fontSize(this.fs(14))
+          .fontColor(this.tk().textSecondary)
         TextInput({ text: this.newCategoryName, placeholder: $r('app.string.category_add_name_placeholder') })
           .height(44)
-          .fontSize(15)
-          .backgroundColor($r('app.color.grey_1'))
+          .fontSize(this.fs(15))
+          .backgroundColor(this.tk().surfaceVariant)
           .borderRadius(SPACE_MEDIUM)
           .onChange((value: string) => {
             this.newCategoryName = value;
@@ -263,8 +276,8 @@ struct CategoryManage {
 
       Column({ space: SPACE_SMALL }) {
         Text($r('app.string.category_add_icon_label'))
-          .fontSize(14)
-          .fontColor($r('app.color.font_2'))
+          .fontSize(this.fs(14))
+          .fontColor(this.tk().textSecondary)
         Flex({ wrap: FlexWrap.Wrap }) {
           ForEach(CATEGORY_ICON_OPTIONS, (option: CategoryIconOption) => {
             this.IconOptionItem(option)
@@ -277,8 +290,8 @@ struct CategoryManage {
 
       Column({ space: SPACE_SMALL }) {
         Text($r('app.string.category_add_color_label'))
-          .fontSize(14)
-          .fontColor($r('app.color.font_2'))
+          .fontSize(this.fs(14))
+          .fontColor(this.tk().textSecondary)
         Row({ space: SPACE_MEDIUM }) {
           ForEach(CATEGORY_COLOR_OPTIONS, (option: CategoryColorOption) => {
             this.ColorOptionItem(option)
@@ -291,9 +304,9 @@ struct CategoryManage {
       Button($r('app.string.category_add'))
         .width('100%')
         .height(44)
-        .fontSize(15)
-        .fontColor($r('app.color.white'))
-        .backgroundColor($r('app.color.green'))
+        .fontSize(this.fs(15))
+        .fontColor(this.tk().surface)
+        .backgroundColor(this.tk().primary)
         .type(ButtonType.Normal)
         .borderRadius(SPACE_MEDIUM)
         .onClick(() => {
@@ -316,8 +329,9 @@ struct CategoryManage {
         .width('100%')
         .height(44)
         .padding(SPACE_TINY)
-        .backgroundColor($r('app.color.white'))
+        .backgroundColor(this.tk().surface)
         .borderRadius(RADIUS_CARD)
+        .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
         .margin({ top: SPACE_MEDIUM, bottom: SPACE_MEDIUM })
 
         Scroll() {
@@ -337,9 +351,9 @@ struct CategoryManage {
           Button($r('app.string.category_add'))
             .layoutWeight(1)
             .height(44)
-            .fontSize(15)
-            .fontColor($r('app.color.white'))
-            .backgroundColor($r('app.color.green'))
+            .fontSize(this.fs(15))
+            .fontColor(this.tk().surface)
+            .backgroundColor(this.tk().primary)
             .type(ButtonType.Normal)
             .borderRadius(SPACE_MEDIUM)
             .onClick(() => {
@@ -349,12 +363,12 @@ struct CategoryManage {
           Button($r('app.string.category_restore'))
             .layoutWeight(1)
             .height(44)
-            .fontSize(15)
-            .fontColor($r('app.color.font_3'))
-            .backgroundColor($r('app.color.white'))
+            .fontSize(this.fs(15))
+            .fontColor(this.tk().textPrimary)
+            .backgroundColor(this.tk().surface)
             .type(ButtonType.Normal)
             .borderRadius(SPACE_MEDIUM)
-            .border({ width: 1, color: $r('app.color.grey_2') })
+            .border({ width: 1, color: this.tk().outline })
             .onClick(() => {
               this.confirmRestore();
             })
@@ -367,7 +381,7 @@ struct CategoryManage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg'))
+    .backgroundColor(this.tk().background)
     .bindSheet($$this.showAddSheet, this.AddSheetBuilder(), {
       detents: [SheetSize.MEDIUM, SheetSize.LARGE],
       dragBar: true,

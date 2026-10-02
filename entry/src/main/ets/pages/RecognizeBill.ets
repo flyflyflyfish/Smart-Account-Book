@@ -22,6 +22,7 @@ import { Toast } from '../components/ToastDialog';
 import { Logger } from '../utils/Logger';
 import BreakpointConstants from '../common/breakpoint';
 import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_TINY, SPACE_XLARGE } from '../common/dimens';
+import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
 // 识别流程步骤：选图 -> 识别中 -> 结果确认
 const STEP_PICK: number = 0;
@@ -36,6 +37,17 @@ interface RecognizeSourceParam {
 @Entry
 @Component
 struct RecognizeBill {
+
+  @StorageProp('themeSeq') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
+
   @State step: number = STEP_PICK;
   // 批量识别任务（每张图一个）
   @State tasks: ImageTask[] = [];
@@ -121,7 +133,7 @@ struct RecognizeBill {
             },
             secondaryButton: {
               value: $r('app.string.agree'),
-              fontColor: $r('app.color.green'),
+              fontColor: this.tk().primary,
               action: () => {
                 CloudLlmConfigStore.saveCloudConsent(true);
                 resolve(true);
@@ -479,19 +491,19 @@ struct RecognizeBill {
   @Builder PickPanel() {
     Column({ space: SPACE_MEDIUM }) {
       Text($r('app.string.recognize_entry_title'))
-        .fontSize(20)
+        .fontSize(this.fs(20))
         .fontWeight(FontWeight.Medium)
-        .fontColor($r('app.color.font_1'))
+        .fontColor(this.tk().textPrimary)
       Text($r('app.string.pick_tip'))
-        .fontSize(13)
-        .fontColor($r('app.color.font_2'))
+        .fontSize(this.fs(13))
+        .fontColor(this.tk().textSecondary)
         .textAlign(TextAlign.Center)
       Button($r('app.string.pick_from_camera'))
         .width('100%')
         .height(48)
-        .fontSize(16)
-        .backgroundColor($r('app.color.green'))
-        .fontColor($r('app.color.white'))
+        .fontSize(this.fs(16))
+        .backgroundColor(this.tk().primary)
+        .fontColor(this.tk().surface)
         .type(ButtonType.Normal)
         .borderRadius(SPACE_SMALL)
         .margin({ top: SPACE_LARGE })
@@ -501,9 +513,9 @@ struct RecognizeBill {
       Button($r('app.string.pick_from_gallery'))
         .width('100%')
         .height(48)
-        .fontSize(16)
-        .backgroundColor($r('app.color.white'))
-        .fontColor($r('app.color.font_3'))
+        .fontSize(this.fs(16))
+        .backgroundColor(this.tk().surface)
+        .fontColor(this.tk().textPrimary)
         .type(ButtonType.Normal)
         .borderRadius(SPACE_SMALL)
         .onClick(() => {
@@ -522,50 +534,50 @@ struct RecognizeBill {
         LoadingProgress()
           .width(16)
           .height(16)
-          .color($r('app.color.green'))
+          .color(this.tk().primary)
       } else if (task.status === ImageTaskStatus.SUCCESS) {
         Image($r('app.media.success'))
           .width(16)
           .height(16)
-          .fillColor($r('app.color.green'))
+          .fillColor(this.tk().primary)
       } else if (task.status === ImageTaskStatus.FAILED) {
         Image($r('app.media.error'))
           .width(16)
           .height(16)
-          .fillColor($r('app.color.red'))
+          .fillColor(this.tk().danger)
       } else {
         Column()
           .width(8)
           .height(8)
           .borderRadius(4)
-          .backgroundColor($r('app.color.grey_2'))
+          .backgroundColor(this.tk().outline)
       }
       Text($r('app.string.task_index', index + 1))
-        .fontSize(14)
-        .fontColor($r('app.color.font_1'))
+        .fontSize(this.fs(14))
+        .fontColor(this.tk().textPrimary)
         .layoutWeight(1)
       if (task.status === ImageTaskStatus.SUCCESS) {
         Text($r('app.string.task_success_count', task.drafts.length))
-          .fontSize(12)
-          .fontColor($r('app.color.green'))
+          .fontSize(this.fs(12))
+          .fontColor(this.tk().primary)
       } else if (task.status === ImageTaskStatus.FAILED) {
         Text($r('app.string.task_failed'))
-          .fontSize(12)
-          .fontColor($r('app.color.red'))
+          .fontSize(this.fs(12))
+          .fontColor(this.tk().danger)
       }
     }
     .width('100%')
     .height(40)
     .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM })
-    .backgroundColor($r('app.color.white'))
+    .backgroundColor(this.tk().surface)
     .borderRadius(SPACE_SMALL)
   }
 
   @Builder RecognizingPanel() {
     Column({ space: SPACE_MEDIUM }) {
       Text($r('app.string.recognizing'))
-        .fontSize(15)
-        .fontColor($r('app.color.font_1'))
+        .fontSize(this.fs(15))
+        .fontColor(this.tk().textPrimary)
         .margin({ bottom: SPACE_SMALL })
       List({ space: SPACE_SMALL }) {
         ForEach(this.tasks, (task: ImageTask, index: number) => {
@@ -589,55 +601,55 @@ struct RecognizeBill {
         Row() {
           Text($r('app.string.amount_label'))
             .width(64)
-            .fontSize(14)
-            .fontColor($r('app.color.font_3'))
+            .fontSize(this.fs(14))
+            .fontColor(this.tk().textPrimary)
           TextInput({ text: this.amountText, placeholder: $r('app.string.amount_placeholder') })
             .type(InputType.NUMBER_DECIMAL)
-            .fontSize(16)
-            .fontColor($r('app.color.font_3'))
+            .fontSize(this.fs(16))
+            .fontColor(this.tk().textPrimary)
             .textAlign(TextAlign.End)
             .layoutWeight(1)
-            .backgroundColor($r('app.color.white'))
+            .backgroundColor(this.tk().surface)
             .onChange((value: string) => {
               this.amountText = value;
             })
         }.width('100%').height(44)
-        Divider().color($r('app.color.grey_1'))
+        Divider().color(this.tk().surfaceVariant)
         Row() {
           Text($r('app.string.merchant_label'))
             .width(64)
-            .fontSize(14)
-            .fontColor($r('app.color.font_3'))
+            .fontSize(this.fs(14))
+            .fontColor(this.tk().textPrimary)
           TextInput({ text: this.merchant, placeholder: $r('app.string.merchant_placeholder') })
-            .fontSize(16)
-            .fontColor($r('app.color.font_3'))
+            .fontSize(this.fs(16))
+            .fontColor(this.tk().textPrimary)
             .textAlign(TextAlign.End)
             .layoutWeight(1)
-            .backgroundColor($r('app.color.white'))
+            .backgroundColor(this.tk().surface)
             .onChange((value: string) => {
               this.merchant = value;
             })
         }.width('100%').height(44)
-        Divider().color($r('app.color.grey_1'))
+        Divider().color(this.tk().surfaceVariant)
         Row({ space: SPACE_SMALL }) {
           Image($r('app.media.date'))
             .width(14)
             .objectFit(ImageFit.Contain)
           Text(dayjs(this.selectedDate).format('YYYY-MM-DD'))
-            .fontSize(14)
-            .fontColor($r('app.color.font_3'))
+            .fontSize(this.fs(14))
+            .fontColor(this.tk().textPrimary)
         }.width('100%').height(44)
         .onClick(() => {
           this.showDatePicker();
         })
-        Divider().color($r('app.color.grey_1'))
+        Divider().color(this.tk().surfaceVariant)
         Row({ space: SPACE_SMALL }) {
           Image($r('app.media.date'))
             .width(14)
             .objectFit(ImageFit.Contain)
           Text(dayjs(this.payTime).format('HH:mm'))
-            .fontSize(14)
-            .fontColor($r('app.color.font_3'))
+            .fontSize(this.fs(14))
+            .fontColor(this.tk().textPrimary)
         }.width('100%').height(44)
         .onClick(() => {
           this.showTimePicker();
@@ -645,16 +657,17 @@ struct RecognizeBill {
       }
       .width('100%')
       .padding(SPACE_LARGE)
-      .backgroundColor($r('app.color.white'))
+      .backgroundColor(this.tk().surface)
       .borderRadius(RADIUS_CARD)
+      .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
 
       Row({ space: SPACE_MEDIUM }) {
         Button($r('app.string.expenditure'))
           .layoutWeight(1)
           .height(40)
-          .fontSize(15)
-          .fontColor(this.accountType === AccountType.EXPENSES ? $r('app.color.white') : $r('app.color.font_2'))
-          .backgroundColor(this.accountType === AccountType.EXPENSES ? $r('app.color.green') : $r('app.color.white'))
+          .fontSize(this.fs(15))
+          .fontColor(this.accountType === AccountType.EXPENSES ? this.tk().surface : this.tk().textSecondary)
+          .backgroundColor(this.accountType === AccountType.EXPENSES ? this.tk().primary : this.tk().surface)
           .type(ButtonType.Normal)
           .borderRadius(SPACE_SMALL)
           .onClick(() => {
@@ -663,9 +676,9 @@ struct RecognizeBill {
         Button($r('app.string.income'))
           .layoutWeight(1)
           .height(40)
-          .fontSize(15)
-          .fontColor(this.accountType === AccountType.INCOME ? $r('app.color.white') : $r('app.color.font_2'))
-          .backgroundColor(this.accountType === AccountType.INCOME ? $r('app.color.green') : $r('app.color.white'))
+          .fontSize(this.fs(15))
+          .fontColor(this.accountType === AccountType.INCOME ? this.tk().surface : this.tk().textSecondary)
+          .backgroundColor(this.accountType === AccountType.INCOME ? this.tk().primary : this.tk().surface)
           .type(ButtonType.Normal)
           .borderRadius(SPACE_SMALL)
           .onClick(() => {
@@ -683,25 +696,25 @@ struct RecognizeBill {
                     Image(item.icon)
                       .width(16)
                       .objectFit(ImageFit.Contain)
-                      .fillColor(this.selectType?.id === item.id ? $r('app.color.white') : $r('app.color.font_2'))
+                      .fillColor(this.selectType?.id === item.id ? this.tk().surface : this.tk().textSecondary)
                   }.width(36)
                   .height(36)
                   .borderRadius(18)
                   .alignItems(HorizontalAlign.Center)
                   .justifyContent(FlexAlign.Center)
-                  .backgroundColor(this.selectType?.id === item.id ? item.activeColor : $r('app.color.grey_1'))
+                  .backgroundColor(this.selectType?.id === item.id ? item.activeColor : this.tk().surfaceVariant)
                   if (this.selectType?.id === item.id && this.autoClassified) {
                     Text($r('app.string.auto_classified'))
-                      .fontSize(8)
-                      .fontColor($r('app.color.white'))
-                      .backgroundColor($r('app.color.orange'))
+                      .fontSize(this.fs(8))
+                      .fontColor(this.tk().surface)
+                      .backgroundColor(this.tk().warning)
                       .borderRadius(4)
                       .padding({ left: 2, right: 2, top: 1, bottom: 1 })
                   }
                 }.width(36).height(36)
-                Text(item.name).fontSize(12)
-                  .fontColor(this.selectType?.id === item.id ? $r('app.color.font_3') : $r('app.color.font_2'))
-                  .lineHeight(15)
+                Text(item.name).fontSize(this.fs(12))
+                  .fontColor(this.selectType?.id === item.id ? this.tk().textPrimary : this.tk().textSecondary)
+                  .lineHeight(this.fs(15))
               }.onClick(() => {
                 this.selectType = item;
                 this.autoClassified = false;
@@ -715,8 +728,9 @@ struct RecognizeBill {
       }
       .width('100%')
       .padding(SPACE_LARGE)
-      .backgroundColor($r('app.color.white'))
+      .backgroundColor(this.tk().surface)
       .borderRadius(RADIUS_CARD)
+      .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
     }
     .width('100%')
     .margin({ top: SPACE_MEDIUM })
@@ -734,22 +748,22 @@ struct RecognizeBill {
         Column({ space: SPACE_TINY }) {
           Row({ space: SPACE_SMALL }) {
             Text(draft.amountText ? '¥' + draft.amountText : $r('app.string.amount_placeholder'))
-              .fontSize(15)
+              .fontSize(this.fs(15))
               .fontWeight(FontWeight.Medium)
-              .fontColor($r('app.color.font_3'))
+              .fontColor(this.tk().textPrimary)
             Text(draft.merchant)
-              .fontSize(13)
-              .fontColor($r('app.color.font_2'))
+              .fontSize(this.fs(13))
+              .fontColor(this.tk().textSecondary)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
           Row({ space: SPACE_SMALL }) {
             Text(draft.selectType?.name ?? '')
-              .fontSize(12)
-              .fontColor($r('app.color.font_2'))
+              .fontSize(this.fs(12))
+              .fontColor(this.tk().textSecondary)
             Text(dayjs(draft.payTime).format('YYYY-MM-DD HH:mm'))
-              .fontSize(12)
-              .fontColor($r('app.color.font_2'))
+              .fontSize(this.fs(12))
+              .fontColor(this.tk().textSecondary)
           }
         }.alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
@@ -757,8 +771,8 @@ struct RecognizeBill {
           this.toggleExpand(index);
         })
         Text($r('app.string.delete'))
-          .fontSize(13)
-          .fontColor($r('app.color.red'))
+          .fontSize(this.fs(13))
+          .fontColor(this.tk().danger)
           .onClick(() => {
             this.deleteDraft(index);
           })
@@ -767,8 +781,8 @@ struct RecognizeBill {
 
       if (draft.duplicated) {
         Text($r('app.string.duplicated_tip'))
-          .fontSize(11)
-          .fontColor($r('app.color.orange'))
+          .fontSize(this.fs(11))
+          .fontColor(this.tk().warning)
           .width('100%')
           .padding({ left: SPACE_MEDIUM, bottom: SPACE_TINY })
       }
@@ -778,23 +792,24 @@ struct RecognizeBill {
       }
     }
     .width('100%')
-    .backgroundColor(draft.duplicated ? $r('app.color.red_alpha') : $r('app.color.white'))
+    .backgroundColor(draft.duplicated ? this.tk().dangerSoft : this.tk().surface)
     .borderRadius(RADIUS_CARD)
+    .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
   }
 
   @Builder ConfirmPanel() {
     Column({ space: SPACE_MEDIUM }) {
       Row({ space: SPACE_MEDIUM }) {
         Text($r('app.string.recognize_confirm_title'))
-          .fontSize(18)
+          .fontSize(this.fs(18))
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('app.color.font_1'))
+          .fontColor(this.tk().textPrimary)
           .layoutWeight(1)
         Button($r('app.string.import_selected'))
           .height(40)
-          .fontSize(15)
-          .backgroundColor($r('app.color.green'))
-          .fontColor($r('app.color.white'))
+          .fontSize(this.fs(15))
+          .backgroundColor(this.tk().primary)
+          .fontColor(this.tk().surface)
           .type(ButtonType.Normal)
           .borderRadius(SPACE_SMALL)
           .onClick(() => {
@@ -809,23 +824,23 @@ struct RecognizeBill {
             Image($r('app.media.error'))
               .width(14)
               .height(14)
-              .fillColor($r('app.color.red'))
+              .fillColor(this.tk().danger)
             Text(task.error)
-              .fontSize(12)
-              .fontColor($r('app.color.red'))
+              .fontSize(this.fs(12))
+              .fontColor(this.tk().danger)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
               .layoutWeight(1)
             Text($r('app.string.retry'))
-              .fontSize(13)
-              .fontColor($r('app.color.green'))
+              .fontSize(this.fs(13))
+              .fontColor(this.tk().primary)
               .onClick(() => {
                 this.retryTask(index);
               })
           }.width('100%')
           .height(40)
           .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM })
-          .backgroundColor($r('app.color.white'))
+          .backgroundColor(this.tk().surface)
           .borderRadius(SPACE_SMALL)
         }
       }, (task: ImageTask, index: number) => 'failed_' + index)
@@ -859,6 +874,6 @@ struct RecognizeBill {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg'))
+    .backgroundColor(this.tk().background)
   }
 }

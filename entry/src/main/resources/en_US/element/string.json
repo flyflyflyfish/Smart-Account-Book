@@ -77,6 +77,10 @@
       "value": "Where did my money go? Record it now."
     },
     {
+      "name": "empty_tip_sub",
+      "value": "Tap the + button below to add one"
+    },
+    {
       "name": "diet",
       "value": "Meals"
     },
@@ -919,6 +923,158 @@
     {
       "name": "recurring_notif_additional",
       "value": "Open the app to see bill details"
+    },
+    {
+      "name": "appearance_title",
+      "value": "Display & Appearance"
+    },
+    {
+      "name": "appearance_tab_theme",
+      "value": "Theme"
+    },
+    {
+      "name": "appearance_tab_font",
+      "value": "Typography"
+    },
+    {
+      "name": "appearance_tab_motion",
+      "value": "Motion"
+    },
+    {
+      "name": "appearance_tab_glow",
+      "value": "Glow"
+    },
+    {
+      "name": "appearance_mode_system",
+      "value": "System"
+    },
+    {
+      "name": "appearance_mode_light",
+      "value": "Light"
+    },
+    {
+      "name": "appearance_mode_dark",
+      "value": "Dark"
+    },
+    {
+      "name": "appearance_theme_section",
+      "value": "Accent color"
+    },
+    {
+      "name": "theme_name_pine",
+      "value": "Pine Mist"
+    },
+    {
+      "name": "theme_desc_pine",
+      "value": "Muted · Fresh and natural"
+    },
+    {
+      "name": "theme_name_claude",
+      "value": "Warm Brown"
+    },
+    {
+      "name": "theme_desc_claude",
+      "value": "Gentle · Calm and cozy"
+    },
+    {
+      "name": "theme_name_sky",
+      "value": "Clear Blue"
+    },
+    {
+      "name": "theme_desc_sky",
+      "value": "Bright · Clean and airy"
+    },
+    {
+      "name": "theme_name_violet",
+      "value": "Misty Violet"
+    },
+    {
+      "name": "theme_desc_violet",
+      "value": "Soft · Quiet and elegant"
+    },
+    {
+      "name": "theme_name_notion",
+      "value": "Minimal Gray"
+    },
+    {
+      "name": "theme_desc_notion",
+      "value": "Minimal · Black and white"
+    },
+    {
+      "name": "theme_name_stone",
+      "value": "Obsidian"
+    },
+    {
+      "name": "theme_desc_stone",
+      "value": "Pure Black · Sharp"
+    },
+    {
+      "name": "appearance_theme_custom",
+      "value": "Custom"
+    },
+    {
+      "name": "appearance_theme_custom_desc",
+      "value": "Build your own palette"
+    },
+    {
+      "name": "appearance_theme_custom_toast",
+      "value": "Custom themes are coming soon"
+    },
+    {
+      "name": "appearance_font_section",
+      "value": "Font size"
+    },
+    {
+      "name": "appearance_font_small",
+      "value": "Small"
+    },
+    {
+      "name": "appearance_font_default",
+      "value": "Default"
+    },
+    {
+      "name": "appearance_font_large",
+      "value": "Large"
+    },
+    {
+      "name": "appearance_font_xlarge",
+      "value": "Extra large"
+    },
+    {
+      "name": "appearance_font_preview_label",
+      "value": "Preview"
+    },
+    {
+      "name": "appearance_font_preview_text",
+      "value": "Bill and stats text scales with this setting"
+    },
+    {
+      "name": "appearance_font_preview_amount",
+      "value": "Total expenses"
+    },
+    {
+      "name": "appearance_motion_placeholder",
+      "value": "Motion settings are coming soon — page transitions and list animations"
+    },
+    {
+      "name": "appearance_glow_placeholder",
+      "value": "Adjust the shadow depth of cards and buttons for extra depth"
+    },
+    {
+      "name": "appearance_glow_section",
+      "value": "Shadow Depth"
+    },
+    {
+      "name": "glow_soft",
+      "value": "Soft"
+    },
+    {
+      "name": "glow_standard",
+      "value": "Standard"
+    },
+    {
+      "name": "glow_strong",
+      "value": "Strong"
     }
   ]
 }

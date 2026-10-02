@@ -1,10 +1,21 @@
+import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 @CustomDialog
 export default struct ToastDialog {
+
+  @StorageProp('themeSeq') themeSeq: number = 0;
+
+  tk(): ThemePalette {
+    return ThemeKit.palette(this.themeSeq);
+  }
+
+  fs(base: number): number {
+    return ThemeKit.fontScaled(base, this.themeSeq);
+  }
   controller: CustomDialogController;
   message: ResourceStr = '';
   type: 'error' | 'success' = 'success';
 
-  getTypeImage() {
+  getTypeImage(): Resource {
     switch (this.type) {
       case 'success':
         return $r('app.media.success')
@@ -13,12 +24,12 @@ export default struct ToastDialog {
     }
   }
 
-  getTypeColor() {
+  getTypeColor(): string {
     switch (this.type) {
       case 'success':
-        return $r('app.color.green')
+        return this.tk().primary
       case 'error':
-        return $r('app.color.red')
+        return this.tk().danger
     }
   }
 
@@ -29,15 +40,15 @@ export default struct ToastDialog {
         .height(45)
         .fillColor(this.getTypeColor())
       Text(this.message)
-        .fontSize(15)
-        .lineHeight(21)
-        .fontColor($r('app.color.white'))
+        .fontSize(this.fs(15))
+        .lineHeight(this.fs(21))
+        .fontColor(this.tk().surface)
         .textAlign(TextAlign.Center)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }.width(160)
     .padding(24)
-    .backgroundColor($r('app.color.grey_3'))
+    .backgroundColor(this.tk().toastBg)
     .borderRadius(12)
   }
 }
