@@ -394,6 +394,25 @@ struct RecognizeBill {
     });
   }
 
+  // 时分编辑：24 小时制时间选择弹窗，日期保持不变
+  showTimePicker(): void {
+    this.getUIContext().showTimePickerDialog({
+      selected: new Date(this.payTime),
+      useMilitaryTime: true,
+      onAccept: (value: TimePickerResult) => {
+        if (value.hour === undefined || value.minute === undefined) {
+          return;
+        }
+        this.payTime = dayjs(this.selectedDate)
+          .hour(value.hour)
+          .minute(value.minute)
+          .second(0)
+          .millisecond(0)
+          .valueOf();
+      }
+    });
+  }
+
   // 校验金额：大于 0 且最多两位小数
   validateAmount(): boolean {
     const value = this.amountText;
@@ -610,6 +629,18 @@ struct RecognizeBill {
         }.width('100%').height(44)
         .onClick(() => {
           this.showDatePicker();
+        })
+        Divider().color($r('app.color.grey_1'))
+        Row({ space: SPACE_SMALL }) {
+          Image($r('app.media.date'))
+            .width(14)
+            .objectFit(ImageFit.Contain)
+          Text(dayjs(this.payTime).format('HH:mm'))
+            .fontSize(14)
+            .fontColor($r('app.color.font_3'))
+        }.width('100%').height(44)
+        .onClick(() => {
+          this.showTimePicker();
         })
       }
       .width('100%')

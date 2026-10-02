@@ -112,12 +112,19 @@ export class LocalOcrRecognizer implements Recognizer {
     return '';
   }
 
-  // 时间：匹配 YYYY-MM-DD 或 YYYY年MM月DD日，解析不到用当前时间
+  // 时间：匹配“YYYY年MM月DD日 HH:mm/HH时mm分”，时分缺失时退回仅日期，均无则用当前时间
   private extractPayTime(text: string): number {
-    const pattern = /(\d{4})[年\-\/](\d{1,2})[月\-\/](\d{1,2})/;
+    const pattern = /(\d{4})[年\-\/.](\d{1,2})[月\-\/.](\d{1,2})日?(?:\s*(\d{1,2})[时:：](\d{1,2})分?)?/;
     const match = pattern.exec(text);
     if (match) {
-      const parsed = dayjs(`${match[1]}-${match[2]}-${match[3]}`);
+      const dateText = `${match[1]}-${match[2]}-${match[3]}`;
+      if (match[4] !== undefined && match[5] !== undefined) {
+        const withTime = dayjs(`${dateText} ${match[4]}:${match[5]}`);
+        if (withTime.isValid()) {
+          return withTime.valueOf();
+        }
+      }
+      const parsed = dayjs(dateText);
       if (parsed.isValid()) {
         return parsed.valueOf();
       }
