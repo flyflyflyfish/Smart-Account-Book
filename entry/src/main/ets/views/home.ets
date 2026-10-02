@@ -88,14 +88,20 @@ export default struct Home {
     this.selectedIds = [];
   }
 
-  toggleSelect(id: string): void {
+  // 用 checked 入参做幂等更新，避免"全选"时因 onChange 反复取反导致 AppFreeze
+  toggleSelect(id: string, checked: boolean): void {
     const idx = this.selectedIds.indexOf(id);
-    if (idx >= 0) {
-      this.selectedIds.splice(idx, 1);
+    if (checked) {
+      if (idx < 0) {
+        this.selectedIds.push(id);
+        this.selectedIds = this.selectedIds.slice();
+      }
     } else {
-      this.selectedIds.push(id);
+      if (idx >= 0) {
+        this.selectedIds.splice(idx, 1);
+        this.selectedIds = this.selectedIds.slice();
+      }
     }
-    this.selectedIds = this.selectedIds.slice();
   }
 
   allRecordIds(): string[] {
@@ -334,7 +340,7 @@ export default struct Home {
                         Checkbox()
                           .select(this.selectedIds.indexOf(record.id) >= 0)
                           .onChange((checked: boolean) => {
-                            this.toggleSelect(record.id);
+                            this.toggleSelect(record.id, checked);
                           })
                       }
                       AccountItem({ account: record })
