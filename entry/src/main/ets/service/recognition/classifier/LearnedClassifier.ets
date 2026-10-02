@@ -12,12 +12,13 @@ export class LearnedClassifier implements Classifier {
     this.repository = repository;
   }
 
-  async classify(merchant: string, rawText: string): Promise<number | null> {
+  async classify(merchant: string, rawText: string, accountType?: number): Promise<number | null> {
     if (!merchant) {
       return null;
     }
     const record = await this.repository.queryByMerchant(merchant);
-    if (record) {
+    // 传入 accountType 时要求记忆的收支侧一致，避免支出商家命中收入分类
+    if (record && (accountType === undefined || record.accountType === accountType)) {
       return record.categoryId;
     }
     return null;

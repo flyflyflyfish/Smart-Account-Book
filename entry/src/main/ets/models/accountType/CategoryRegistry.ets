@@ -34,6 +34,20 @@ class CategoryRegistry {
   listNames(accountType: number): string[] {
     return CategoryStore.listNames(accountType);
   }
+
+  /**
+   * 分类 id 对应的纯文本名称（含被隐藏分类），供识别流水线回写分类名使用
+   */
+  nameText(id: number, accountType: number): string {
+    return CategoryStore.nameText(id, accountType);
+  }
+
+  /**
+   * 该收支侧“其他”分类名称，供识别流水线判断模型分类是否为兜底值
+   */
+  otherName(accountType: number): string {
+    return CategoryStore.otherName(accountType);
+  }
 }
 
 export default new CategoryRegistry();
