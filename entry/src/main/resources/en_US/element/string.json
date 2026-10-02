@@ -611,6 +611,154 @@
     {
       "name": "ocr_failed",
       "value": "On-device recognition failed, please retry"
+    },
+    {
+      "name": "export_bill",
+      "value": "Export bills"
+    },
+    {
+      "name": "export_bill_desc",
+      "value": "Export bills as documents by time range"
+    },
+    {
+      "name": "export_bill_title",
+      "value": "Export bills"
+    },
+    {
+      "name": "export_range_label",
+      "value": "Time range"
+    },
+    {
+      "name": "export_range_month",
+      "value": "This month"
+    },
+    {
+      "name": "export_range_last",
+      "value": "Last month"
+    },
+    {
+      "name": "export_range_quarter",
+      "value": "Last 3 months"
+    },
+    {
+      "name": "export_range_year",
+      "value": "This year"
+    },
+    {
+      "name": "export_format_label",
+      "value": "Export format"
+    },
+    {
+      "name": "export_format_word",
+      "value": "Word document"
+    },
+    {
+      "name": "export_format_word_desc",
+      "value": "Save as .docx, openable in Word/WPS"
+    },
+    {
+      "name": "export_format_pdf",
+      "value": "PDF document"
+    },
+    {
+      "name": "export_format_pdf_desc",
+      "value": "Generate a PDF file"
+    },
+    {
+      "name": "export_summary_label",
+      "value": "Bill summary"
+    },
+    {
+      "name": "export_total_expense",
+      "value": "Total expense"
+    },
+    {
+      "name": "export_total_income",
+      "value": "Total income"
+    },
+    {
+      "name": "export_balance",
+      "value": "Balance"
+    },
+    {
+      "name": "export_total_count",
+      "value": "%d records in total"
+    },
+    {
+      "name": "export_do",
+      "value": "Export & save"
+    },
+    {
+      "name": "export_share",
+      "value": "Share bill"
+    },
+    {
+      "name": "export_pdf_hint",
+      "value": "PDF export automatically generates a PDF file"
+    },
+    {
+      "name": "export_empty",
+      "value": "No bills in this period"
+    },
+    {
+      "name": "export_saved",
+      "value": "Bill exported"
+    },
+    {
+      "name": "export_failed",
+      "value": "Export failed, please retry"
+    },
+    {
+      "name": "export_share_failed",
+      "value": "Share failed, please retry"
+    },
+    {
+      "name": "export_content_label",
+      "value": "Export content"
+    },
+    {
+      "name": "export_opt_summary",
+      "value": "Summary"
+    },
+    {
+      "name": "export_opt_summary_desc",
+      "value": "Total expense, income and balance"
+    },
+    {
+      "name": "export_opt_category",
+      "value": "Category stats"
+    },
+    {
+      "name": "export_opt_category_desc",
+      "value": "Amount and share by category"
+    },
+    {
+      "name": "export_opt_detail",
+      "value": "Transaction details"
+    },
+    {
+      "name": "export_opt_detail_desc",
+      "value": "Every single transaction record"
+    },
+    {
+      "name": "export_opt_group",
+      "value": "Group details by day"
+    },
+    {
+      "name": "export_opt_group_desc",
+      "value": "Group by day, or a flat list by time"
+    },
+    {
+      "name": "export_no_content",
+      "value": "Select at least one section to export"
+    },
+    {
+      "name": "export_preview_title",
+      "value": "Bill preview"
+    },
+    {
+      "name": "export_preview_close",
+      "value": "Close"
     }
   ]
 }

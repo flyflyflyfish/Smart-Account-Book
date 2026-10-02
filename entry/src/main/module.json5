@@ -50,8 +50,11 @@
     ],
     "requestPermissions": [
       {
-        // 云端识别需要联网；选图与拍照走系统选择器，无需相册/相机权限
         "name": "ohos.permission.INTERNET"
+      },
+      {
+        // 导出账单 PDF：调用系统打印服务
+        "name": "ohos.permission.PRINT"
       },
       {
         // 语音记账：将语音转成文字

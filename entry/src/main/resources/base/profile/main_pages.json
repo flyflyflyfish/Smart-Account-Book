@@ -7,6 +7,7 @@
     "pages/AccountLogin",
     "pages/ModelSettings",
     "pages/Appearance",
-    "pages/PrivacySecurity"
+    "pages/PrivacySecurity",
+    "pages/ExportBill"
   ]
 }
