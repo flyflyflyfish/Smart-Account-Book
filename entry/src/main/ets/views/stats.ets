@@ -271,10 +271,12 @@ export default struct Stats {
   }
 
   build() {
-    Column({ space: 20 }) {
+    Column() {
       StatsHeader({ type: this.statsType, time: this.time })
-      this.TotalStats()
-      Column() {
+      Scroll() {
+        Column({ space: 20 }) {
+          this.TotalStats()
+          Column() {
         StatsDetailHeader({
           onChange: (type: CategoryType) => {
             this.categoryType = type;
@@ -309,6 +311,12 @@ export default struct Stats {
       .backgroundColor($r('app.color.white'))
       .borderRadius(RADIUS_CARD)
       .padding(SPACE_LARGE)
+        }
+        .width('100%')
+      }
+      .scrollBar(BarState.Off)
+      .align(Alignment.Top)
+      .layoutWeight(1)
     }.width('100%')
     .height('100%')
     .padding({ left: SPACE_LARGE, right: SPACE_LARGE })
