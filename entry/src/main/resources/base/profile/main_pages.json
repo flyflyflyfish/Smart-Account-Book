@@ -10,6 +10,8 @@
     "pages/PrivacySecurity",
     "pages/ExportBill",
     "pages/CategoryManage",
-    "pages/BudgetSettings"
+    "pages/BudgetSettings",
+    "pages/RecurringBillManage",
+    "pages/RecurringBillEdit"
   ]
 }
