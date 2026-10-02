@@ -3,6 +3,7 @@ import router from '@ohos.router';
 import { GroupByDate, ItemRecordInfo } from '../models/account/account';
 import AccountService from '../service/account';
 import StatsService from '../service/stats';
+import BudgetService from '../service/BudgetService';
 import BillStore, { BillChangeListener } from '../common/BillStore';
 import GroupHeader from '../components/GroupHeader';
 import { Toast } from '../components/ToastDialog';
@@ -29,6 +30,10 @@ export default struct Home {
   @State accountList: GroupByDate[] = [];
   @State expenses: number = 0;
   @State income: number = 0;
+  // 月度消费额度状态，账单或额度设置变更后刷新
+  @State budgetEnabled: boolean = false;
+  @State budgetLimit: number = 0;
+  @State budgetMonthExpenses: number = 0;
   // 首页所选日期，默认今天，可切换查看其他日期
   @State selectedDate: number = dayjs().startOf('day').valueOf();
   // 批量删除模式
@@ -49,14 +54,64 @@ export default struct Home {
       const total = StatsService.statsConsume(res);
       this.expenses = total.expenses;
       this.income = total.income;
+      this.refreshBudgetStatus();
     } catch (err) {
       Logger.error('查询当日记录失败', (err as Error).message);
     }
   }
 
+  // 查询本月支出与消费额度使用情况
+  async refreshBudgetStatus(): Promise<void> {
+    try {
+      const status = await BudgetService.loadStatus();
+      this.budgetEnabled = status.enabled;
+      this.budgetLimit = status.limit;
+      this.budgetMonthExpenses = status.monthExpenses;
+    } catch (err) {
+      Logger.error('查询月度消费额度失败', (err as Error).message);
+    }
+  }
+
+  budgetOver(): boolean {
+    return this.budgetEnabled && this.budgetLimit > 0 && this.budgetMonthExpenses > this.budgetLimit;
+  }
+
+  budgetNear(): boolean {
+    if (!this.budgetEnabled || this.budgetLimit <= 0 || this.budgetOver()) {
+      return false;
+    }
+    return this.budgetMonthExpenses / this.budgetLimit >= 0.8;
+  }
+
+  budgetUsagePercent(): number {
+    if (this.budgetLimit <= 0) {
+      return 0;
+    }
+    return Math.min(100, this.budgetMonthExpenses / this.budgetLimit * 100);
+  }
+
+  budgetOverAmount(): number {
+    return this.budgetMonthExpenses - this.budgetLimit;
+  }
+
+  budgetRemaining(): number {
+    return this.budgetLimit - this.budgetMonthExpenses;
+  }
+
+  budgetProgressColor(): ResourceColor {
+    if (this.budgetOver()) {
+      return $r('app.color.red');
+    }
+    if (this.budgetNear()) {
+      return $r('app.color.orange');
+    }
+    return $r('app.color.green');
+  }
+
   aboutToAppear(): void {
     BillStore.subscribe(this.billListener);
     this.queryByDate();
+    this.refreshBudgetStatus();
   }
 
   aboutToDisappear(): void {
@@ -287,6 +342,55 @@ export default struct Home {
     .borderRadius(RADIUS_BADGE)
   }
 
+  @Builder BudgetCard() {
+    Column({ space: SPACE_SMALL }) {
+      Row() {
+        Text($r('app.string.budget_card_title'))
+          .fontSize(13)
+          .fontColor($r('app.color.font_2'))
+        Blank()
+        if (this.budgetOver()) {
+          Text($r('app.string.budget_over_row_label', this.budgetOverAmount().toFixed(2)))
+            .fontSize(13)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.red'))
+        } else {
+          Text($r('app.string.budget_remaining_label', this.budgetRemaining().toFixed(2)))
+            .fontSize(13)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(this.budgetNear() ? $r('app.color.orange') : $r('app.color.green'))
+        }
+      }.width('100%')
+      Progress({ value: this.budgetUsagePercent(), total: 100, type: ProgressType.Linear })
+        .color(this.budgetProgressColor())
+        .height(8)
+        .borderRadius(4)
+        .animation({ duration: 400, curve: Curve.EaseOut })
+      Row() {
+        Text($r('app.string.budget_usage_label',
+          this.budgetMonthExpenses.toFixed(2), this.budgetLimit.toFixed(2)))
+          .fontSize(12)
+          .fontColor($r('app.color.font_2'))
+        Blank()
+        Text(this.budgetUsagePercent().toFixed(0) + '%')
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.budgetProgressColor())
+      }.width('100%')
+      if (this.budgetOver()) {
+        Text($r('app.string.budget_over_banner', this.budgetOverAmount().toFixed(2)))
+          .width('100%')
+          .fontSize(12)
+          .lineHeight(17)
+          .fontColor($r('app.color.red'))
+      }
+    }
+    .width('100%')
+    .padding(SPACE_MEDIUM)
+    .backgroundColor(this.budgetOver() ? $r('app.color.red_alpha') : $r('app.color.white'))
+    .borderRadius(RADIUS_CARD)
+  }
+
   @Builder EmptyView() {
     Column({ space: SPACE_LARGE }) {
       Image($r('app.media.empty'))
@@ -326,6 +430,9 @@ export default struct Home {
         }.alignItems(VerticalAlign.Center)
         this.BalanceBadge()
       }.alignItems(VerticalAlign.Center)
+      if (this.budgetEnabled && this.budgetLimit > 0) {
+        this.BudgetCard()
+      }
       Column() {
         if (this.accountList.length) {
           List() {

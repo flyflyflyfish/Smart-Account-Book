@@ -1047,6 +1047,86 @@
     {
       "name": "category_restore_success",
       "value": "已恢复默认分类"
+    },
+    {
+      "name": "budget_settings",
+      "value": "消费额度"
+    },
+    {
+      "name": "budget_settings_desc",
+      "value": "自定义每月消费额度，超额弹窗提醒"
+    },
+    {
+      "name": "budget_enable_label",
+      "value": "启用月度消费额度"
+    },
+    {
+      "name": "budget_hint",
+      "value": "开启后，本月支出超过额度时会通过弹窗和系统通知提醒你"
+    },
+    {
+      "name": "budget_amount_label",
+      "value": "每月额度"
+    },
+    {
+      "name": "budget_amount_placeholder",
+      "value": "如 3000"
+    },
+    {
+      "name": "budget_amount_invalid",
+      "value": "请输入大于 0 的额度金额，最多两位小数"
+    },
+    {
+      "name": "budget_month_spent_label",
+      "value": "本月已支出"
+    },
+    {
+      "name": "budget_usage_label",
+      "value": "已支出 ¥%s / 额度 ¥%s"
+    },
+    {
+      "name": "budget_remaining_label",
+      "value": "剩余 ¥%s"
+    },
+    {
+      "name": "budget_over_row_label",
+      "value": "已超支 ¥%s"
+    },
+    {
+      "name": "budget_over_banner",
+      "value": "本月支出已超出消费额度，超支 ¥%s，请注意控制消费"
+    },
+    {
+      "name": "budget_card_title",
+      "value": "本月消费额度"
+    },
+    {
+      "name": "budget_no_limit_tip",
+      "value": "填写额度后即可看到本月使用情况"
+    },
+    {
+      "name": "budget_alert_title",
+      "value": "超支提醒"
+    },
+    {
+      "name": "budget_alert_msg",
+      "value": "本月支出 ¥%s，已超出消费额度，超支 ¥%s，请注意控制消费哦"
+    },
+    {
+      "name": "budget_adjust_action",
+      "value": "调整额度"
+    },
+    {
+      "name": "budget_notif_title",
+      "value": "本月消费额度已超支"
+    },
+    {
+      "name": "budget_notif_text",
+      "value": "本月支出 %s，已超出额度，超支 %s"
+    },
+    {
+      "name": "budget_notif_additional",
+      "value": "进入记账助手调整额度或查看消费明细"
     }
   ]
 }

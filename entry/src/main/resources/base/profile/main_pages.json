@@ -9,6 +9,7 @@
     "pages/Appearance",
     "pages/PrivacySecurity",
     "pages/ExportBill",
-    "pages/CategoryManage"
+    "pages/CategoryManage",
+    "pages/BudgetSettings"
   ]
 }
