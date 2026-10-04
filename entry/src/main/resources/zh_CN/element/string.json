@@ -77,6 +77,10 @@
       "value": "我的钱去哪了，赶紧来记录一下吧"
     },
     {
+      "name": "loading_tip",
+      "value": "加载中…"
+    },
+    {
       "name": "diet",
       "value": "早午晚餐"
     },
@@ -470,7 +474,67 @@
     },
     {
       "name": "cloud_hint",
-      "value": "需使用支持图片输入的多模态模型，DeepSeek 纯文本接口不可用于图片识别；API Key 仅保存在本机"
+      "value": "图片识别请选带「视觉」的模型（纯文本模型只能用于 AI 助手对话）；接口地址已内置，仅 API Key 保存在本机"
+    },
+    {
+      "name": "provider_label",
+      "value": "服务商"
+    },
+    {
+      "name": "provider_save",
+      "value": "保存此服务商"
+    },
+    {
+      "name": "provider_saved",
+      "value": "已保存并设为当前服务商"
+    },
+    {
+      "name": "provider_activated",
+      "value": "已切换为当前服务商"
+    },
+    {
+      "name": "provider_deleted",
+      "value": "已删除该服务商"
+    },
+    {
+      "name": "provider_clear_success",
+      "value": "已清空全部服务商"
+    },
+    {
+      "name": "provider_list_title",
+      "value": "已保存的服务商"
+    },
+    {
+      "name": "provider_none",
+      "value": "暂未保存任何服务商"
+    },
+    {
+      "name": "provider_use",
+      "value": "使用"
+    },
+    {
+      "name": "provider_active_tag",
+      "value": "使用中"
+    },
+    {
+      "name": "provider_clear_all",
+      "value": "清空全部"
+    },
+    {
+      "name": "provider_clear_confirm_msg",
+      "value": "确定清空所有已保存的服务商吗？"
+    },
+    {
+      "name": "api_key_required",
+      "value": "请填写 API Key"
+    },
+    {
+      "name": "model_required",
+      "value": "请选择模型"
+    },
+    {
+      "name": "base_url_required",
+      "value": "请填写接口地址"
     },
     {
       "name": "settings_saved",
@@ -762,35 +826,35 @@
     },
     {
       "name": "recurring_bill_title",
-      "value": "重复性账单"
+      "value": "快捷记账"
     },
     {
       "name": "recurring_bill_settings_desc",
-      "value": "到点自动记入周期性收支，如每天地铁通勤"
+      "value": "常用收支一键添加，也可到点自动记入，如每天地铁通勤"
     },
     {
       "name": "recurring_bill_hint",
-      "value": "开启后，到达设定时间将自动添加一笔账单，无需手动记入；停用期间不会补记。"
+      "value": "点击卡片上的“一键添加”立即记入一笔账单（时间为当前时间）；开启开关后，到达设定时间也将自动添加账单，停用期间不会补记。"
     },
     {
       "name": "recurring_bill_empty",
-      "value": "暂无重复性账单"
+      "value": "暂无快捷记账"
     },
     {
       "name": "recurring_bill_empty_hint",
-      "value": "点击下方按钮新建，到期将自动记入"
+      "value": "点击下方按钮新建，支持一键添加与到点自动记入"
     },
     {
       "name": "recurring_bill_add",
-      "value": "新建重复账单"
+      "value": "新建快捷记账"
     },
     {
       "name": "recurring_bill_edit",
-      "value": "编辑重复账单"
+      "value": "编辑快捷记账"
     },
     {
       "name": "recurring_delete_title",
-      "value": "删除重复账单"
+      "value": "删除快捷记账"
     },
     {
       "name": "recurring_delete_msg",
@@ -910,7 +974,7 @@
     },
     {
       "name": "recurring_notif_title",
-      "value": "重复账单已自动记入"
+      "value": "快捷账单已自动记入"
     },
     {
       "name": "recurring_notif_text",
@@ -919,6 +983,26 @@
     {
       "name": "recurring_notif_additional",
       "value": "打开记账助手查看账单明细"
+    },
+    {
+      "name": "recurring_add_now",
+      "value": "一键添加"
+    },
+    {
+      "name": "recurring_add_now_confirm_title",
+      "value": "一键添加账单"
+    },
+    {
+      "name": "recurring_add_now_confirm_msg",
+      "value": "将按该模板立即记入一笔 ¥%s 的账单（支付时间为现在），是否继续？"
+    },
+    {
+      "name": "recurring_add_now_success",
+      "value": "已记入 ¥%s"
+    },
+    {
+      "name": "recurring_add_now_failed",
+      "value": "记入失败，请重试"
     },
     {
       "name": "appearance_title",
@@ -1071,6 +1155,82 @@
     {
       "name": "glow_strong",
       "value": "浓郁"
+    },
+    {
+      "name": "train_section_title",
+      "value": "训练数据采集"
+    },
+    {
+      "name": "train_collect_label",
+      "value": "采集训练数据"
+    },
+    {
+      "name": "train_collect_hint",
+      "value": "开启后，图片识别时会并行运行端侧 OCR，仅在本机保存图片宽高、OCR 文本块与多模态识别结果，用于训练本地识别模型；不上传、不保存图片本身。"
+    },
+    {
+      "name": "train_collected_count",
+      "value": "已采集 %d 条"
+    },
+    {
+      "name": "train_export_do",
+      "value": "导出数据"
+    },
+    {
+      "name": "train_export_empty",
+      "value": "暂无训练数据可导出"
+    },
+    {
+      "name": "train_export_success",
+      "value": "已导出 %d 条训练数据"
+    },
+    {
+      "name": "ocr_supported",
+      "value": "端侧 OCR：支持"
+    },
+    {
+      "name": "ocr_test_do",
+      "value": "测试识别"
+    },
+    {
+      "name": "ocr_testing",
+      "value": "测试中..."
+    },
+    {
+      "name": "ocr_test_success",
+      "value": "识别到 %d 行文本"
+    },
+    {
+      "name": "ocr_test_detail",
+      "value": "识别内容（文本 + 相对坐标）"
+    },
+    {
+      "name": "train_list_title",
+      "value": "已采集样本（点「删除」移除废数据）"
+    },
+    {
+      "name": "train_delete_success",
+      "value": "已删除该样本"
+    },
+    {
+      "name": "train_clear_all",
+      "value": "清空全部"
+    },
+    {
+      "name": "train_clear_confirm_title",
+      "value": "清空训练样本"
+    },
+    {
+      "name": "train_clear_confirm_msg",
+      "value": "确定清空全部已采集样本吗？此操作不可恢复"
+    },
+    {
+      "name": "train_clear_success",
+      "value": "已清空训练样本"
+    },
+    {
+      "name": "add_manual",
+      "value": "手动添加一笔"
     }
   ]
 }

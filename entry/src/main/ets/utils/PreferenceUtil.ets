@@ -5,6 +5,8 @@ import { Logger } from './Logger';
 
 class PreferenceUtils {
   private pref: preferences.Preferences | undefined = undefined;
+  // 首次 loadPreference 的 context：后续读写发现未初始化时用它做懒加载重试
+  private loadContext: common.Context | undefined = undefined;
 
   // 敏感键（API Key、密码等）不落明文，避免泄入日志
   private static maskValue(key: string, value: preferences.ValueType): string {
@@ -21,6 +23,7 @@ class PreferenceUtils {
   }
 
   async loadPreference(context: common.Context): Promise<void> {
+    this.loadContext = context;
     try {
       this.pref = await preferences.getPreferences(context, CONSTANTS.H_STORE);
       Logger.debug(`加载 Preference [${CONSTANTS.H_STORE}] 成功`);
@@ -29,28 +32,35 @@ class PreferenceUtils {
     }
   }
 
-  async putPreferenceValue(key: string, value: preferences.ValueType): Promise<void> {
-    if (!this.pref) {
-      Logger.debug(`Preference [${CONSTANTS.H_STORE}] 尚未初始化`);
-      return;
+  // 确保已加载：启动时加载失败不是永久状态，首次读写时用保存的 context 重试
+  private async ensureLoaded(): Promise<preferences.Preferences> {
+    if (this.pref) {
+      return this.pref;
     }
+    if (!this.loadContext) {
+      throw new Error('Preference 尚未初始化');
+    }
+    this.pref = await preferences.getPreferences(this.loadContext, CONSTANTS.H_STORE);
+    return this.pref;
+  }
+
+  async putPreferenceValue(key: string, value: preferences.ValueType): Promise<void> {
     try {
-      const pref = this.pref;
+      const pref = await this.ensureLoaded();
       await pref.put(key, value);
       await pref.flush();
       Logger.debug(`保存 Preference [${key} = ${PreferenceUtils.maskValue(key, value)}] 成功`);
     } catch (err) {
       Logger.debug(`保存 Preference [${key} = ${PreferenceUtils.maskValue(key, value)}] 失败`, err);
+      // 写失败必须上抛：调用方（如快捷记账的进度保存）依赖失败信号中断流程，
+      // 吞掉异常会导致“以为保存成功”，引发重复记账等数据错误
+      throw err as Error;
     }
   }
 
   async getPreferenceValue(key: string, defaultValue: preferences.ValueType): Promise<preferences.ValueType> {
-    if (!this.pref) {
-      Logger.debug(`Preference [${CONSTANTS.H_STORE}] 尚未初始化`);
-      return defaultValue;
-    }
     try {
-      const pref = this.pref;
+      const pref = await this.ensureLoaded();
       const value = await pref.get(key, defaultValue);
       Logger.debug(`读取 Preference [${key} = ${PreferenceUtils.maskValue(key, value)}] 成功`);
       return value;

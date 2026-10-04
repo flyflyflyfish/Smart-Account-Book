@@ -2,8 +2,16 @@
  * 云端多模态大模型识别的数据模型：OpenAI 兼容 chat/completions 的请求、响应与配置结构
  */
 
-// 云端识别服务配置：由设置页填写，保存在本机 Preferences
+// 云端识别服务配置：识别器实际消费的「生效配置」（baseUrl/apiKey/model）
 export interface CloudLlmConfig {
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+}
+
+// 已保存的单个服务商配置：baseUrl 冗余存一份，自定义服务商也能直接读
+export interface SavedProviderConfig {
+  id: string;      // 服务商 id：doubao/qwen/glm/deepseek/kimi/custom
   baseUrl: string;
   apiKey: string;
   model: string;
@@ -55,7 +63,7 @@ export interface ChatCompletionResponse {
 export interface LlmBillRaw {
   isBill?: boolean;
   accountType?: string;
-  amount?: number;
+  amount?: number | string;
   merchant?: string;
   payTime?: string;
   category?: string;

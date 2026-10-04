@@ -1,5 +1,5 @@
 import fs from '@ohos.file.fs';
-import { RecognitionResult } from '../../../models/recognition/RecognitionResult';
+import { RecognitionResult, copyRecognitionResult } from '../../../models/recognition/RecognitionResult';
 import { Recognizer } from '../Recognizer';
 
 // FNV-1a 哈希初始值（32 位）
@@ -27,11 +27,20 @@ export class CachingRecognizer implements Recognizer {
     const key = await this.hashFn(imageUri);
     const cached = this.cache.get(key);
     if (cached) {
-      return cached;
+      // 返回副本：调用方（识别流水线）会就地修改结果，不能污染缓存
+      return this.copyResults(cached);
     }
     const results = await this.inner.recognize(imageUri);
-    this.put(key, results);
+    this.put(key, this.copyResults(results));
     return results;
+  }
+
+  private copyResults(results: RecognitionResult[]): RecognitionResult[] {
+    const copies: RecognitionResult[] = [];
+    for (const r of results) {
+      copies.push(copyRecognitionResult(r));
+    }
+    return copies;
   }
 
   // 读文件字节做 FNV-1a 哈希，作为缓存键（内容相同则键相同）

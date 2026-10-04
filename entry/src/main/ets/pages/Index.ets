@@ -1,6 +1,7 @@
 import router from '@ohos.router';
 import window from '@ohos.window';
 import dayjs from 'dayjs';
+import { BusinessError } from '@kit.BasicServicesKit';
 import Home from '../views/home';
 import AiAssistant from '../views/aiAssistant';
 import Stats from '../views/stats';
@@ -53,6 +54,10 @@ struct Index {
     this.refreshBudgetAlert();
     WidgetUpdater.refreshAllForms(getContext(this), ThemeKit.palette());
   };
+  // 持有窗口引用，销毁时取消键盘高度监听
+  private mainWindow: window.Window | undefined = undefined;
+  // 预算检查进行中标志：批量插账时多次 notifyChanged 并发触发，去重避免重复弹窗/通知
+  private budgetChecking: boolean = false;
 
   async aboutToAppear() {
     this.breakpointSystem.register();
@@ -68,13 +73,17 @@ struct Index {
     WidgetUpdater.refreshAllForms(getContext(this), ThemeKit.palette());
     const firstUseTime = Number(await PreferenceUtil.getPreferenceValue(CONSTANTS.PREF_USER_FIRST_KEY, 0));
     if (!firstUseTime) {
-      PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_USER_FIRST_KEY, dayjs().valueOf());
+      PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_USER_FIRST_KEY, dayjs().valueOf())
+        .catch((err: BusinessError): void => {
+          Logger.error('记录首次使用时间失败', err.message);
+        });
     }
   }
 
   aboutToDisappear() {
     this.breakpointSystem.unRegister();
     BillStore.unsubscribe(this.billListener);
+    this.unregisterKeyboardListener();
   }
 
   onBudgetChanged(): void {
@@ -90,42 +99,60 @@ struct Index {
 
   // 本月首次越过额度时弹窗提醒（系统通知由 BudgetService 发送）
   async refreshBudgetAlert(): Promise<void> {
-    const status = await BudgetService.checkAndAlert(getContext(this));
-    if (status === null) {
+    // 并发去重：批量插账会在短时间内触发多次检查，避免重复弹窗/重复通知
+    if (this.budgetChecking) {
       return;
     }
-    AlertDialog.show({
-      title: $r('app.string.budget_alert_title'),
-      message: $r('app.string.budget_alert_msg',
-        status.monthExpenses.toFixed(2), (status.monthExpenses - status.limit).toFixed(2)),
-      autoCancel: true,
-      alignment: DialogAlignment.Center,
-      primaryButton: {
-        value: $r('app.string.confirm'),
-        action: () => {
-        }
-      },
-      secondaryButton: {
-        value: $r('app.string.budget_adjust_action'),
-        fontColor: this.tk().primary,
-        action: (): void => {
-          router.pushUrl({ url: 'pages/BudgetSettings' }).catch((err: Error): void => {
-            Logger.error('跳转消费额度设置失败', err.message);
-          });
-        }
+    this.budgetChecking = true;
+    try {
+      const status = await BudgetService.checkAndAlert(getContext(this));
+      if (status === null) {
+        return;
       }
-    });
+      AlertDialog.show({
+        title: $r('app.string.budget_alert_title'),
+        message: $r('app.string.budget_alert_msg',
+          status.monthExpenses.toFixed(2), (status.monthExpenses - status.limit).toFixed(2)),
+        autoCancel: true,
+        alignment: DialogAlignment.Center,
+        primaryButton: {
+          value: $r('app.string.confirm'),
+          action: () => {
+          }
+        },
+        secondaryButton: {
+          value: $r('app.string.budget_adjust_action'),
+          fontColor: this.tk().primary,
+          action: (): void => {
+            router.pushUrl({ url: 'pages/BudgetSettings' }).catch((err: Error): void => {
+              Logger.error('跳转消费额度设置失败', err.message);
+            });
+          }
+        }
+      });
+    } finally {
+      this.budgetChecking = false;
+    }
   }
 
   // 键盘弹出时隐藏底部导航栏，避免导航栏被顶到键盘上方；收起时恢复
   async registerKeyboardListener(): Promise<void> {
     try {
       const win = await window.getLastWindow(getContext(this));
+      this.mainWindow = win;
       win.on('keyboardHeightChange', (height: number) => {
         this.keyboardVisible = height > 0;
       });
     } catch (err) {
       Logger.error('监听键盘高度失败', (err as Error).message);
+    }
+  }
+
+  // 取消键盘高度监听，避免窗口重建场景下重复注册
+  unregisterKeyboardListener(): void {
+    if (this.mainWindow) {
+      this.mainWindow.off('keyboardHeightChange');
+      this.mainWindow = undefined;
     }
   }
 

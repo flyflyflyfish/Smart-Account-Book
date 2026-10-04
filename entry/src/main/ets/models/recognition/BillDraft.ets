@@ -8,6 +8,9 @@ import { RecognitionResult } from './RecognitionResult';
  * 图片识别确认页的单笔草稿：翻页编辑时承载每笔的可变状态
  */
 export class BillDraft {
+  // 草稿唯一自增 id：一张图可产生多笔草稿，ForEach key 与删除后重排必须靠它区分
+  private static seq: number = 0;
+  readonly uid: number;
   amountText: string = '';
   merchant: string = '';
   accountType: AccountType = AccountType.EXPENSES;
@@ -26,6 +29,11 @@ export class BillDraft {
   selected: boolean = true;
   // 来源图片地址，用于编辑面板展示与失败定位
   imageUri: string = '';
+
+  constructor() {
+    BillDraft.seq++;
+    this.uid = BillDraft.seq;
+  }
 
   // 金额 ≤0 时留空，交给用户在确认页补填；疑似重复默认不勾选
   static fromResult(result: RecognitionResult, imageUri: string): BillDraft {

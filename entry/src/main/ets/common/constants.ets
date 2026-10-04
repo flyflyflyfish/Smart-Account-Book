@@ -1,19 +1,25 @@
 export const H_STORE = 'account_store';
 export const PREF_USER_FIRST_KEY = 'userFirstUsed';
 
-// 账单来源：手动录入 / 图片识别 / 重复性账单自动记入
+// 账单来源：手动录入 / 图片识别 / 快捷记账（一键添加与到点自动记入）
 export const SOURCE_MANUAL: number = 0;
 export const SOURCE_IMAGE: number = 1;
 export const SOURCE_RECURRING: number = 2;
 
 // 云端识别配置与识别引擎开关的 Preferences 键
+// 旧版单配置三键（保留用于迁移历史数据）
 export const PREF_CLOUD_BASE_URL = 'cloud_base_url';
 export const PREF_CLOUD_API_KEY = 'cloud_api_key';
 export const PREF_CLOUD_MODEL = 'cloud_model';
+// 新版多服务商：JSON 数组 + 当前激活的服务商 id
+export const PREF_CLOUD_PROVIDERS = 'cloud_providers';
+export const PREF_CLOUD_ACTIVE_PROVIDER = 'cloud_active_provider';
 export const PREF_OCR_ENABLED = 'ocr_enabled';
 export const PREF_CLOUD_ENABLED = 'cloud_enabled';
 // 用户是否同意将图片上传至云端识别服务
 export const PREF_CLOUD_CONSENT = 'cloud_consent';
+// 训练数据采集开关（默认关闭，仅存本机，不上传）
+export const PREF_TRAIN_COLLECT_ENABLED = 'train_collect_enabled';
 
 // 自定义分类配置（JSON：新增的自定义分类 + 被隐藏的默认分类 id）的 Preferences 键
 export const PREF_CATEGORY_CONFIG = 'category_config';

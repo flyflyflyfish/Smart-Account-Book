@@ -1,6 +1,8 @@
 import dayjs from 'dayjs';
 import AccountNavigator from '../components/Navigator';
 import BudgetService from '../service/BudgetService';
+import DBUtil from '../utils/DBUtil';
+import { Logger } from '../utils/Logger';
 import { Toast } from '../components/ToastDialog';
 import BreakpointConstants from '../common/breakpoint';
 import {
@@ -39,11 +41,17 @@ struct BudgetSettings {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
 
   async aboutToAppear(): Promise<void> {
-    const status = await BudgetService.loadStatus();
-    this.budgetOn = status.enabled;
-    this.savedLimit = status.limit;
-    this.monthExpenses = status.monthExpenses;
-    this.amountText = status.limit > 0 ? String(status.limit) : '';
+    try {
+      // 等待数据库初始化完成，避免冷启动期间查询抛错导致超支进度显示为 0
+      await DBUtil.ready;
+      const status = await BudgetService.loadStatus();
+      this.budgetOn = status.enabled;
+      this.savedLimit = status.limit;
+      this.monthExpenses = status.monthExpenses;
+      this.amountText = status.limit > 0 ? String(status.limit) : '';
+    } catch (err) {
+      Logger.error('加载消费额度设置失败', (err as Error).message);
+    }
   }
 
   // 预览时优先使用当前输入的合法额度，未输入或非法时回退到已保存额度
@@ -86,21 +94,26 @@ struct BudgetSettings {
   }
 
   async onSave(): Promise<void> {
-    if (this.budgetOn) {
-      const text = this.amountText.trim();
-      if (!AMOUNT_PATTERN.test(text) || Number(text) <= 0) {
-        Toast.error($r('app.string.budget_amount_invalid'));
-        return;
+    try {
+      if (this.budgetOn) {
+        const text = this.amountText.trim();
+        if (!AMOUNT_PATTERN.test(text) || Number(text) <= 0) {
+          Toast.error($r('app.string.budget_amount_invalid'));
+          return;
+        }
+        const amount = Math.round(Number(text) * 100) / 100;
+        await BudgetService.saveSettings(true, amount);
+      } else {
+        await BudgetService.saveSettings(false, 0);
       }
-      const amount = Math.round(Number(text) * 100) / 100;
-      await BudgetService.saveSettings(true, amount);
-    } else {
-      await BudgetService.saveSettings(false, 0);
+      const status = await BudgetService.loadStatus();
+      this.savedLimit = status.limit;
+      this.monthExpenses = status.monthExpenses;
+      Toast.success($r('app.string.settings_saved'));
+    } catch (err) {
+      Logger.error('保存消费额度设置失败', (err as Error).message);
+      Toast.error($r('app.string.save_failed'));
     }
-    const status = await BudgetService.loadStatus();
-    this.savedLimit = status.limit;
-    this.monthExpenses = status.monthExpenses;
-    Toast.success($r('app.string.settings_saved'));
   }
 
   @Builder SectionTitle(label: ResourceStr) {

@@ -6,6 +6,7 @@ import { RecurringBill, RecurringRepeatMode } from '../models/recurring/Recurrin
 import CategoryStore from '../models/accountType/CategoryStore';
 import AccountTypeModel from '../models/accountType/AccountTypeModel';
 import { AccountType } from '../models/account/account';
+import { Toast } from '../components/ToastDialog';
 import BreakpointConstants from '../common/breakpoint';
 import {
   RADIUS_CARD,
@@ -18,7 +19,7 @@ import {
 import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
 /**
- * 重复性账单管理：查看全部规则、启停/编辑/删除，点击新建进入编辑页
+ * 快捷记账管理：查看全部规则、一键添加/启停/编辑/删除，点击新建进入编辑页
  */
 @Entry
 @Component
@@ -153,6 +154,36 @@ struct RecurringBillManage {
     router.pushUrl({ url: 'pages/RecurringBillEdit' });
   }
 
+  // 一键添加：先二次确认，再按模板立即记入一笔时间为现在的账单
+  addNow(bill: RecurringBill): void {
+    const msgTemplate = this.resText($r('app.string.recurring_add_now_confirm_msg'));
+    AlertDialog.show({
+      title: $r('app.string.recurring_add_now_confirm_title'),
+      message: msgTemplate.replace('%s', bill.amount.toFixed(2)),
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      primaryButton: {
+        value: $r('app.string.cancel'),
+        action: () => {
+        }
+      },
+      secondaryButton: {
+        value: $r('app.string.recurring_add_now'),
+        fontColor: this.tk().primary,
+        action: (): void => {
+          RecurringBillService.recordNow(bill).then((ok: boolean): void => {
+            if (ok) {
+              const template = this.resText($r('app.string.recurring_add_now_success'));
+              Toast.success(template.replace('%s', bill.amount.toFixed(2)));
+            } else {
+              Toast.error($r('app.string.recurring_add_now_failed'));
+            }
+          });
+        }
+      }
+    });
+  }
+
   @Builder BillCard(bill: RecurringBill) {
     Column({ space: SPACE_SMALL }) {
       Row({ space: SPACE_MEDIUM }) {
@@ -214,6 +245,18 @@ struct RecurringBillManage {
           .fontSize(this.fs(12))
           .fontColor(this.tk().textSecondary)
           .layoutWeight(1)
+        Button($r('app.string.recurring_add_now'))
+          .height(30)
+          .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM })
+          .fontSize(this.fs(13))
+          .fontWeight(FontWeight.Medium)
+          .type(ButtonType.Normal)
+          .borderRadius(15)
+          .backgroundColor(this.tk().primary)
+          .fontColor(this.tk().surface)
+          .onClick(() => {
+            this.addNow(bill);
+          })
         Text($r('app.string.delete'))
           .fontSize(this.fs(12))
           .fontColor(this.tk().danger)

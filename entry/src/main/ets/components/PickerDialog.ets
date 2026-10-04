@@ -42,7 +42,7 @@ export default struct PickerDialog {
           .backgroundColor(this.tk().toastBg)
           .layoutWeight(1)
           .onClick(() => {
-            this.controller.close()
+            this.controller?.close()
           })
         Button($r('app.string.confirm'))
           .type(ButtonType.Normal)
@@ -50,10 +50,14 @@ export default struct PickerDialog {
           .backgroundColor(this.tk().primary)
           .layoutWeight(1)
           .onClick(() => {
-            if (this.onChange) {
-              this.onChange(this.options[this.selected].value)
+            // 选项为空或索引越界时直接关闭，避免取值崩溃
+            if (this.options.length > 0 && this.onChange) {
+              const option = this.options[this.selected];
+              if (option) {
+                this.onChange(option.value);
+              }
             }
-            this.controller.close();
+            this.controller?.close();
           })
       }.width('100%')
     }.width('90%')

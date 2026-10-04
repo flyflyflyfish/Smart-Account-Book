@@ -43,7 +43,13 @@ struct AccountLogin {
       CloudInit.init();
       this.signedIn = true;
       this.uid = currentUid;
-      Toast.success($r('app.string.sign_in_success'));
+      if (CloudInit.isReady()) {
+        Toast.success($r('app.string.sign_in_success'));
+      } else {
+        // 登录成功但云服务初始化失败：本地记账不受影响，但需明确告知云端同步不可用
+        Toast.error($r('app.string.cloud_sync_unavailable'));
+        Logger.error('云同步初始化失败', '登录成功但云开发服务不可用，账单将不会同步到云端');
+      }
     } else {
       Toast.error($r('app.string.sign_in_failed'));
     }

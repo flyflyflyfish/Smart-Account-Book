@@ -1,4 +1,5 @@
 import http from '@ohos.net.http';
+import dayjs from 'dayjs';
 import image from '@ohos.multimedia.image';
 import fs from '@ohos.file.fs';
 import util from '@ohos.util';
@@ -78,27 +79,49 @@ export class CloudLlmRecognizer implements Recognizer {
   // 读取图片 -> 缩放至最长边不超过 1280 -> 打包为 JPEG(质量80) -> Base64
   private async imageToBase64(uri: string): Promise<string> {
     let file: fs.File | undefined = undefined;
+    let source: image.ImageSource | undefined = undefined;
+    let packer: image.ImagePacker | undefined = undefined;
+    let pixelMap: image.PixelMap | undefined = undefined;
     try {
       file = fs.openSync(uri, fs.OpenMode.READ_ONLY);
-      const source = image.createImageSource(file.fd);
-      const pixelMap = await source.createPixelMap();
+      source = image.createImageSource(file.fd);
+      pixelMap = await source.createPixelMap();
       const info = await pixelMap.getImageInfo();
       const maxEdge = Math.max(info.size.width, info.size.height);
       if (maxEdge > MAX_IMAGE_EDGE) {
         const ratio = MAX_IMAGE_EDGE / maxEdge;
         await pixelMap.scale(ratio, ratio);
       }
-      const packer = image.createImagePacker();
+      packer = image.createImagePacker();
       const option: image.PackingOption = { format: 'image/jpeg', quality: JPEG_QUALITY };
       const buffer = await packer.packing(pixelMap, option);
       const base64Helper = new util.Base64Helper();
-      const encoded = base64Helper.encodeToStringSync(new Uint8Array(buffer));
-      pixelMap.release();
-      return encoded;
+      return base64Helper.encodeToStringSync(new Uint8Array(buffer));
     } catch (error) {
       Logger.error('图片压缩转码失败', (error as Error).message);
       throw new Error(getContext().resourceManager.getStringSync($r('app.string.cloud_image_failed')));
     } finally {
+      if (pixelMap) {
+        try {
+          pixelMap.release();
+        } catch (e) {
+          Logger.warn('pixelMap释放失败', (e as Error).message);
+        }
+      }
+      if (packer) {
+        try {
+          await packer.release();
+        } catch (e) {
+          Logger.warn('ImagePacker释放失败', (e as Error).message);
+        }
+      }
+      if (source) {
+        try {
+          await source.release();
+        } catch (e) {
+          Logger.warn('ImageSource释放失败', (e as Error).message);
+        }
+      }
       if (file) {
         fs.closeSync(file);
       }
@@ -109,12 +132,16 @@ export class CloudLlmRecognizer implements Recognizer {
   private buildPrompt(): string {
     const expenseNames = CategoryRegistry.listNames(AccountType.EXPENSES).join('、');
     const incomeNames = CategoryRegistry.listNames(AccountType.INCOME).join('、');
+    const today = dayjs().format('YYYY-MM-DD');
+    const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
     return '你是账单识别助手。请判断图片是否为账单、小票或收支截图，并提取其中的全部交易记录。' +
       '只输出一个 JSON 数组，不要输出任何解释文字或 markdown 代码块。' +
       '数组每个元素的格式：{"accountType": "支出 或 收入", "amount": number, ' +
       '"merchant": string, "payTime": "YYYY-MM-DD HH:mm 或空字符串", "category": string}。' +
-      'payTime 必须尽量精确到分钟：图片上印有交易时刻（如 14:32、09:05:11）时，必须把年月日和时分一并写入 payTime；' +
-      '只能看出日期时输出 YYYY-MM-DD；完全看不到时间信息才用空字符串，禁止用当前时间或拍照时间猜测。' +
+      `今天是 ${today}。payTime 必须尽量精确到分钟，日期按如下规则换算：` +
+      `图片印有"今天"时写 ${today}；印有"昨天"时写 ${yesterday}；` +
+      `只印有时分（如 14:32、09:05:11）而看不到日期时，日期按今天补全为 "${today} HH:mm"；` +
+      '完全看不到任何时间信息才用空字符串，禁止用当前时间或拍照时间胡乱猜测。' +
       `支出分类只能取：${expenseNames}。收入分类只能取：${incomeNames}。` +
       '非账单图片输出空数组 []；一张图包含多笔交易时输出多个元素；除 payTime 外无法确定的字段不要猜测，用空字符串或 0。';
   }
@@ -128,6 +155,7 @@ export class CloudLlmRecognizer implements Recognizer {
       'Authorization': `Bearer ${this.config.apiKey}`
     };
     const request = http.createHttp();
+    Logger.info('云端诊断: 准备发起请求', url, 'model=' + this.config.model);
     try {
       const response = await request.request(url, {
         method: http.RequestMethod.POST,
@@ -137,6 +165,11 @@ export class CloudLlmRecognizer implements Recognizer {
         connectTimeout: HTTP_TIMEOUT_MS,
         readTimeout: HTTP_TIMEOUT_MS
       });
+      Logger.info('云端诊断: 请求已返回', 'responseCode=' + response.responseCode,
+        'resultType=' + typeof response.result);
+      if (typeof response.result === 'string') {
+        Logger.info('云端诊断: 响应体前200字符', response.result.substring(0, 200));
+      }
       return this.handleResponse(response);
     } catch (error) {
       const err = error as BusinessError;
@@ -146,6 +179,7 @@ export class CloudLlmRecognizer implements Recognizer {
       }
       throw new Error(getContext().resourceManager.getStringSync($r('app.string.cloud_network_failed')));
     } finally {
+      Logger.info('云端诊断: postChat结束, 销毁request');
       request.destroy();
     }
   }

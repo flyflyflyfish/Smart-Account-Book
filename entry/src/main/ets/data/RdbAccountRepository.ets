@@ -71,10 +71,14 @@ export class RdbAccountRepository implements AccountRepository {
   private async queryAccount(predicates: relationalStore.RdbPredicates): Promise<AccountPO[]> {
     const result = await DBUtil.query(predicates, QUERY_COLUMNS);
     const list: AccountPO[] = [];
-    while (result.goToNextRow()) {
-      list.push(this.parseAccount(result));
+    try {
+      while (result.goToNextRow()) {
+        list.push(this.parseAccount(result));
+      }
+    } finally {
+      // 读取抛错时 ResultSet 也不能泄漏
+      result.close();
     }
-    result.close();
     return list;
   }
 
