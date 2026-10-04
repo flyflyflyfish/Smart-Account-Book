@@ -54,6 +54,8 @@ export default struct ToastDialog {
 }
 
 export class Toast {
+  // 当前弹出的 Toast：重复弹出时先关闭旧的，避免旧弹窗永久残留
+  private static current: CustomDialogController | undefined = undefined;
   // 记录定时器句柄，便于在重复弹出时清理旧定时器
   private static timer: number = -1;
 
@@ -68,6 +70,15 @@ export class Toast {
     })
   }
 
+  // 关闭指定 Toast：宿主页面可能已销毁（如 Toast 后立即 router.back），close 需兜底
+  private static closeQuietly(dialog: CustomDialogController): void {
+    try {
+      dialog.close();
+    } catch (err) {
+      // 忽略：页面已销毁时 close 可能抛错
+    }
+  }
+
   static success(message: ResourceStr, duration: number = 2000): void {
     Toast.show(message, 'success', duration);
   }
@@ -77,14 +88,25 @@ export class Toast {
   }
 
   private static show(message: ResourceStr, type: 'success' | 'error', duration: number): void {
-    const dialog = Toast.createDialog(message, type);
-    dialog.open();
+    // 先关闭上一个 Toast 并清掉它的关闭定时器
     if (Toast.timer >= 0) {
       clearTimeout(Toast.timer);
       Toast.timer = -1;
     }
+    const prev = Toast.current;
+    if (prev) {
+      Toast.closeQuietly(prev);
+      Toast.current = undefined;
+    }
+    const dialog = Toast.createDialog(message, type);
+    Toast.current = dialog;
+    dialog.open();
     Toast.timer = setTimeout(() => {
-      dialog.close();
+      const cur = Toast.current;
+      if (cur) {
+        Toast.closeQuietly(cur);
+        Toast.current = undefined;
+      }
       Toast.timer = -1;
     }, duration);
   }

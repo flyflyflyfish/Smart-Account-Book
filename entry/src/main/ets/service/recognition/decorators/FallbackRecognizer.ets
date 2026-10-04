@@ -23,8 +23,8 @@ export class FallbackRecognizer implements Recognizer {
         return results;
       }
     } catch (error) {
-      // primary 失败，降级到 secondary
-      Logger.debug('主识别器失败，降级到备用识别器');
+      // primary 失败，降级到 secondary（warn 级别便于在日志里发现降级原因）
+      Logger.warn('主识别器失败，降级到备用识别器: ', (error as Error).message);
     }
     return this.secondary.recognize(imageUri);
   }

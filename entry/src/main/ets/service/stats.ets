@@ -13,13 +13,15 @@ import AccountPO from '../models/account/accountPO';
 import CategoryRegistry from '../models/accountType/CategoryRegistry';
 
 /**
- * 按收支类型累加金额，消除各统计方法中重复的 if/else
+ * 按收支类型累加金额，消除各统计方法中重复的 if/else。
+ * 金额以 DOUBLE 存储存在二进制浮点误差（0.1+0.2≠0.3），
+ * 每次累加后四舍五入到分，避免统计/预算比较出现 ±0.01 级偏差
  */
 function accumulate(summary: AmountSummary, accountType: number, amount: number): void {
   if (accountType === AccountType.EXPENSES) {
-    summary.expenses += amount;
+    summary.expenses = Math.round((summary.expenses + amount) * 100) / 100;
   } else {
-    summary.income += amount;
+    summary.income = Math.round((summary.income + amount) * 100) / 100;
   }
 }
 
@@ -132,7 +134,7 @@ class StatsService {
       const activeStats: StatsByType[] = item.accountType === AccountType.EXPENSES ? expensesStats : incomeStats;
       const existing: StatsByType | undefined = activeStats.find((s: StatsByType): boolean => s.info.id === item.type);
       if (existing) {
-        existing.amount += item.amount;
+        existing.amount = Math.round((existing.amount + item.amount) * 100) / 100;
         existing.count += 1;
       } else {
         const info = CategoryRegistry.getById(item.type, item.accountType);

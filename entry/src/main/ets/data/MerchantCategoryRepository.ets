@@ -38,31 +38,31 @@ export default class MerchantCategoryRepository implements MerchantCategoryStore
     const predicates = new relationalStore.RdbPredicates(MERCHANT_CATEGORY_TABLE_NAME);
     predicates.equalTo(COL_MERCHANT, merchant);
     const result = await DBUtil.query(predicates, QUERY_COLUMNS);
-    if (result.goToNextRow()) {
-      const record = this.parseRecord(result);
+    try {
+      if (result.goToNextRow()) {
+        return this.parseRecord(result);
+      }
+      return null;
+    } finally {
+      // 读取抛错时 ResultSet 也不能泄漏
       result.close();
-      return record;
     }
-    result.close();
-    return null;
   }
 
-  // merchant 为主键：已存在则更新，否则插入
+  // merchant 为主键：INSERT OR REPLACE 原子完成“存在则更新/不存在则插入”，
+  // 避免“先查后插”在并发写入时因主键冲突失败
   async upsert(record: MerchantCategory): Promise<void> {
-    const bucket: relationalStore.ValuesBucket = {
-      'merchant': record.merchant,
-      'category_id': record.categoryId,
-      'account_type': record.accountType,
-      'updated_at': record.updatedAt
-    };
-    const existing = await this.queryByMerchant(record.merchant);
-    if (existing) {
-      const predicates = new relationalStore.RdbPredicates(MERCHANT_CATEGORY_TABLE_NAME);
-      predicates.equalTo(COL_MERCHANT, record.merchant);
-      await DBUtil.update(predicates, bucket);
-      return;
-    }
-    await DBUtil.insert(MERCHANT_CATEGORY_TABLE_NAME, bucket);
+    const args: Array<relationalStore.ValueType> = [
+      record.merchant,
+      record.categoryId,
+      record.accountType,
+      record.updatedAt
+    ];
+    await DBUtil.executeSql(
+      `INSERT OR REPLACE INTO ${MERCHANT_CATEGORY_TABLE_NAME} ` +
+      `(${COL_MERCHANT}, ${COL_CATEGORY_ID}, ${COL_ACCOUNT_TYPE}, ${COL_UPDATED_AT}) VALUES (?, ?, ?, ?)`,
+      args
+    );
   }
 
   // 清除全部商家-分类记忆，返回删除行数；updated_at 恒 >= 0，故可匹配所有行

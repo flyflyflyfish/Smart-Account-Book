@@ -23,3 +23,18 @@ export interface RecognitionResult {
   // 是否与已有账单疑似重复，供确认页高亮并默认不勾选
   duplicated?: boolean;
 }
+
+// 深拷贝单条识别结果：缓存与训练样本需要与后续流水线的就地修改隔离
+export function copyRecognitionResult(source: RecognitionResult): RecognitionResult {
+  return {
+    accountType: source.accountType,
+    amount: source.amount,
+    merchant: source.merchant,
+    payTime: source.payTime,
+    categoryName: source.categoryName,
+    confidence: source.confidence,
+    isBill: source.isBill,
+    autoClassified: source.autoClassified,
+    duplicated: source.duplicated
+  };
+}

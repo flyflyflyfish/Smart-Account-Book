@@ -54,7 +54,7 @@ export default struct OptionsGridDialog {
                 if (this.onChange) {
                   this.onChange(item.value);
                 }
-                this.controller.close();
+                this.controller?.close();
               })
           }
         }, (item: OptionsItem<number>) => item.value.toString())
@@ -73,7 +73,7 @@ export default struct OptionsGridDialog {
         .type(ButtonType.Normal)
         .borderRadius(20)
         .onClick(() => {
-          this.controller.close();
+          this.controller?.close();
         })
     }
     .width('78%')

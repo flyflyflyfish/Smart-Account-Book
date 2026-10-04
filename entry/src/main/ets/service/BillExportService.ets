@@ -59,6 +59,13 @@ interface WParaOptions {
   spacingAfter?: number;
 }
 
+// OOXML 表格单元格：段落 XML + 跨列数 + 底色（空串表示不着色）
+interface WCell {
+  para: string;
+  span: number;
+  shade: string;
+}
+
 interface ZipEntry {
   name: string;
   data: Uint8Array;
@@ -119,12 +126,12 @@ class BillExportService {
     let income = 0;
     records.forEach((record: AccountPO) => {
       if (record.accountType === AccountType.EXPENSES) {
-        expenses += record.amount;
+        expenses = Math.round((expenses + record.amount) * 100) / 100;
       } else {
-        income += record.amount;
+        income = Math.round((income + record.amount) * 100) / 100;
       }
     });
-    return { expenses, income, balance: income - expenses, count: records.length };
+    return { expenses, income, balance: Math.round((income - expenses) * 100) / 100, count: records.length };
   }
 
   /**
@@ -147,7 +154,7 @@ class BillExportService {
         };
         map.set(record.type, stat);
       }
-      stat.amount += record.amount;
+      stat.amount = Math.round((stat.amount + record.amount) * 100) / 100;
       stat.count += 1;
     });
     const list: CategoryStat[] = Array.from(map.values());
@@ -156,21 +163,23 @@ class BillExportService {
   }
 
   /**
-   * 按天分组，日期降序，组内按支付时间降序
+   * 按天分组，日期降序，组内按支付时间降序。
+   * 分组键用行内展示的时间（recordTime，优先 payTime），
+   * 避免“分组标题 3月5日、行内时间却是 3月4日 23:50”的矛盾展示
    */
   private buildDayGroups(records: AccountPO[]): DayGroup[] {
     const map = new Map<number, DayGroup>();
     records.forEach((record: AccountPO) => {
-      const dayTime = dayjs(record.time).startOf('day').valueOf();
+      const dayTime = dayjs(this.recordTime(record)).startOf('day').valueOf();
       let group = map.get(dayTime);
       if (!group) {
         group = { time: dayTime, expenses: 0, income: 0, records: [] };
         map.set(dayTime, group);
       }
       if (record.accountType === AccountType.EXPENSES) {
-        group.expenses += record.amount;
+        group.expenses = Math.round((group.expenses + record.amount) * 100) / 100;
       } else {
-        group.income += record.amount;
+        group.income = Math.round((group.income + record.amount) * 100) / 100;
       }
       group.records.push(record);
     });
@@ -571,6 +580,24 @@ td.headcell { padding:5pt 8pt; font-size:9pt; color:#666666; }
   // OOXML 表格：rows 中每个 cell 为已构建的段落 XML 字符串
   private wTable(rows: string[][]): string {
     const colCount = rows.length > 0 ? rows[0].length : 0;
+    return this.wTableXml(colCount, rows.map((row: string[]): WCell[] =>
+      row.map((cell: string): WCell => ({ para: cell, span: 1, shade: '' }))));
+  }
+
+  // 可带跨列/底色的单元格
+  private wCellXml(cell: WCell): string {
+    let tcPr = '';
+    if (cell.span > 1) {
+      tcPr += `<w:gridSpan w:val="${cell.span}"/>`;
+    }
+    if (cell.shade.length > 0) {
+      tcPr += `<w:shd w:val="clear" w:fill="${cell.shade}"/>`;
+    }
+    return `<w:tc>${tcPr ? `<w:tcPr>${tcPr}</w:tcPr>` : ''}${cell.para}</w:tc>`;
+  }
+
+  // OOXML 表格底层实现：固定列网格，单元格支持跨列（gridSpan）与底色
+  private wTableXml(colCount: number, rows: WCell[][]): string {
     const colWidth = colCount > 0 ? Math.floor(9026 / colCount) : 9026;
     let xml = '<w:tbl><w:tblPr><w:tblW w:w="9026" w:type="dxa"/><w:tblBorders>' +
       '<w:top w:val="single" w:sz="4" w:space="0" w:color="EEEEEE"/>' +
@@ -588,7 +615,7 @@ td.headcell { padding:5pt 8pt; font-size:9pt; color:#666666; }
     for (const row of rows) {
       xml += '<w:tr>';
       for (const cell of row) {
-        xml += `<w:tc>${cell}</w:tc>`;
+        xml += this.wCellXml(cell);
       }
       xml += '</w:tr>';
     }
@@ -641,32 +668,65 @@ td.headcell { padding:5pt 8pt; font-size:9pt; color:#666666; }
     return this.wTable(rows);
   }
 
-  private wDetailTable(records: AccountPO[]): string {
+  // 明细行单元格：showDate 为 false 时（按天分组）时间只显示时分
+  private wDetailRowCells(record: AccountPO, showDate: boolean): WCell[] {
+    const name = this.categoryName(record.type, record.accountType);
+    const title = record.description || record.merchant || name;
+    const color = this.docHex(record.accountType === AccountType.EXPENSES ? this.docTheme().danger : this.docTheme().success);
+    const amountText = this.sign(record) + this.money(record.amount);
+    const timeFormat = showDate ? 'MM-DD HH:mm' : 'HH:mm';
+    return [
+      { para: this.wPara(this.wRun(dayjs(this.recordTime(record)).format(timeFormat), { sz: 18, color: '808080' }),
+        { align: 'center' }), span: 1, shade: '' },
+      { para: this.wPara(this.wRun(name, { sz: 18 }), { align: 'center' }), span: 1, shade: '' },
+      { para: this.wPara(this.wRun(title, { sz: 18 })), span: 1, shade: '' },
+      { para: this.wPara(this.wRun(amountText, { bold: true, sz: 18, color: color }), { align: 'right' }),
+        span: 1, shade: '' }
+    ];
+  }
+
+  private wDetailTable(records: AccountPO[], groupByDay: boolean): string {
     if (records.length === 0) {
       return this.wPara(this.wRun('该时间段暂无账单记录', { color: '808080' }), { align: 'center' });
     }
-    const rows: string[][] = [];
+    const rows: WCell[][] = [];
     rows.push([
-      this.wPara(this.wRun('时间', { bold: true, sz: 18, color: '666666' }), { align: 'center' }),
-      this.wPara(this.wRun('分类', { bold: true, sz: 18, color: '666666' }), { align: 'center' }),
-      this.wPara(this.wRun('内容', { bold: true, sz: 18, color: '666666' })),
-      this.wPara(this.wRun('金额', { bold: true, sz: 18, color: '666666' }), { align: 'right' })
+      { para: this.wPara(this.wRun('时间', { bold: true, sz: 18, color: '666666' }), { align: 'center' }), span: 1, shade: '' },
+      { para: this.wPara(this.wRun('分类', { bold: true, sz: 18, color: '666666' }), { align: 'center' }), span: 1, shade: '' },
+      { para: this.wPara(this.wRun('内容', { bold: true, sz: 18, color: '666666' })), span: 1, shade: '' },
+      { para: this.wPara(this.wRun('金额', { bold: true, sz: 18, color: '666666' }), { align: 'right' }), span: 1, shade: '' }
     ]);
-    const list = this.flatRecords(records);
-    for (const record of list) {
-      const name = this.categoryName(record.type, record.accountType);
-      const title = record.description || record.merchant || name;
-      const color = this.docHex(record.accountType === AccountType.EXPENSES ? this.docTheme().danger : this.docTheme().success);
-      const amountText = this.sign(record) + this.money(record.amount);
-      rows.push([
-        this.wPara(this.wRun(dayjs(this.recordTime(record)).format('MM-DD HH:mm'), { sz: 18, color: '808080' }),
-          { align: 'center' }),
-        this.wPara(this.wRun(name, { sz: 18 }), { align: 'center' }),
-        this.wPara(this.wRun(title, { sz: 18 })),
-        this.wPara(this.wRun(amountText, { bold: true, sz: 18, color: color }), { align: 'right' })
-      ]);
+    if (groupByDay) {
+      // 与 .doc/Web 版式一致：按天分组，日期头行跨 4 列并带底色
+      const groups = this.buildDayGroups(records);
+      for (const group of groups) {
+        const date = dayjs(group.time);
+        let head = `${date.format('M月D日')} · 周${this.weekday(group.time)}`;
+        const parts: string[] = [];
+        if (group.expenses > 0) {
+          parts.push(`支出 ¥${this.money(group.expenses)}`);
+        }
+        if (group.income > 0) {
+          parts.push(`收入 ¥${this.money(group.income)}`);
+        }
+        if (parts.length > 0) {
+          head += `　${parts.join('　')}`;
+        }
+        rows.push([{
+          para: this.wPara(this.wRun(head, { bold: true, sz: 18, color: '333333' })),
+          span: 4,
+          shade: 'F4F5F7'
+        }]);
+        for (const record of group.records) {
+          rows.push(this.wDetailRowCells(record, false));
+        }
+      }
+    } else {
+      for (const record of this.flatRecords(records)) {
+        rows.push(this.wDetailRowCells(record, true));
+      }
     }
-    return this.wTable(rows);
+    return this.wTableXml(4, rows);
   }
 
   private wSectPr(): string {
@@ -706,7 +766,7 @@ td.headcell { padding:5pt 8pt; font-size:9pt; color:#666666; }
     }
     if (options.includeDetail) {
       body.push(this.wSection(`收支明细（${summary.count} 笔）`));
-      body.push(this.wDetailTable(records));
+      body.push(this.wDetailTable(records, options.groupByDay));
     }
     body.push(this.wPara(this.wRun(`由「记账助手」生成于 ${generatedAt}`, { sz: 16, color: '999999' }),
       { align: 'center', spacingAfter: 0 }));

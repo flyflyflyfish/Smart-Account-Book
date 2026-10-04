@@ -77,6 +77,10 @@
       "value": "Where did my money go? Record it now."
     },
     {
+      "name": "loading_tip",
+      "value": "Loading…"
+    },
+    {
       "name": "empty_tip_sub",
       "value": "Tap the + button below to add one"
     },
@@ -474,7 +478,67 @@
     },
     {
       "name": "cloud_hint",
-      "value": "Use a multimodal model with image input. DeepSeek text-only APIs cannot recognize images. The API key is stored only on this device."
+      "value": "For image recognition, choose a vision model (text-only models work only for the AI assistant). Base URLs are built in; only the API key is stored on this device."
+    },
+    {
+      "name": "provider_label",
+      "value": "Provider"
+    },
+    {
+      "name": "provider_save",
+      "value": "Save this provider"
+    },
+    {
+      "name": "provider_saved",
+      "value": "Saved and set as current provider"
+    },
+    {
+      "name": "provider_activated",
+      "value": "Switched to current provider"
+    },
+    {
+      "name": "provider_deleted",
+      "value": "Provider deleted"
+    },
+    {
+      "name": "provider_clear_success",
+      "value": "All providers cleared"
+    },
+    {
+      "name": "provider_list_title",
+      "value": "Saved providers"
+    },
+    {
+      "name": "provider_none",
+      "value": "No providers saved yet"
+    },
+    {
+      "name": "provider_use",
+      "value": "Use"
+    },
+    {
+      "name": "provider_active_tag",
+      "value": "In use"
+    },
+    {
+      "name": "provider_clear_all",
+      "value": "Clear all"
+    },
+    {
+      "name": "provider_clear_confirm_msg",
+      "value": "Clear all saved providers?"
+    },
+    {
+      "name": "api_key_required",
+      "value": "Please enter an API Key"
+    },
+    {
+      "name": "model_required",
+      "value": "Please select a model"
+    },
+    {
+      "name": "base_url_required",
+      "value": "Please enter the base URL"
     },
     {
       "name": "settings_saved",
@@ -766,19 +830,19 @@
     },
     {
       "name": "recurring_bill_title",
-      "value": "Recurring bills"
+      "value": "Quick entries"
     },
     {
       "name": "recurring_bill_settings_desc",
-      "value": "Auto-record periodic bills, like daily subway rides"
+      "value": "One-tap record common bills, or auto-record on schedule, like daily subway rides"
     },
     {
       "name": "recurring_bill_hint",
-      "value": "Once enabled, a bill is added automatically at the scheduled time. Missed entries are not back-filled while disabled."
+      "value": "Tap \"Add now\" on a card to instantly record a bill at the current time. When enabled, bills are also added automatically at the scheduled time; missed entries are not back-filled while disabled."
     },
     {
       "name": "recurring_bill_empty",
-      "value": "No recurring bills yet"
+      "value": "No quick entries yet"
     },
     {
       "name": "recurring_bill_empty_hint",
@@ -786,15 +850,15 @@
     },
     {
       "name": "recurring_bill_add",
-      "value": "New recurring bill"
+      "value": "New quick entry"
     },
     {
       "name": "recurring_bill_edit",
-      "value": "Edit recurring bill"
+      "value": "Edit quick entry"
     },
     {
       "name": "recurring_delete_title",
-      "value": "Delete recurring bill"
+      "value": "Delete quick entry"
     },
     {
       "name": "recurring_delete_msg",
@@ -914,7 +978,7 @@
     },
     {
       "name": "recurring_notif_title",
-      "value": "Recurring bill recorded"
+      "value": "Quick entry recorded automatically"
     },
     {
       "name": "recurring_notif_text",
@@ -923,6 +987,26 @@
     {
       "name": "recurring_notif_additional",
       "value": "Open the app to see bill details"
+    },
+    {
+      "name": "recurring_add_now",
+      "value": "Add now"
+    },
+    {
+      "name": "recurring_add_now_confirm_title",
+      "value": "Add bill now"
+    },
+    {
+      "name": "recurring_add_now_confirm_msg",
+      "value": "This will instantly record a bill of ¥%s at the current time. Continue?"
+    },
+    {
+      "name": "recurring_add_now_success",
+      "value": "Recorded ¥%s"
+    },
+    {
+      "name": "recurring_add_now_failed",
+      "value": "Failed to record, please retry"
     },
     {
       "name": "appearance_title",
@@ -1075,6 +1159,82 @@
     {
       "name": "glow_strong",
       "value": "Strong"
+    },
+    {
+      "name": "train_section_title",
+      "value": "Training data collection"
+    },
+    {
+      "name": "train_collect_label",
+      "value": "Collect training data"
+    },
+    {
+      "name": "train_collect_hint",
+      "value": "When enabled, on-device OCR runs in parallel during image recognition. Only the image dimensions, OCR text blocks and multimodal results are stored locally to train the on-device model. Nothing is uploaded and the image itself is not saved."
+    },
+    {
+      "name": "train_collected_count",
+      "value": "%d collected"
+    },
+    {
+      "name": "train_export_do",
+      "value": "Export data"
+    },
+    {
+      "name": "train_export_empty",
+      "value": "No training data to export"
+    },
+    {
+      "name": "train_export_success",
+      "value": "Exported %d training samples"
+    },
+    {
+      "name": "ocr_supported",
+      "value": "On-device OCR: supported"
+    },
+    {
+      "name": "ocr_test_do",
+      "value": "Test OCR"
+    },
+    {
+      "name": "ocr_testing",
+      "value": "Testing..."
+    },
+    {
+      "name": "ocr_test_success",
+      "value": "Recognized %d lines"
+    },
+    {
+      "name": "ocr_test_detail",
+      "value": "Recognized text (text + relative coordinates)"
+    },
+    {
+      "name": "train_list_title",
+      "value": "Collected samples (tap \"Delete\" to remove bad data)"
+    },
+    {
+      "name": "train_delete_success",
+      "value": "Sample deleted"
+    },
+    {
+      "name": "train_clear_all",
+      "value": "Clear all"
+    },
+    {
+      "name": "train_clear_confirm_title",
+      "value": "Clear training samples"
+    },
+    {
+      "name": "train_clear_confirm_msg",
+      "value": "Clear all collected samples? This cannot be undone."
+    },
+    {
+      "name": "train_clear_success",
+      "value": "Training samples cleared"
+    },
+    {
+      "name": "add_manual",
+      "value": "Add manually"
     }
   ]
 }

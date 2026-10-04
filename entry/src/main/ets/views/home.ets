@@ -8,6 +8,7 @@ import BillStore, { BillChangeListener } from '../common/BillStore';
 import GroupHeader from '../components/GroupHeader';
 import { Toast } from '../components/ToastDialog';
 import AccountItem from '../components/AccountItem';
+import DBUtil from '../utils/DBUtil';
 import { Logger } from '../utils/Logger';
 import {
   PAGE_PADDING,
@@ -40,6 +41,8 @@ export default struct Home {
   @State accountList: GroupByDate[] = [];
   @State expenses: number = 0;
   @State income: number = 0;
+  // 首帧加载状态：数据库就绪前显示加载中，避免冷启动时误显示“暂无账单”
+  @State loading: boolean = true;
   // 月度消费额度状态，账单或额度设置变更后刷新
   @State budgetEnabled: boolean = false;
   @State budgetLimit: number = 0;
@@ -57,6 +60,8 @@ export default struct Home {
 
   async queryByDate(): Promise<void> {
     try {
+      // 冷启动时数据库初始化与页面加载并行，先等待就绪再查询，避免查询失败误显示空态
+      await DBUtil.ready;
       const start = dayjs(this.selectedDate).startOf('day').valueOf();
       const end = dayjs(this.selectedDate).endOf('day').valueOf();
       const res = await AccountService.queryByDateRange(start, end);
@@ -67,6 +72,8 @@ export default struct Home {
       this.refreshBudgetStatus();
     } catch (err) {
       Logger.error('查询当日记录失败', (err as Error).message);
+    } finally {
+      this.loading = false;
     }
   }
 
@@ -402,6 +409,19 @@ export default struct Home {
     .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
   }
 
+  @Builder LoadingView() {
+    Column({ space: SPACE_MEDIUM }) {
+      LoadingProgress()
+        .width(40)
+        .height(40)
+        .color(this.tk().primary)
+      Text($r('app.string.loading_tip'))
+        .fontSize(this.fs(13))
+        .fontColor(this.tk().textSecondary)
+    }.width('100%')
+    .margin({ top: 60 })
+  }
+
   @Builder EmptyView() {
     Column({ space: SPACE_LARGE }) {
       Image($r('app.media.empty'))
@@ -475,6 +495,8 @@ export default struct Home {
             })
           }.divider({ strokeWidth: 1, color: this.tk().surfaceVariant })
           Divider().color(this.tk().surfaceVariant)
+        } else if (this.loading) {
+          this.LoadingView()
         } else {
           this.EmptyView()
         }

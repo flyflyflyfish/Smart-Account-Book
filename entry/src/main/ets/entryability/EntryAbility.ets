@@ -84,8 +84,11 @@ export default class EntryAbility extends UIAbility {
     hilog.info(0x0000, 'testTag', '%{private}s', 'Ability onWindowStageCreate');
     this.currentWindowStage = windowStage;
 
-    // 自定义分类配置就绪后再加载页面，避免首帧读到默认分类
-    CategoryStore.init(this.context).then((): void => {
+    // 自定义分类配置就绪后再加载页面，避免首帧读到默认分类；
+    // init 失败也必须加载页面（用默认分类兜底），否则应用白屏
+    CategoryStore.init(this.context).catch((err: Error): void => {
+      hilog.error(0x0000, 'testTag', 'CategoryStore init failed: %{public}s', err.message);
+    }).then((): void => {
       if (this.selectPage === 'ai') {
         AppStorage.setOrCreate('quickTab', 1);
       }
