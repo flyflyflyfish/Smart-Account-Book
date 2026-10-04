@@ -3,14 +3,19 @@ import dayjs from 'dayjs';
 import cameraPicker from '@ohos.multimedia.cameraPicker';
 import camera from '@ohos.multimedia.camera';
 import photoAccessHelper from '@ohos.file.photoAccessHelper';
+import common from '@ohos.app.ability.common';
 import AccountNavigator from '../components/Navigator';
 import AccountTypeModel from '../models/accountType/AccountTypeModel';
 import CategoryRegistry from '../models/accountType/CategoryRegistry';
+import CategoryStore from '../models/accountType/CategoryStore';
 import { AccountInfo, AccountType } from '../models/account/account';
 import { BillDraft } from '../models/recognition/BillDraft';
 import { ImageTask, ImageTaskStatus } from '../models/recognition/ImageTask';
+import { RecognitionResult, copyRecognitionResult } from '../models/recognition/RecognitionResult';
+import { OcrVisionResult, SampleTransaction } from '../models/recognition/OcrSample';
 import { RecognizerFactory } from '../service/recognition/RecognizerFactory';
 import { Recognizer } from '../service/recognition/Recognizer';
+import OcrSampleCollector from '../service/recognition/OcrSampleCollector';
 import CloudLlmConfigStore from '../service/recognition/CloudLlmConfigStore';
 import { RecognitionPipeline } from '../service/recognition/pipeline/RecognitionPipeline';
 import learnedClassifier from '../service/recognition/classifier/LearnedClassifier';
@@ -64,6 +69,12 @@ struct RecognizeBill {
   @State selectType: AccountTypeModel | undefined = undefined;
   @State autoClassified: boolean = false;
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
+  // 页面销毁标志：识别中退出页面后，后台协程不再更新状态/写缓存
+  private destroyed: boolean = false;
+  // 入账执行中标志：防止双击“入账”导致同一批草稿重复入库
+  @State importing: boolean = false;
+  // 每张图的训练样本缓存协程：入账前需等它们完成，否则样本可能因“无缓存”被静默丢弃
+  private samplePromises: Map<string, Promise<void>> = new Map();
 
   aboutToAppear(): void {
     const params = router.getParams() as RecognizeSourceParam | undefined;
@@ -73,6 +84,14 @@ struct RecognizeBill {
     } else if (source === 'gallery') {
       this.pickFromGallery();
     }
+  }
+
+  aboutToDisappear(): void {
+    // 退出识别页时清理未入账的采集缓存，避免内存残留；
+    // 同时置销毁标志，让仍在后台执行的识别/采集协程放弃后续状态更新
+    this.destroyed = true;
+    this.samplePromises.clear();
+    OcrSampleCollector.clearPending();
   }
 
   // 从相册多选账单图片：走系统选择器，无需相册权限
@@ -125,6 +144,9 @@ struct RecognizeBill {
             message: $r('app.string.cloud_consent_msg'),
             autoCancel: true,
             alignment: DialogAlignment.Center,
+            cancel: () => {
+              resolve(false);
+            },
             primaryButton: {
               value: $r('app.string.cancel'),
               action: () => {
@@ -161,6 +183,9 @@ struct RecognizeBill {
     }
     this.tasks = tasks;
     await this.runBatch(tasks);
+    if (this.destroyed) {
+      return;
+    }
     this.mergeDrafts();
     if (this.drafts.length === 0) {
       Toast.error($r('app.string.all_recognize_failed'));
@@ -194,9 +219,9 @@ struct RecognizeBill {
     await Promise.all(workers);
   }
 
-  // 单个工作协程：从共享队列取任务直到取空
+  // 单个工作协程：从共享队列取任务直到取空；页面销毁后立即停止
   async runWorker(queue: ImageTask[], recognizer: Recognizer): Promise<void> {
-    while (queue.length > 0) {
+    while (queue.length > 0 && !this.destroyed) {
       const task = queue.shift();
       if (!task) {
         return;
@@ -210,7 +235,15 @@ struct RecognizeBill {
     task.status = ImageTaskStatus.RECOGNIZING;
     this.refreshTasks();
     try {
+      // 阶段1：并行采集训练数据。本地 OCR 与主识别（多模态）同时进行；
+      // 关闭开关时 collectOcr 立即返回 null，采集失败也不影响主流程。
+      // 这里只缓存，等用户入账确认后才真正落盘（标签用人工确认结果）。
+      const ocrPromise = OcrSampleCollector.collectOcr(task.uri);
       const raws = await recognizer.recognize(task.uri);
+      // 训练样本要的是大模型原始输出：识别后立刻快照，避免流水线就地修改污染样本
+      const rawSnapshot = this.snapshotRaws(raws);
+      const samplePromise = this.cacheSample(ocrPromise, rawSnapshot, task.uri);
+      this.samplePromises.set(task.uri, samplePromise);
       if (raws.length === 0) {
         task.status = ImageTaskStatus.FAILED;
         task.error = getContext().resourceManager.getStringSync($r('app.string.not_a_bill'));
@@ -240,6 +273,34 @@ struct RecognizeBill {
       this.refreshTasks();
       return false;
     }
+  }
+
+  // 阶段1：识别时缓存「OCR 文本块 + 大模型原始输出」，等入账确认后再落盘。失败只记日志
+  private async cacheSample(ocrPromise: Promise<OcrVisionResult | null>,
+    raws: RecognitionResult[], uri: string): Promise<void> {
+    try {
+      const ocr = await ocrPromise;
+      // 页面已退出：采集缓存已被清理，直接放弃本次缓存
+      if (this.destroyed) {
+        return;
+      }
+      if (ocr !== null) {
+        OcrSampleCollector.cache(uri, ocr, raws);
+      }
+    } catch (err) {
+      Logger.error('缓存训练数据失败', (err as Error).message);
+    } finally {
+      this.samplePromises.delete(uri);
+    }
+  }
+
+  // 识别结果的独立副本：与流水线、草稿的修改完全隔离
+  private snapshotRaws(raws: RecognitionResult[]): RecognitionResult[] {
+    const copies: RecognitionResult[] = [];
+    for (const r of raws) {
+      copies.push(copyRecognitionResult(r));
+    }
+    return copies;
   }
 
   // 失败项单独重试，成功后追加新草稿，保留已有编辑
@@ -310,6 +371,8 @@ struct RecognizeBill {
         }
         if (isDuplicateBill(amount, current.merchant, current.payTime,
           prevAmount, prev.merchant, prev.payTime)) {
+          // 批内重复：标记为疑似重复，让用户可见原因，而不是仅静默取消勾选
+          current.duplicated = true;
           current.selected = false;
           break;
         }
@@ -439,11 +502,37 @@ struct RecognizeBill {
     return regex.test(value);
   }
 
-  // 一键入账：遍历勾选项逐条插入
+  // 一键入账：入账只处理勾选项；训练标签则采集图上所有真实交易（含判重复的）
   async onImportSelected(): Promise<void> {
+    // 防重入：双击“入账”会把同一批草稿写两遍
+    if (this.importing) {
+      return;
+    }
+    this.importing = true;
+    try {
+      await this.doImportSelected();
+    } finally {
+      this.importing = false;
+    }
+  }
+
+  private async doImportSelected(): Promise<void> {
     if (this.expandedIndex >= 0) {
       this.commitExpanded();
     }
+    // 等待仍在后台采集的 OCR/大模型原始输出缓存完成：
+    // appendConfirmed 对“无缓存”的图会静默忽略，不等会导致训练样本丢失
+    const pending: Promise<void>[] = [];
+    this.samplePromises.forEach((p: Promise<void>) => {
+      pending.push(p);
+    });
+    if (pending.length > 0) {
+      await Promise.all(pending);
+    }
+    if (this.destroyed) {
+      return;
+    }
+    // 入账：只处理勾选的（去重只影响是否入账，不影响训练标签）
     let imported = 0;
     for (const draft of this.drafts) {
       if (!draft.selected) {
@@ -475,8 +564,73 @@ struct RecognizeBill {
       Toast.error($r('app.string.require_amount_type'));
       return;
     }
+    if (this.destroyed) {
+      return;
+    }
+    // 采集训练数据：图上所有真实交易 = 勾选入账的 + 判重复未勾选的。
+    // 判重复的交易仍是图上真实存在的一笔，不应剔除；仅排除用户手动取消勾选的非重复项（识别错/不想记）。
+    const confirmedByUri: Map<string, SampleTransaction[]> = new Map();
+    for (const draft of this.drafts) {
+      if (!draft.selected && !draft.duplicated) {
+        continue;
+      }
+      const amount = parseFloat(draft.amountText);
+      if (!(amount > 0) || !draft.selectType) {
+        continue;
+      }
+      const txn: SampleTransaction = {
+        accountType: draft.accountType === AccountType.INCOME ? '收入' : '支出',
+        amount: amount,
+        merchant: draft.merchant,
+        payTime: draft.payTime,
+        categoryName: CategoryStore.nameText(draft.selectType.id, draft.accountType),
+        confidence: 1
+      };
+      let list = confirmedByUri.get(draft.imageUri);
+      if (!list) {
+        list = [];
+        confirmedByUri.set(draft.imageUri, list);
+      }
+      list.push(txn);
+    }
+    // 阶段1：把「OCR 块 + 大模型原始输出 + 用户确认结果（含重复交易）」落盘
+    const ctx = getContext(this) as common.Context;
+    confirmedByUri.forEach((confirmed: SampleTransaction[], uri: string) => {
+      OcrSampleCollector.appendConfirmed(ctx, uri, confirmed);
+    });
     Toast.success($r('app.string.save_success'));
     router.back();
+  }
+
+  // 手动补录大模型漏识别的交易：新建一条空草稿并展开编辑，入账后同样进入训练样本（confirmed）
+  addManualDraft(): void {
+    if (this.expandedIndex >= 0) {
+      this.commitExpanded();
+    }
+    const draft = new BillDraft();
+    draft.amountText = '';
+    draft.merchant = '';
+    draft.accountType = AccountType.EXPENSES;
+    draft.selectType = BillDraft.matchCategory('', AccountType.EXPENSES);
+    draft.selectedDate = dayjs().startOf('day').valueOf();
+    draft.payTime = Date.now();
+    draft.selected = true;
+    draft.autoClassified = false;
+    draft.imageUri = this.firstSuccessUri();
+    this.drafts.push(draft);
+    this.drafts = this.drafts.slice();
+    this.expandedIndex = this.drafts.length - 1;
+    this.loadExpanded();
+  }
+
+  // 取当前批次第一个成功任务的图片 uri，作为手动补录交易的关联图（用于训练样本按图分组）
+  firstSuccessUri(): string {
+    for (const task of this.tasks) {
+      if (task.status === ImageTaskStatus.SUCCESS) {
+        return task.uri;
+      }
+    }
+    return '';
   }
 
   // Grid 是滚动容器，必须显式给定高度
@@ -812,10 +966,26 @@ struct RecognizeBill {
           .fontColor(this.tk().surface)
           .type(ButtonType.Normal)
           .borderRadius(SPACE_SMALL)
+          .enabled(!this.importing)
+          .opacity(this.importing ? 0.6 : 1)
           .onClick(() => {
             this.onImportSelected();
           })
       }.width('100%')
+
+      // 手动补录大模型漏识别的交易：补录的也会进入训练样本（confirmed）
+      Button($r('app.string.add_manual'))
+        .width('100%')
+        .height(40)
+        .fontSize(this.fs(15))
+        .fontColor(this.tk().primary)
+        .backgroundColor(this.tk().surface)
+        .type(ButtonType.Normal)
+        .borderRadius(SPACE_SMALL)
+        .border({ width: 1, color: this.tk().primary })
+        .onClick(() => {
+          this.addManualDraft();
+        })
 
       // 失败项：可单独重试
       ForEach(this.tasks, (task: ImageTask, index: number) => {
@@ -850,7 +1020,7 @@ struct RecognizeBill {
           ListItem() {
             this.DraftItem(draft, index)
           }
-        }, (draft: BillDraft, index: number) => draft.imageUri + '_' + index)
+        }, (draft: BillDraft, index: number) => 'draft_' + draft.uid)
       }
       .width('100%')
       .layoutWeight(1)

@@ -1,11 +1,13 @@
 import dayjs from 'dayjs';
 import util from '@ohos.util';
+import { BusinessError } from '@kit.BasicServicesKit';
 import { AccountRepository } from '../data/AccountRepository';
 import { RdbAccountRepository } from '../data/RdbAccountRepository';
 import { AccountInfo } from '../models/account/account';
 import AccountPO from '../models/account/accountPO';
 import BillStore from '../common/BillStore';
 import { SOURCE_MANUAL } from '../common/constants';
+import { Logger } from '../utils/Logger';
 import AuthService from './AuthService';
 import CloudAccountRepository from '../data/CloudAccountRepository';
 
@@ -57,7 +59,33 @@ class AccountService {
     po.createTime = Date.now();
     await this.repository.insert(po);
     BillStore.notifyChanged();
-    this.syncUpsert(po);
+    this.syncUpsert(po).catch((error: BusinessError): void => {
+      // 云同步失败不影响本地结果，只记日志
+      Logger.error('云同步账单失败', error.message);
+    });
+  }
+
+  /**
+   * 静默插入一条记录：不触发 BillStore 通知。
+   * 供周期补记等批量场景使用——一次补记可能插入上百笔，
+   * 逐笔广播会引发 UI/卡片刷新风暴；调用方在整批完成后统一 notifyChanged。
+   */
+  async insertSilently(info: AccountInfo): Promise<void> {
+    const po: AccountPO = new AccountPO();
+    po.id = util.generateRandomUUID();
+    po.type = info.type;
+    po.accountType = info.accountType;
+    po.amount = info.amount;
+    po.time = info.time;
+    po.description = info.description ?? '';
+    po.merchant = info.merchant ?? '';
+    po.source = info.source ?? SOURCE_MANUAL;
+    po.payTime = info.payTime ?? this.buildDefaultPayTime(info.time);
+    po.createTime = Date.now();
+    await this.repository.insert(po);
+    this.syncUpsert(po).catch((error: BusinessError): void => {
+      Logger.error('云同步账单失败', error.message);
+    });
   }
 
   /**
@@ -77,7 +105,9 @@ class AccountService {
     po.createTime = info.createTime ?? Date.now();
     const rows = await this.repository.update(id, po);
     BillStore.notifyChanged();
-    this.syncUpsert(po);
+    this.syncUpsert(po).catch((error: BusinessError): void => {
+      Logger.error('云同步账单失败', error.message);
+    });
     return rows;
   }
 
@@ -87,7 +117,9 @@ class AccountService {
   async deleteById(id: string): Promise<number> {
     const rows = await this.repository.deleteById(id);
     BillStore.notifyChanged();
-    this.syncDelete(id);
+    this.syncDelete(id).catch((error: BusinessError): void => {
+      Logger.error('云同步删除账单失败', error.message);
+    });
     return rows;
   }
 
@@ -98,7 +130,9 @@ class AccountService {
     let rows = 0;
     for (const id of ids) {
       rows += await this.repository.deleteById(id);
-      this.syncDelete(id);
+      this.syncDelete(id).catch((error: BusinessError): void => {
+        Logger.error('云同步删除账单失败', error.message);
+      });
     }
     BillStore.notifyChanged();
     return rows;

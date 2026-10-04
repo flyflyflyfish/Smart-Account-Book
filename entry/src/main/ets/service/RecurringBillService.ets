@@ -5,6 +5,7 @@ import common from '@ohos.app.ability.common';
 import PreferenceUtil from '../utils/PreferenceUtil';
 import * as CONSTANTS from '../common/constants';
 import AccountService from './account';
+import BillStore from '../common/BillStore';
 import CategoryStore from '../models/accountType/CategoryStore';
 import { RecurringBill, RecurringRepeatMode } from '../models/recurring/RecurringBill';
 import { AccountInfo, AccountType } from '../models/account/account';
@@ -21,7 +22,8 @@ const MONTH_DAY_MIN: number = 1;
 const MONTH_DAY_MAX: number = 28;
 
 /**
- * 重复性账单：规则存取、到期补记、记入成功通知与周期检查
+ * 快捷记账（原重复性账单）：规则存取、一键添加、到期补记、记入成功通知与周期检查
+ * 一键添加：按模板立即记入一笔时间为当前的账单；
  * 到达设定时间自动调用 AccountService.insert 记入账单；
  * 应用启动/回前台时补记停机期间错过的账单
  */
@@ -157,6 +159,36 @@ class RecurringBillService {
   }
 
   /**
+   * 一键添加：按模板立即记入一笔账单，支付时间与记入时间均为当前时间
+   * 与规则的开关状态、定时自动记入互不影响
+   */
+  async recordNow(bill: RecurringBill): Promise<boolean> {
+    if (!bill || bill.amount <= 0) {
+      return false;
+    }
+    try {
+      const now = Date.now();
+      // time 为首页分组用的日桶，需归一到当天零点；payTime 为实际支付时间（现在）
+      const today = dayjs(now).startOf('day').valueOf();
+      const info: AccountInfo = {
+        type: bill.type,
+        accountType: bill.accountType === AccountType.INCOME ? AccountType.INCOME : AccountType.EXPENSES,
+        amount: bill.amount,
+        time: today,
+        description: bill.description,
+        source: CONSTANTS.SOURCE_RECURRING,
+        payTime: now,
+        createTime: now
+      };
+      await AccountService.insert(info);
+      return true;
+    } catch (err) {
+      Logger.error('一键添加快捷账单失败', (err as Error).message);
+      return false;
+    }
+  }
+
+  /**
    * 某天是否命中重复规则
    */
   static matchesDay(bill: RecurringBill, dayTime: number): boolean {
@@ -210,7 +242,13 @@ class RecurringBillService {
       const now = Date.now();
       let changed = false;
       for (const bill of list) {
-        const inserted = await this.backfillBill(bill, now);
+        let inserted = 0;
+        try {
+          inserted = await this.backfillBill(bill, list, now);
+        } catch (err) {
+          // 单条规则失败不影响其他规则；进度已随每笔插入持久化，不会重复
+          Logger.error('补记单条规则失败', (err as Error).message);
+        }
         if (inserted > 0) {
           changed = true;
           if (bill.notify) {
@@ -219,7 +257,8 @@ class RecurringBillService {
         }
       }
       if (changed) {
-        await this.saveAll(list);
+        // 补记走静默插入，这里统一广播一次，避免逐笔触发 UI/卡片刷新风暴
+        BillStore.notifyChanged();
       }
     } catch (err) {
       Logger.error('同步重复性账单失败', (err as Error).message);
@@ -229,7 +268,7 @@ class RecurringBillService {
   }
 
   // 逐天扫描补记窗口，命中规则且未记入的账单逐条插入
-  private async backfillBill(bill: RecurringBill, now: number): Promise<number> {
+  private async backfillBill(bill: RecurringBill, list: RecurringBill[], now: number): Promise<number> {
     if (!bill.enabled || bill.amount <= 0) {
       return 0;
     }
@@ -259,9 +298,18 @@ class RecurringBillService {
             payTime: occurrence,
             createTime: Date.now()
           };
-          await AccountService.insert(info);
-          bill.lastTriggerTime = occurrence;
-          inserted += 1;
+          try {
+            await AccountService.insertSilently(info);
+            bill.lastTriggerTime = occurrence;
+            inserted += 1;
+            // 每笔插入后立即持久化进度：后续某笔失败或进程被杀，
+            // 已成功笔不会被下轮 sync 重复插入
+            await this.saveAll(list);
+          } catch (err) {
+            // 本笔失败：中断本规则，下轮 sync 从已持久化的 lastTriggerTime 继续
+            Logger.error('补记账单中断', (err as Error).message);
+            break;
+          }
         }
       }
       day = day.add(1, 'day');
@@ -281,7 +329,7 @@ class RecurringBillService {
       // 变参 getStringSync 重载在 ArkTS 严格模式不可用，先取模板再替换占位符
       const textTemplate = context.resourceManager.getStringSync($r('app.string.recurring_notif_text'));
       const request: notificationManager.NotificationRequest = {
-        id: CONSTANTS.RECURRING_NOTIFICATION_ID,
+        id: RecurringBillService.notificationIdOf(bill),
         content: {
           notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT,
           normal: {
@@ -297,6 +345,16 @@ class RecurringBillService {
     } catch (err) {
       Logger.debug('发送重复性账单通知失败', (err as Error).message);
     }
+  }
+
+  // 由规则 id 派生稳定的通知 id：多规则同轮触发时通知互不覆盖
+  private static notificationIdOf(bill: RecurringBill): number {
+    let hash = 0;
+    const id = bill.id;
+    for (let i = 0; i < id.length; i++) {
+      hash = (hash * 31 + id.charCodeAt(i)) % 100000;
+    }
+    return CONSTANTS.RECURRING_NOTIFICATION_ID + hash;
   }
 
   /**

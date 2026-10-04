@@ -62,6 +62,8 @@ struct ExportBill {
   private webController: webview.WebviewController = new webview.WebviewController();
   private pendingPdfAction: string = '';
   private pdfSrc: string = '';
+  // 渲染等待定时器：关闭预览或离开页面时必须取消，否则会对已销毁的 Web 调 createPdf
+  private pdfTimerId: number = -1;
   private pdfConfig: webview.PdfConfiguration = {
     width: 8.27,
     height: 11.69,
@@ -75,6 +77,28 @@ struct ExportBill {
 
   aboutToAppear(): void {
     this.loadRecords();
+  }
+
+  aboutToDisappear(): void {
+    // 离开页面时取消未触发的 PDF 生成定时器
+    this.cancelPdfTimer();
+  }
+
+  private cancelPdfTimer(): void {
+    if (this.pdfTimerId >= 0) {
+      clearTimeout(this.pdfTimerId);
+      this.pdfTimerId = -1;
+    }
+  }
+
+  // 将字节写入指定文件/URI 并确保关闭句柄：写失败时 fd 也不泄漏
+  private writeBytesSync(pathOrUri: string, bytes: Uint8Array, mode: number): void {
+    const file = fs.openSync(pathOrUri, mode);
+    try {
+      fs.writeSync(file.fd, bytes.buffer);
+    } finally {
+      fs.closeSync(file);
+    }
   }
 
   async loadRecords(): Promise<void> {
@@ -116,7 +140,7 @@ struct ExportBill {
 
   pickStartDate(): void {
     this.getUIContext().showDatePickerDialog({
-      start: new Date('2020-1-1'),
+      start: new Date(2020, 0, 1),
       end: new Date(),
       selected: new Date(this.startDate),
       onDateAccept: (value: Date) => {
@@ -132,7 +156,7 @@ struct ExportBill {
 
   pickEndDate(): void {
     this.getUIContext().showDatePickerDialog({
-      start: new Date('2020-1-1'),
+      start: new Date(2020, 0, 1),
       end: new Date(),
       selected: new Date(this.endDate),
       onDateAccept: (value: Date) => {
@@ -189,9 +213,7 @@ struct ExportBill {
       if (!uris || uris.length === 0) {
         return;
       }
-      const file = fs.openSync(uris[0], fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);
-      fs.writeSync(file.fd, docxBytes.buffer);
-      fs.closeSync(file);
+      this.writeBytesSync(uris[0], docxBytes, fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);
       Toast.success($r('app.string.export_saved'));
     } catch (err) {
       Logger.error('导出 Word 账单失败', (err as Error).message);
@@ -219,8 +241,11 @@ struct ExportBill {
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       const path = `${context.cacheDir}/bill_preview.html`;
       const file = fs.openSync(path, fs.OpenMode.READ_WRITE | fs.OpenMode.CREATE | fs.OpenMode.TRUNC);
-      fs.writeSync(file.fd, html);
-      fs.closeSync(file);
+      try {
+        fs.writeSync(file.fd, html);
+      } finally {
+        fs.closeSync(file);
+      }
       this.pdfSrc = `file://${path}`;
       this.pendingPdfAction = action;
       this.pdfPreview = true;
@@ -236,12 +261,18 @@ struct ExportBill {
   private generatePdf(): void {
     const action = this.pendingPdfAction;
     this.pendingPdfAction = '';
-    setTimeout(() => {
+    this.cancelPdfTimer();
+    this.pdfTimerId = setTimeout(() => {
+      this.pdfTimerId = -1;
       this.doGeneratePdf(action);
     }, 500);
   }
 
   private async doGeneratePdf(action: string): Promise<void> {
+    // 用户已关闭预览（Web 已销毁）时直接放弃，避免对已销毁组件调用抛错
+    if (!this.pdfPreview) {
+      return;
+    }
     try {
       this.webController.onActive();
       const pdfData = await this.webController.createPdf(this.pdfConfig);
@@ -268,9 +299,7 @@ struct ExportBill {
     if (!uris || uris.length === 0) {
       return;
     }
-    const file = fs.openSync(uris[0], fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);
-    fs.writeSync(file.fd, bytes.buffer);
-    fs.closeSync(file);
+    this.writeBytesSync(uris[0], bytes, fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);
     Toast.success($r('app.string.export_saved'));
   }
 
@@ -278,9 +307,7 @@ struct ExportBill {
     const name = this.fileName('pdf');
     const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
     const path = `${context.cacheDir}/${name}`;
-    const file = fs.openSync(path, fs.OpenMode.READ_WRITE | fs.OpenMode.CREATE | fs.OpenMode.TRUNC);
-    fs.writeSync(file.fd, bytes.buffer);
-    fs.closeSync(file);
+    this.writeBytesSync(path, bytes, fs.OpenMode.READ_WRITE | fs.OpenMode.CREATE | fs.OpenMode.TRUNC);
     const utdTypeId = utd.getUniformDataTypeByFilenameExtension('.pdf', utd.UniformDataType.PDF);
     const shareData = new systemShare.SharedData({
       utd: utdTypeId,
@@ -313,9 +340,7 @@ struct ExportBill {
       const name = this.fileName('docx');
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       const path = `${context.cacheDir}/${name}`;
-      const file = fs.openSync(path, fs.OpenMode.READ_WRITE | fs.OpenMode.CREATE | fs.OpenMode.TRUNC);
-      fs.writeSync(file.fd, docxBytes.buffer);
-      fs.closeSync(file);
+      this.writeBytesSync(path, docxBytes, fs.OpenMode.READ_WRITE | fs.OpenMode.CREATE | fs.OpenMode.TRUNC);
       const utdTypeId = utd.getUniformDataTypeByFilenameExtension('.docx', utd.UniformDataType.WORDPROCESSINGML_DOCUMENT);
       const shareData = new systemShare.SharedData({
         utd: utdTypeId,
@@ -654,9 +679,11 @@ struct ExportBill {
               .fontSize(this.fs(14))
               .fontColor(this.tk().textSecondary)
               .padding({ left: SPACE_MEDIUM, right: SPACE_LARGE, top: SPACE_SMALL, bottom: SPACE_SMALL })
-              .onClick(() => {
+               .onClick(() => {
                 this.pendingPdfAction = '';
                 this.pdfPreview = false;
+                // 取消未触发的生成定时器，真正停止本次导出
+                this.cancelPdfTimer();
               })
           }
           .width('100%')

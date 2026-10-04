@@ -17,6 +17,7 @@ import CategoryRegistry from '../models/accountType/CategoryRegistry';
 import AccountService from '../service/account';
 import StatsService from '../service/stats';
 import { VoiceBillParser, ParsedVoiceBill } from '../service/recognition/VoiceBillParser';
+import BillStore, { BillChangeListener } from '../common/BillStore';
 import { SOURCE_MANUAL } from '../common/constants';
 import { Toast } from '../components/ToastDialog';
 import { Logger } from '../utils/Logger';
@@ -24,6 +25,23 @@ import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_TINY } from 
 import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
 const AI_GREETING: string = '你好，我是你的记账助手，可以帮你记一笔，也能分析消费、生成小结。';
+
+// 发送给大模型的最大历史消息条数（含当前输入），超出只保留最近若干条
+const MAX_HISTORY_MESSAGES: number = 20;
+
+// 是否带有记账意图：包含常见记账动词/场景词即认为用户在记账
+function hasBookingIntent(text: string): boolean {
+  const keywords: string[] = [
+    '记', '花', '买', '付', '消费', '支出', '收入', '赚', '收到',
+    '转账', '充值', '缴费', '打车', '外卖', '红包', '工资', '房租'
+  ];
+  for (const keyword of keywords) {
+    if (text.indexOf(keyword) >= 0) {
+      return true;
+    }
+  }
+  return false;
+}
 
 interface ChatBubble {
   role: string;
@@ -90,6 +108,18 @@ export default struct AiAssistant {
   private asrEngine: speechRecognizer.SpeechRecognitionEngine | undefined = undefined;
   private sessionId: string = '';
   private finalText: string = '';
+  // 页面销毁标志：防止引擎异步初始化完成后向已销毁页面赋值/泄漏
+  private destroyed: boolean = false;
+  // 语音启动中标志：权限弹窗等待期间为 true，配合 stopRequested 处理“提前松开”竞态
+  private voiceStarting: boolean = false;
+  private voiceStopRequested: boolean = false;
+  // 账单上下文缓存：避免每条消息都全表查询；账单变化时置空重建
+  private billContextCache: string | null = null;
+  // 入账执行中标志：防止双击“确认入账”重复入库
+  @State confirming: boolean = false;
+  private billListener: BillChangeListener = (): void => {
+    this.billContextCache = null;
+  };
 
   async aboutToAppear(): Promise<void> {
     this.getUIContext().setKeyboardAvoidMode(KeyboardAvoidMode.RESIZE);
@@ -97,11 +127,14 @@ export default struct AiAssistant {
     this.configMissing = !this.config.baseUrl || !this.config.apiKey || !this.config.model;
     const greeting: ChatBubble = { role: 'assistant', content: AI_GREETING };
     this.chatList = [greeting];
+    BillStore.subscribe(this.billListener);
     await this.initAsrEngine();
   }
 
   aboutToDisappear(): void {
+    this.destroyed = true;
     this.getUIContext().setKeyboardAvoidMode(KeyboardAvoidMode.OFFSET);
+    BillStore.unsubscribe(this.billListener);
     if (this.asrEngine) {
       try {
         this.asrEngine.shutdown();
@@ -120,8 +153,18 @@ export default struct AiAssistant {
         online: 1,
         extraParams: extraParams
       };
-      this.asrEngine = await speechRecognizer.createEngine(params);
-      this.asrEngine.setListener(this.buildListener());
+      const engine = await speechRecognizer.createEngine(params);
+      // 等待创建期间页面已销毁：立即关闭，避免引擎泄漏或向已销毁页面写状态
+      if (this.destroyed) {
+        try {
+          engine.shutdown();
+        } catch (err) {
+          Logger.error('关闭语音引擎失败', (err as Error).message);
+        }
+        return;
+      }
+      this.asrEngine = engine;
+      engine.setListener(this.buildListener());
     } catch (err) {
       Logger.error('初始化语音识别失败', (err as Error).message);
     }
@@ -172,43 +215,70 @@ export default struct AiAssistant {
       Toast.error($r('app.string.voice_unavailable'));
       return;
     }
-    const granted = await this.ensureMicPermission();
-    if (!granted) {
-      Toast.error($r('app.string.mic_permission_denied'));
+    if (this.listening || this.voiceStarting) {
       return;
     }
-    this.sessionId = 'voice_' + Date.now();
-    this.finalText = '';
-    this.partialText = '';
-    const recognizerOption: RecognizerOption = { enablePartialResult: true };
-    const extraParams: Record<string, Object> = {
-      'recognitionMode': 0,
-      'vadBegin': 2000,
-      'vadEnd': 800,
-      'maxAudioDuration': 20000,
-      'recognizerOption': recognizerOption
-    };
-    const params: speechRecognizer.StartParams = {
-      sessionId: this.sessionId,
-      audioInfo: { audioType: 'pcm', sampleRate: 16000, soundChannel: 1, sampleBit: 16 },
-      extraParams: extraParams
-    };
+    this.voiceStarting = true;
+    this.voiceStopRequested = false;
     try {
+      const granted = await this.ensureMicPermission();
+      if (!granted) {
+        Toast.error($r('app.string.mic_permission_denied'));
+        return;
+      }
+      this.sessionId = 'voice_' + Date.now();
+      this.finalText = '';
+      this.partialText = '';
+      const recognizerOption: RecognizerOption = { enablePartialResult: true };
+      const extraParams: Record<string, Object> = {
+        'recognitionMode': 0,
+        'vadBegin': 2000,
+        'vadEnd': 800,
+        'maxAudioDuration': 20000,
+        'recognizerOption': recognizerOption
+      };
+      const params: speechRecognizer.StartParams = {
+        sessionId: this.sessionId,
+        audioInfo: { audioType: 'pcm', sampleRate: 16000, soundChannel: 1, sampleBit: 16 },
+        extraParams: extraParams
+      };
       this.asrEngine.startListening(params);
+      // 用户在权限弹窗/启动等待期间已松开：启动完成立即结束，避免“松开无效”
+      if (this.voiceStopRequested) {
+        this.finishVoice();
+        return;
+      }
       this.listening = true;
     } catch (err) {
       Logger.error('启动语音识别失败', (err as Error).message);
       Toast.error($r('app.string.voice_failed'));
+    } finally {
+      this.voiceStarting = false;
     }
   }
 
   stopVoice(): void {
-    if (this.asrEngine && this.listening) {
-      try {
-        this.asrEngine.finish(this.sessionId);
-      } catch (err) {
-        Logger.error('结束语音识别失败', (err as Error).message);
-      }
+    if (!this.asrEngine) {
+      return;
+    }
+    if (this.voiceStarting) {
+      // 引擎尚未真正开始：记录请求，startVoice 完成后立即结束
+      this.voiceStopRequested = true;
+      return;
+    }
+    this.finishVoice();
+  }
+
+  // 结束本次识别：finish 后立即复位 listening，不依赖回调（回调丢失时也不会卡在录音态）
+  private finishVoice(): void {
+    if (!this.listening) {
+      return;
+    }
+    this.listening = false;
+    try {
+      this.asrEngine?.finish(this.sessionId);
+    } catch (err) {
+      Logger.error('结束语音识别失败', (err as Error).message);
     }
   }
 
@@ -216,8 +286,13 @@ export default struct AiAssistant {
     this.processUserInput(text);
   }
 
-  // 本地解析（支持一句话多笔），成功则弹确认卡片
+  // 本地解析（支持一句话多笔），成功则弹确认卡片。
+  // 加记账动词门控：像“预算3000元够吗”这类含金额但只是提问的句子，
+  // 不应误触发本地记账，交由云端 AI 判断意图
   tryParseAsBills(text: string): boolean {
+    if (!hasBookingIntent(text)) {
+      return false;
+    }
     const parsedList = VoiceBillParser.parseMultiple(text);
     if (parsedList.length === 0) {
       return false;
@@ -250,48 +325,57 @@ export default struct AiAssistant {
   }
 
   async confirmBillDrafts(): Promise<void> {
+    // 防重入：双击“确认入账”会把同一批草稿写两遍
+    if (this.confirming) {
+      return;
+    }
     const drafts = this.billDrafts;
     if (drafts.length === 0) {
       return;
     }
-    let okCount = 0;
-    let total = 0;
-    for (const draft of drafts) {
-      const info: AccountInfo = {
-        accountType: draft.accountType,
-        type: draft.category.id,
-        amount: draft.amount,
-        time: dayjs(draft.time).startOf('day').valueOf(),
-        merchant: draft.merchant,
-        description: draft.merchant,
-        source: SOURCE_MANUAL,
-        payTime: draft.time
-      };
-      try {
-        await AccountService.insert(info);
-        okCount++;
-        total += draft.amount;
-      } catch (err) {
-        Logger.error('记账失败', (err as Error).message);
+    this.confirming = true;
+    try {
+      let okCount = 0;
+      let total = 0;
+      for (const draft of drafts) {
+        const info: AccountInfo = {
+          accountType: draft.accountType,
+          type: draft.category.id,
+          amount: draft.amount,
+          time: dayjs(draft.time).startOf('day').valueOf(),
+          merchant: draft.merchant,
+          description: draft.merchant,
+          source: SOURCE_MANUAL,
+          payTime: draft.time
+        };
+        try {
+          await AccountService.insert(info);
+          okCount++;
+          total += draft.amount;
+        } catch (err) {
+          Logger.error('记账失败', (err as Error).message);
+        }
       }
+      this.billDrafts = [];
+      if (okCount <= 0) {
+        Toast.error($r('app.string.save_failed'));
+        return;
+      }
+      Toast.success($r('app.string.save_success'));
+      let tip = '';
+      if (drafts.length === 1) {
+        const typeLabel = drafts[0].accountType === AccountType.EXPENSES ? '支出' : '收入';
+        const merchantText = drafts[0].merchant.length > 0 ? drafts[0].merchant + ' ' : '';
+        tip = '已记一笔' + typeLabel + '：' + merchantText + '¥' + drafts[0].amount.toFixed(2);
+      } else {
+        tip = '已记' + drafts.length + '笔，共 ¥' + total.toFixed(2);
+      }
+      this.chatList.push({ role: 'assistant', content: tip });
+      this.chatList = this.chatList.slice();
+      this.scrollToBottom();
+    } finally {
+      this.confirming = false;
     }
-    this.billDrafts = [];
-    if (okCount <= 0) {
-      Toast.error($r('app.string.save_failed'));
-      return;
-    }
-    Toast.success($r('app.string.save_success'));
-    let tip = '';
-    if (drafts.length === 1) {
-      const typeLabel = drafts[0].accountType === AccountType.EXPENSES ? '支出' : '收入';
-      const merchantText = drafts[0].merchant.length > 0 ? drafts[0].merchant + ' ' : '';
-      tip = '已记一笔' + typeLabel + '：' + merchantText + '¥' + drafts[0].amount.toFixed(2);
-    } else {
-      tip = '已记' + drafts.length + '笔，共 ¥' + total.toFixed(2);
-    }
-    this.chatList.push({ role: 'assistant', content: tip });
-    this.chatList = this.chatList.slice();
-    this.scrollToBottom();
   }
 
   cancelBillDrafts(): void {
@@ -349,7 +433,7 @@ export default struct AiAssistant {
 
   showEditDatePicker(): void {
     this.getUIContext().showDatePickerDialog({
-      start: new Date('2020-1-1'),
+      start: new Date(2020, 0, 1),
       end: new Date(),
       selected: new Date(this.editTime),
       onDateAccept: (value: Date) => {
@@ -375,8 +459,12 @@ export default struct AiAssistant {
     return getContext(this).resourceManager.getStringSync(name);
   }
 
-  // 把全部历史账单 + 当月账单汇总成纯文本，作为上下文喂给大模型
+  // 把全部历史账单 + 当月账单汇总成纯文本，作为上下文喂给大模型。
+  // 结果缓存：账单未变化时复用，避免每条消息都全表查询
   async buildBillContext(): Promise<string> {
+    if (this.billContextCache !== null) {
+      return this.billContextCache;
+    }
     try {
       const now = dayjs();
       const allRes = await AccountService.queryByDateRange(dayjs('2020-01-01').valueOf(), now.valueOf());
@@ -389,6 +477,7 @@ export default struct AiAssistant {
       const monthType = StatsService.statsConsumeByType(monthRes);
       ctx += '\n本月：支出 ¥' + monthType.expenses.toFixed(2) + '，收入 ¥' + monthType.income.toFixed(2);
       ctx = this.appendTypeSummary(ctx, monthType, '本月支出分类', '本月收入分类');
+      this.billContextCache = ctx;
       return ctx;
     } catch (err) {
       Logger.error('构建账单上下文失败', (err as Error).message);
@@ -436,7 +525,9 @@ export default struct AiAssistant {
       const ctxContent: ChatContent = { type: 'text', text: billContext };
       messages.push({ role: 'system', content: [ctxContent] });
     }
-    for (const b of bubbles) {
+    // 只携带最近若干轮对话：历史消息无限累积会撑大请求体、稀释近期上下文
+    const recent = bubbles.slice(-MAX_HISTORY_MESSAGES);
+    for (const b of recent) {
       const c: ChatContent = { type: 'text', text: b.content };
       messages.push({ role: b.role, content: [c] });
     }
@@ -469,14 +560,13 @@ export default struct AiAssistant {
           continue;
         }
         const accountType = item.accountType === '收入' ? AccountType.INCOME : AccountType.EXPENSES;
+        // 模型给的分类名不在列表时回退“其他”，不能静默丢掉这一笔
         const category = CategoryRegistry.getByName(item.category, accountType);
-        if (!category) {
-          continue;
-        }
+        const fallbackCategory = category ? category : CategoryRegistry.getOther(accountType);
         const bill: ParsedVoiceBill = {
           amount: amount,
           accountType: accountType,
-          categoryId: category.id,
+          categoryId: fallbackCategory.id,
           merchant: typeof item.merchant === 'string' ? item.merchant : '',
           time: VoiceBillParser.resolveTime(typeof item.date === 'string' ? item.date : '')
         };
@@ -776,6 +866,8 @@ export default struct AiAssistant {
         .type(ButtonType.Normal)
         .borderRadius(SPACE_SMALL)
         .margin({ top: SPACE_TINY })
+        .enabled(!this.confirming)
+        .opacity(this.confirming ? 0.6 : 1)
         .onClick(() => {
           this.confirmBillDrafts();
         })

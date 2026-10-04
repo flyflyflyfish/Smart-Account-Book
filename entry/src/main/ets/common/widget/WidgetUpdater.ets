@@ -1,5 +1,6 @@
 import { formBindingData, formInfo, formProvider } from '@kit.FormKit';
 import { common } from '@kit.AbilityKit';
+import { BusinessError } from '@kit.BasicServicesKit';
 import relationalStore from '@ohos.data.relationalStore';
 import dayjs from 'dayjs';
 import { ACCOUNT_TABLE_NAME } from '../../data/schema';
@@ -9,6 +10,24 @@ import { ThemePalette } from '../theme/Theme';
 import { FORM_DIM_PREFIX, PREF_FORM_IDS } from '../constants';
 
 const DB_FILENAME: string = 'account.db';
+
+// 进程级 RDB 连接缓存：卡片每次刷新都要查询，复用连接避免句柄累积；
+// 打开失败时清空缓存，下次调用重试
+let widgetStorePromise: Promise<relationalStore.RdbStore> | undefined = undefined;
+
+function getWidgetStore(context: common.Context): Promise<relationalStore.RdbStore> {
+  if (!widgetStorePromise) {
+    const config: relationalStore.StoreConfig = {
+      name: DB_FILENAME,
+      securityLevel: relationalStore.SecurityLevel.S1
+    };
+    widgetStorePromise = relationalStore.getRdbStore(context, config).catch((err: BusinessError) => {
+      widgetStorePromise = undefined;
+      throw err as Error;
+    });
+  }
+  return widgetStorePromise;
+}
 
 export interface RangeSummary {
   expenses: number;
@@ -46,27 +65,27 @@ export function buildCardData(expenses: string, income: string, monthExpenses: s
 export default class WidgetUpdater {
   /** 卡片进程与主应用进程隔离，各自独立建立 RDB 连接，按时间范围查询收支 */
   static async queryRangeSummary(context: common.Context, start: number, end: number): Promise<RangeSummary> {
-    const config: relationalStore.StoreConfig = {
-      name: DB_FILENAME,
-      securityLevel: relationalStore.SecurityLevel.S1
-    };
-    const store = await relationalStore.getRdbStore(context, config);
+    const store = await getWidgetStore(context);
     const predicates = new relationalStore.RdbPredicates(ACCOUNT_TABLE_NAME);
     predicates.greaterThanOrEqualTo('time', start).and().lessThanOrEqualTo('time', end);
     const columns: string[] = ['account_type', 'amount'];
     const result = await store.query(predicates, columns);
     let expenses = 0;
     let income = 0;
-    while (result.goToNextRow()) {
-      const accountType = result.getLong(result.getColumnIndex('account_type'));
-      const amount = result.getDouble(result.getColumnIndex('amount'));
-      if (accountType === 0) {
-        expenses += amount;
-      } else {
-        income += amount;
+    try {
+      while (result.goToNextRow()) {
+        const accountType = result.getLong(result.getColumnIndex('account_type'));
+        const amount = result.getDouble(result.getColumnIndex('amount'));
+        if (accountType === 0) {
+          expenses += amount;
+        } else {
+          income += amount;
+        }
       }
+    } finally {
+      // ResultSet 必须关闭，读取抛错时也不能泄漏
+      result.close();
     }
-    result.close();
     return { expenses: expenses, income: income };
   }
 

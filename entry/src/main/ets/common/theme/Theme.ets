@@ -6,7 +6,10 @@
 import common from '@ohos.app.ability.common';
 import ConfigurationConstant from '@ohos.app.ability.ConfigurationConstant';
 import resourceManager from '@ohos.resourceManager';
+import preferences from '@ohos.data.preferences';
+import { BusinessError } from '@kit.BasicServicesKit';
 import PreferenceUtil from '../../utils/PreferenceUtil';
+import { Logger } from '../../utils/Logger';
 import { PREF_THEME_ID, PREF_COLOR_MODE, PREF_FONT_SCALE, PREF_GLOW_LEVEL } from '../constants';
 
 // 主题 id
@@ -443,27 +446,34 @@ class ThemeManager {
 
   setThemeId(id: string): void {
     this.themeId = id;
-    PreferenceUtil.putPreferenceValue(PREF_THEME_ID, id);
+    this.persistQuietly(PREF_THEME_ID, id);
     this.bump();
   }
 
   setMode(mode: string): void {
     this.mode = mode;
-    PreferenceUtil.putPreferenceValue(PREF_COLOR_MODE, mode);
+    this.persistQuietly(PREF_COLOR_MODE, mode);
     this.applyColorMode();
     this.bump();
   }
 
   setFontScale(scale: number): void {
     this.fontScale = scale;
-    PreferenceUtil.putPreferenceValue(PREF_FONT_SCALE, scale);
+    this.persistQuietly(PREF_FONT_SCALE, scale);
     this.bump();
   }
 
   setGlowLevel(level: string): void {
     this.glowLevel = level;
-    PreferenceUtil.putPreferenceValue(PREF_GLOW_LEVEL, level);
+    this.persistQuietly(PREF_GLOW_LEVEL, level);
     this.bump();
+  }
+
+  // 主题偏好写盘失败只记日志，不影响界面即时生效
+  private persistQuietly(key: string, value: preferences.ValueType): void {
+    PreferenceUtil.putPreferenceValue(key, value).catch((err: BusinessError): void => {
+      Logger.error('保存主题偏好失败', err.message);
+    });
   }
 
   /** 系统深浅色变化（跟随系统模式时联动） */

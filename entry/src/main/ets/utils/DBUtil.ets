@@ -67,6 +67,22 @@ class DBUtil {
   }
 
   /**
+   * 执行带参数的 SQL（INSERT OR REPLACE 等无法用 ValuesBucket 表达的语句）
+   */
+  async executeSql(sql: string, args: Array<relationalStore.ValueType>): Promise<void> {
+    if (!this.rdbStore) {
+      throw new DbError('rdbStore 尚未初始化，无法执行 SQL');
+    }
+    try {
+      await this.rdbStore.executeSql(sql, args);
+    } catch (err) {
+      const e = err as Error;
+      Logger.error('SQL 执行失败', e.message);
+      throw new DbError('SQL 执行失败');
+    }
+  }
+
+  /**
    * 在单个事务内执行一组迁移 SQL，任一步失败即回滚，保证迁移原子性
    */
   private async executeSqlsInTransaction(sqls: string[]): Promise<void> {

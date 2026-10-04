@@ -42,7 +42,7 @@ export class CloudResultParser {
   // 单笔映射：金额与时间非法时回退默认值，交确认页兜底
   parseItem(raw: LlmBillRaw): RecognitionResult {
     const accountType = raw.accountType === '收入' ? AccountType.INCOME : AccountType.EXPENSES;
-    const amount = typeof raw.amount === 'number' && raw.amount > 0 ? raw.amount : 0;
+    const amount = this.parseAmount(raw);
     const merchant = typeof raw.merchant === 'string' ? raw.merchant : '';
     const categoryName = this.normalizeCategory(typeof raw.category === 'string' ? raw.category : '', accountType);
     const payTime = this.parsePayTime(typeof raw.payTime === 'string' ? raw.payTime : '');
@@ -58,6 +58,19 @@ export class CloudResultParser {
     return result;
   }
 
+  // 金额解析：模型可能输出数字或字符串（"12.5"、"¥12.5"、"12.5元"），字符串清洗后再转数值
+  private parseAmount(raw: LlmBillRaw): number {
+    if (typeof raw.amount === 'number') {
+      return raw.amount > 0 ? raw.amount : 0;
+    }
+    if (typeof raw.amount === 'string') {
+      const cleaned = raw.amount.replace(/[¥￥,，\s元]/g, '');
+      const parsed = parseFloat(cleaned);
+      return parsed > 0 && !isNaN(parsed) ? parsed : 0;
+    }
+    return 0;
+  }
+
   // 分类名不在当前可选列表时回退为该收支侧的“其他”
   normalizeCategory(name: string, accountType: AccountType): string {
     const names = CategoryStore.listNames(accountType);
@@ -67,10 +80,20 @@ export class CloudResultParser {
     return CategoryStore.otherName(accountType);
   }
 
-  // 时间缺失或格式非法时用当前时间兜底
+  // 时间解析：优先按完整时间解析；只有时分（HH:mm / HH:mm:ss）无日期时按今天补全；均失败才用当前时间兜底
   parsePayTime(text: string): number {
     if (text) {
-      const parsed = dayjs(text);
+      const trimmed = text.trim();
+      const timeOnly = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(trimmed);
+      if (timeOnly) {
+        const hour = parseInt(timeOnly[1], 10);
+        const minute = parseInt(timeOnly[2], 10);
+        const second = timeOnly[3] ? parseInt(timeOnly[3], 10) : 0;
+        if (hour >= 0 && hour < 24 && minute >= 0 && minute < 60 && second >= 0 && second < 60) {
+          return dayjs().hour(hour).minute(minute).second(second).millisecond(0).valueOf();
+        }
+      }
+      const parsed = dayjs(trimmed);
       if (parsed.isValid()) {
         return parsed.valueOf();
       }

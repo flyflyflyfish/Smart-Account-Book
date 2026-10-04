@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import { textRecognition } from '@kit.CoreVisionKit';
 import { AccountType } from '../../models/account/account';
 import { RecognitionResult } from '../../models/recognition/RecognitionResult';
+import { OcrTextBlock, OcrVisionResult } from '../../models/recognition/OcrSample';
 import { Recognizer } from './Recognizer';
 import { Logger } from '../../utils/Logger';
 
@@ -13,6 +14,17 @@ const OCR_SYSCAP: string = 'SystemCapability.AI.OCR.TextRecognition';
 // 纯 OCR 无语义理解，置信度给中等值
 const OCR_CONFIDENCE: number = 0.6;
 
+// OCR 原始结果 + 图片像素尺寸（供相对坐标换算）
+interface OcrRaw {
+  width: number;
+  height: number;
+  result: textRecognition.TextRecognitionResult;
+}
+
+// OCR 引擎串行队列：textRecognition 的 init/release 是全局操作，
+// 并发识别时必须排队，避免一个协程 release 掉另一个还在用的引擎
+let ocrQueue: Promise<void> = Promise.resolve();
+
 /**
  * 端侧 OCR 识别器：Core Vision Kit 通用文字识别
  * 只提取文本，金额/商家/时间用本地规则解析，分类留空交给流水线智能分类
@@ -20,24 +32,46 @@ const OCR_CONFIDENCE: number = 0.6;
  */
 export class LocalOcrRecognizer implements Recognizer {
   async recognize(imageUri: string): Promise<RecognitionResult[]> {
+    const raw = await this.runOcr(imageUri);
+    return this.parse(raw.result.value);
+  }
+
+  // 阶段1：返回带相对坐标的文本块 + 图片尺寸，供训练数据采集使用
+  async recognizeBlocks(imageUri: string): Promise<OcrVisionResult> {
+    const raw = await this.runOcr(imageUri);
+    return this.toVisionResult(raw);
+  }
+
+  // OCR 核心：init -> 解码 -> recognizeText，返回 {宽,高,原始结果}，统一负责 release
+  private runOcr(imageUri: string): Promise<OcrRaw> {
+    const job: Promise<OcrRaw> = ocrQueue.then((): Promise<OcrRaw> => this.doRunOcr(imageUri));
+    ocrQueue = job.then((): void => {
+    }, (): void => {
+    });
+    return job;
+  }
+
+  private async doRunOcr(imageUri: string): Promise<OcrRaw> {
     if (!canIUse(OCR_SYSCAP)) {
       throw new Error(getContext().resourceManager.getStringSync($r('app.string.ocr_unsupported')));
     }
     let file: fs.File | undefined = undefined;
+    let source: image.ImageSource | undefined = undefined;
     let inited = false;
     try {
       await textRecognition.init();
       inited = true;
       file = fs.openSync(imageUri, fs.OpenMode.READ_ONLY);
-      const source = image.createImageSource(file.fd);
+      source = image.createImageSource(file.fd);
       const options: image.DecodingOptions = {
         desiredPixelFormat: image.PixelMapFormat.RGBA_8888
       };
       const pixelMap = await source.createPixelMap(options);
       try {
+        const info = await pixelMap.getImageInfo();
         const visionInfo: textRecognition.VisionInfo = { pixelMap: pixelMap };
         const result = await textRecognition.recognizeText(visionInfo);
-        return this.parse(result.value);
+        return { width: info.size.width, height: info.size.height, result: result };
       } finally {
         pixelMap.release();
       }
@@ -46,6 +80,13 @@ export class LocalOcrRecognizer implements Recognizer {
       Logger.error('端侧 OCR 识别失败', String(e.code), e.message);
       throw new Error(getContext().resourceManager.getStringSync($r('app.string.ocr_failed')));
     } finally {
+      if (source) {
+        try {
+          await source.release();
+        } catch (err) {
+          Logger.warn('ImageSource释放失败', (err as Error).message);
+        }
+      }
       if (file) {
         fs.closeSync(file);
       }
@@ -57,6 +98,56 @@ export class LocalOcrRecognizer implements Recognizer {
         }
       }
     }
+  }
+
+  // 把原始结果映射为「文本行 -> 相对坐标块」；行外框四点取 min/max 得矩形，再除以宽高
+  private toVisionResult(raw: OcrRaw): OcrVisionResult {
+    const blocks: OcrTextBlock[] = [];
+    for (const block of raw.result.blocks) {
+      for (const line of block.lines) {
+        const pts = line.cornerPoints;
+        if (!pts || pts.length === 0) {
+          continue;
+        }
+        let left = pts[0].x;
+        let top = pts[0].y;
+        let right = pts[0].x;
+        let bottom = pts[0].y;
+        for (const p of pts) {
+          if (p.x < left) {
+            left = p.x;
+          }
+          if (p.y < top) {
+            top = p.y;
+          }
+          if (p.x > right) {
+            right = p.x;
+          }
+          if (p.y > bottom) {
+            bottom = p.y;
+          }
+        }
+        blocks.push({
+          text: line.value,
+          left: this.clamp01(left / raw.width),
+          top: this.clamp01(top / raw.height),
+          right: this.clamp01(right / raw.width),
+          bottom: this.clamp01(bottom / raw.height)
+        });
+      }
+    }
+    return { width: raw.width, height: raw.height, blocks: blocks };
+  }
+
+  // 相对坐标 clamp 到 [0,1]：OCR 检测框紧贴边缘时 cornerPoints 可能略越界
+  private clamp01(value: number): number {
+    if (value < 0) {
+      return 0;
+    }
+    if (value > 1) {
+      return 1;
+    }
+    return value;
   }
 
   // 从纯文本解析单笔账单：金额/商家/时间用正则提取，分类留空交给流水线

@@ -90,7 +90,11 @@ export class VoiceBillParser {
         const month = parseInt(dm[1]);
         const day = parseInt(dm[2]);
         if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-          base = now.month(month - 1).date(day).startOf('day');
+          const candidate = now.month(month - 1).date(day).startOf('day');
+          // 合法性校验：dayjs 会把“3月32日”滚到下个月，回读验证不通过则保持今天
+          if (candidate.month() === month - 1 && candidate.date() === day) {
+            base = candidate;
+          }
         }
       }
     }
@@ -122,12 +126,8 @@ export class VoiceBillParser {
     if (!trimmed) {
       return result;
     }
-    const parts = trimmed.split(/[，。；;、\n和]+/);
-    for (const raw of parts) {
-      const part = raw.trim();
-      if (!part) {
-        continue;
-      }
+    const parts = VoiceBillParser.splitSegments(trimmed);
+    for (const part of parts) {
       const parsed = VoiceBillParser.parse(part);
       if (parsed) {
         result.push(parsed);
@@ -140,6 +140,41 @@ export class VoiceBillParser {
       }
     }
     return result;
+  }
+
+  // 拆分语段：标点直接拆；“和”可能是商家名的一部分（如“和平饭店”），
+  // 只有“和”前后两段都能独立解析出金额时才视为分隔符
+  private static splitSegments(text: string): string[] {
+    const rough = text.split(/[，。；;、\n]+/);
+    const out: string[] = [];
+    for (const raw of rough) {
+      const piece = raw.trim();
+      if (!piece) {
+        continue;
+      }
+      const sub = piece.split('和');
+      if (sub.length <= 1) {
+        out.push(piece);
+        continue;
+      }
+      let buffer = sub[0];
+      for (let i = 1; i < sub.length; i++) {
+        const current = sub[i];
+        if (VoiceBillParser.looksLikeBill(buffer) && VoiceBillParser.looksLikeBill(current)) {
+          out.push(buffer.trim());
+          buffer = current;
+        } else {
+          buffer = buffer + '和' + current;
+        }
+      }
+      out.push(buffer.trim());
+    }
+    return out;
+  }
+
+  // 该段是否像一笔账单描述：能提取出明确金额（带元/块单位或中文数字金额）
+  private static looksLikeBill(text: string): boolean {
+    return VoiceBillParser.extractAmount(text) > 0;
   }
 
   private static extractAmount(text: string): number {
@@ -176,12 +211,8 @@ export class VoiceBillParser {
         return value;
       }
     }
-    // 4. 兜底：第一个阿拉伯数字
-    const numRegex = /(\d+(?:\.\d{1,2})?)/;
-    const n = text.match(numRegex);
-    if (n && n.length > 1) {
-      return parseFloat(n[1]);
-    }
+    // 不做纯数字兜底：像“3月5日”这类日期会被误判成 ¥3，
+    // 没有明确金额单位的输入交给云端大模型理解
     return 0;
   }
 

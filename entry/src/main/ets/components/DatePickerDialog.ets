@@ -29,7 +29,7 @@ export default struct DatePickerDialog {
           .width(120)
           .backgroundColor(this.tk().outline)
           .onClick(() => {
-            this.controller.close();
+            this.controller?.close();
           })
         Button($r('app.string.submit'))
           .width(120)
@@ -38,7 +38,7 @@ export default struct DatePickerDialog {
             if (this.onChange) {
               this.onChange(this.selectedDate.getTime())
             }
-            this.controller.close();
+            this.controller?.close();
           })
       }
     }.padding(16)
