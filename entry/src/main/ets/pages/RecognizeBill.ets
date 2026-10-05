@@ -718,6 +718,10 @@ struct RecognizeBill {
         Text($r('app.string.task_failed'))
           .fontSize(this.fs(12))
           .fontColor(this.tk().danger)
+      } else if (task.status === ImageTaskStatus.PENDING) {
+        Text($r('app.string.task_pending'))
+          .fontSize(this.fs(12))
+          .fontColor(this.tk().textSecondary)
       }
     }
     .width('100%')
@@ -738,7 +742,7 @@ struct RecognizeBill {
           ListItem() {
             this.TaskItem(task, index)
           }
-        }, (task: ImageTask, index: number) => task.uri + index)
+        }, (task: ImageTask, index: number) => task.uri + index + task.status)
       }
       .width('100%')
       .layoutWeight(1)
@@ -1013,14 +1017,15 @@ struct RecognizeBill {
           .backgroundColor(this.tk().surface)
           .borderRadius(SPACE_SMALL)
         }
-      }, (task: ImageTask, index: number) => 'failed_' + index)
+      }, (task: ImageTask, index: number) => 'failed_' + index + task.status)
 
       List({ space: SPACE_SMALL }) {
         ForEach(this.drafts, (draft: BillDraft, index: number) => {
           ListItem() {
             this.DraftItem(draft, index)
           }
-        }, (draft: BillDraft, index: number) => 'draft_' + draft.uid)
+        }, (draft: BillDraft, index: number) => 'draft_' + draft.uid + draft.selected + draft.duplicated +
+          draft.amountText + draft.merchant + draft.payTime + (draft.selectType ? draft.selectType.name : ''))
       }
       .width('100%')
       .layoutWeight(1)

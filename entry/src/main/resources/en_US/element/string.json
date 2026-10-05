@@ -269,6 +269,10 @@
       "value": "Failed"
     },
     {
+      "name": "task_pending",
+      "value": "Queued"
+    },
+    {
       "name": "import_selected",
       "value": "Import"
     },
