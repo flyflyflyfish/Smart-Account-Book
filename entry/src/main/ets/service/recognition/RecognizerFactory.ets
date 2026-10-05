@@ -15,7 +15,7 @@ import { LoggingRecognizer } from './decorators/LoggingRecognizer';
 
 /**
  * 识别器工厂：按设置页的引擎开关创建基础识别器，再按配置组合装饰器
- * 云端启用：Logging(Caching(Retry(Fallback(Cloud, LocalOcr))))  —— 云端失败降级端侧（若端侧也启用）
+ * 云端启用：Logging(Caching(Fallback(Retry(Cloud), LocalOcr)))  —— 云端失败先重试，仍失败才降级端侧（若端侧也启用）
  * 仅端侧：  Logging(Caching(Retry(LocalOcr)))
  */
 export class RecognizerFactory {
@@ -31,11 +31,14 @@ export class RecognizerFactory {
       primary = new LocalOcrRecognizer();
     }
 
-    let recognizer: Recognizer = primary;
+    let recognizer: Recognizer;
     if (useFallback) {
-      recognizer = new FallbackRecognizer(primary, new LocalOcrRecognizer(), RECOGNIZE_CONFIDENCE_THRESHOLD);
+      // 重试包在 primary 内：云端超时/失败先原样重试，重试耗尽才降级端侧，避免端侧低质结果抢跑
+      const retriedPrimary = new RetryRecognizer(primary, RECOGNIZE_RETRY_MAX_ATTEMPTS, RECOGNIZE_RETRY_BASE_DELAY_MS);
+      recognizer = new FallbackRecognizer(retriedPrimary, new LocalOcrRecognizer(), RECOGNIZE_CONFIDENCE_THRESHOLD);
+    } else {
+      recognizer = new RetryRecognizer(primary, RECOGNIZE_RETRY_MAX_ATTEMPTS, RECOGNIZE_RETRY_BASE_DELAY_MS);
     }
-    recognizer = new RetryRecognizer(recognizer, RECOGNIZE_RETRY_MAX_ATTEMPTS, RECOGNIZE_RETRY_BASE_DELAY_MS);
     recognizer = new CachingRecognizer(recognizer, RECOGNIZE_CACHE_SIZE);
     recognizer = new LoggingRecognizer(recognizer);
     return recognizer;
