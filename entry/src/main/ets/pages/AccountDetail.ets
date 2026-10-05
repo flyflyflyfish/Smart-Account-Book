@@ -9,7 +9,7 @@ import BillStore, { BillChangeListener } from '../common/BillStore';
 import { Toast } from '../components/ToastDialog';
 import BreakpointConstants from '../common/breakpoint';
 import { Logger } from '../utils/Logger';
-import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_XLARGE } from '../common/dimens';
+import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_XLARGE } from '../common/dimens';
 import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
 /**
@@ -37,6 +37,10 @@ struct AccountDetail {
 
   @State accountType: number = AccountType.EXPENSES;
   @State accountList: GroupByDate[] = [];
+  // 批量删除模式
+  @State batchMode: boolean = false;
+  // 批量模式下勾选的账单 id
+  @State selectedIds: string[] = [];
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
   private startTime: number = 0;
   private endTime: number = 0;
@@ -65,6 +69,82 @@ struct AccountDetail {
       this.accountList = StatsService.groupByDate(res);
     } catch (err) {
       Logger.error('加载账单详情失败', (err as Error).message);
+    }
+  }
+
+  toggleBatchMode(): void {
+    this.batchMode = !this.batchMode;
+    this.selectedIds = [];
+  }
+
+  // 用 checked 入参做幂等更新，避免"全选"时因 onChange 反复取反导致 AppFreeze
+  toggleSelect(id: string, checked: boolean): void {
+    const idx = this.selectedIds.indexOf(id);
+    if (checked) {
+      if (idx < 0) {
+        this.selectedIds.push(id);
+        this.selectedIds = this.selectedIds.slice();
+      }
+    } else {
+      if (idx >= 0) {
+        this.selectedIds.splice(idx, 1);
+        this.selectedIds = this.selectedIds.slice();
+      }
+    }
+  }
+
+  allRecordIds(): string[] {
+    const ids: string[] = [];
+    for (const group of this.accountList) {
+      for (const record of group.records) {
+        ids.push(record.id);
+      }
+    }
+    return ids;
+  }
+
+  toggleSelectAll(): void {
+    const all = this.allRecordIds();
+    if (this.selectedIds.length === all.length) {
+      this.selectedIds = [];
+    } else {
+      this.selectedIds = all.slice();
+    }
+  }
+
+  confirmBatchDelete(): void {
+    if (this.selectedIds.length === 0) {
+      Toast.error($r('app.string.require_select'));
+      return;
+    }
+    AlertDialog.show({
+      title: $r('app.string.delete_confirm_title'),
+      message: $r('app.string.batch_delete_confirm_msg', this.selectedIds.length),
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      primaryButton: {
+        value: $r('app.string.cancel'),
+        action: () => {
+        }
+      },
+      secondaryButton: {
+        value: $r('app.string.delete'),
+        fontColor: this.tk().danger,
+        action: () => {
+          this.batchDelete();
+        }
+      }
+    });
+  }
+
+  async batchDelete(): Promise<void> {
+    try {
+      await AccountService.deleteByIds(this.selectedIds);
+      this.selectedIds = [];
+      this.batchMode = false;
+    } catch (err) {
+      Logger.error('批量删除失败', (err as Error).message);
+      Toast.error($r('app.string.delete_failed'));
     }
   }
 
@@ -110,6 +190,47 @@ struct AccountDetail {
     GroupHeader({ group: item, accountType: this.accountType })
   }
 
+  // 卡片上方的批量管理入口：仅在有账单时展示
+  @Builder BatchToolbar() {
+    Row() {
+      Blank()
+      Text(this.batchMode ? $r('app.string.cancel') : $r('app.string.batch_manage'))
+        .fontSize(this.fs(14))
+        .fontColor(this.tk().primary)
+        .onClick(() => {
+          this.toggleBatchMode();
+        })
+    }.width('100%')
+    .margin({ bottom: SPACE_SMALL })
+  }
+
+  @Builder BatchOperateBar() {
+    Row({ space: SPACE_MEDIUM }) {
+      Button(this.selectedIds.length === this.allRecordIds().length ? $r('app.string.cancel_select_all') : $r('app.string.select_all'))
+        .layoutWeight(1)
+        .height(40)
+        .fontSize(this.fs(15))
+        .backgroundColor(this.tk().surface)
+        .fontColor(this.tk().textPrimary)
+        .type(ButtonType.Normal)
+        .borderRadius(SPACE_SMALL)
+        .onClick(() => {
+          this.toggleSelectAll();
+        })
+      Button($r('app.string.batch_delete_count', this.selectedIds.length))
+        .layoutWeight(1)
+        .height(40)
+        .fontSize(this.fs(15))
+        .backgroundColor(this.tk().danger)
+        .fontColor(this.tk().surface)
+        .type(ButtonType.Normal)
+        .borderRadius(SPACE_SMALL)
+        .onClick(() => {
+          this.confirmBatchDelete();
+        })
+    }.width('100%')
+  }
+
   @Builder AccountItemOperate(record: ItemRecordInfo) {
     Row() {
       Button($r('app.string.delete'))
@@ -140,6 +261,9 @@ struct AccountDetail {
     Column() {
       Navigator({ title: $r('app.string.detail') })
       Column() {
+        if (this.accountList.length) {
+          this.BatchToolbar()
+        }
         Column() {
           if (this.accountList.length) {
             List() {
@@ -147,14 +271,26 @@ struct AccountDetail {
                 ListItemGroup({
                   header: this.GroupHeaderBuilder(item)
                 }) {
-                  ForEach(item.records, (record: ItemRecordInfo) => {
-                    ListItem() {
+                ForEach(item.records, (record: ItemRecordInfo) => {
+                  ListItem() {
+                    Row({ space: SPACE_SMALL }) {
+                      if (this.batchMode) {
+                        Checkbox()
+                          .select(this.selectedIds.indexOf(record.id) >= 0)
+                          .onChange((checked: boolean) => {
+                            this.toggleSelect(record.id, checked);
+                          })
+                      }
                       AccountItem({ account: record })
-                    }.swipeAction({ end: this.AccountItemOperate(record) })
-                    .onClick(() => {
+                        .layoutWeight(1)
+                    }.width('100%')
+                  }.swipeAction({ end: this.AccountItemOperate(record) })
+                  .onClick(() => {
+                    if (!this.batchMode) {
                       this.openEditPage(record);
-                    })
+                    }
                   })
+                })
                 }.divider({ strokeWidth: 1, color: this.tk().surfaceVariant })
               })
             }.divider({ strokeWidth: 1, color: this.tk().surfaceVariant })
@@ -167,8 +303,16 @@ struct AccountDetail {
         .borderRadius(RADIUS_CARD)
         .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
         .padding(SPACE_LARGE)
+        .layoutWeight(1)
       }.padding({ left: SPACE_XLARGE, right: SPACE_XLARGE })
       .margin({ top: SPACE_LARGE })
+      .layoutWeight(1)
+      if (this.batchMode) {
+        Row() {
+          this.BatchOperateBar()
+        }.padding({ left: SPACE_XLARGE, right: SPACE_XLARGE })
+        .margin({ top: SPACE_MEDIUM })
+      }
     }.width('100%')
     .height('100%')
     .backgroundColor(this.tk().background)
