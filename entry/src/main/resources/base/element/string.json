@@ -265,6 +265,10 @@
       "value": "失败"
     },
     {
+      "name": "task_pending",
+      "value": "排队中"
+    },
+    {
       "name": "import_selected",
       "value": "一键入账"
     },
