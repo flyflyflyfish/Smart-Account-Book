@@ -105,6 +105,10 @@ export class LocalOcrRecognizer implements Recognizer {
     const blocks: OcrTextBlock[] = [];
     for (const block of raw.result.blocks) {
       for (const line of block.lines) {
+        const lineText = line.value;
+        if (!lineText || lineText.trim().length === 0) {
+          continue;
+        }
         const pts = line.cornerPoints;
         if (!pts || pts.length === 0) {
           continue;
@@ -128,7 +132,7 @@ export class LocalOcrRecognizer implements Recognizer {
           }
         }
         blocks.push({
-          text: line.value,
+          text: lineText,
           left: this.clamp01(left / raw.width),
           top: this.clamp01(top / raw.height),
           right: this.clamp01(right / raw.width),
