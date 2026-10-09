@@ -25,6 +25,8 @@ export class BillDraft {
   autoClassified: boolean = false;
   // 是否与已有账单疑似重复，确认页高亮并默认不勾选
   duplicated: boolean = false;
+  // 识别引擎标识：'local_model' / 'cloud' / 'ocr_rule'，确认页展示徽标
+  engine: string = '';
   // 是否勾选待入账
   selected: boolean = true;
   // 来源图片地址，用于编辑面板展示与失败定位
@@ -46,6 +48,7 @@ export class BillDraft {
     draft.payTime = result.payTime;
     draft.autoClassified = result.autoClassified === true;
     draft.duplicated = result.duplicated === true;
+    draft.engine = result.engine ?? '';
     draft.selected = !draft.duplicated;
     draft.imageUri = imageUri;
     return draft;

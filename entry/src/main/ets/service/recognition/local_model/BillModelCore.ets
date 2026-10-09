@@ -28,6 +28,7 @@ export interface BillTxnPrediction {
   merchant: string;     // 商户名（可能为空串）
   isIncome: boolean;    // 金额文本带 '+' 号为收入，否则为支出
   confidence: number;   // 0~1
+  payTime: number;      // 支付时间（毫秒时间戳；图上无时间信息时回退 nowMs）
 }
 
 // HGB 单节点（扁平数组）：leaf 为 true 时只读 value；否则按 feature/threshold 走 left/right
@@ -68,6 +69,25 @@ export interface BillModel {
 interface BillAmountMatch {
   value: number;
   sign: string;
+}
+
+// 时间抽取结果：ms 为毫秒时间戳，dated 表示文本里是否含日期（纯时刻为 false）
+export interface BillPayTime {
+  ms: number;
+  dated: boolean;
+}
+
+// 儒略日序号 -> (年, 月, 日)
+interface BillYmd {
+  y: number;
+  m: number;
+  d: number;
+}
+
+// 组时间解析结果：ms + 命中的块下标（-1 表示回退 nowMs）
+interface BillTimeResolve {
+  ms: number;
+  hitIdx: number;
 }
 
 // 配对特征输入：块位置 + 块特征里的 digitRatio(feats[1])、textLen(feats[0])
@@ -128,6 +148,25 @@ const NUM_SEQ_RE = /[0-9]+(?:\.[0-9]{1,4})?/g;
 const NUM_IN_TEXT_RE = /[+\-][¥￥]?\s*[0-9][0-9,，]*(?:\.[0-9]{1,2})?|[¥￥]\s*[+\-]?[0-9][0-9,，]*(?:\.[0-9]{1,2})?|[0-9][0-9,，]*(?:\.[0-9]{1,2})/g;
 const STRIP_AMOUNT_RE = /[¥￥,，+\-\s]/g;
 const STRONG_AMOUNT_RE = /[+\-]\s*[¥￥]?\s*[0-9]+\.[0-9]{1,2}/;
+
+// ---------------- 时间抽取正则（与训练侧逐字一致；输入为 nfkcLite 后保留空格的文本） ----------------
+
+// 星期几 -> 0=周一 … 6=周日
+const WEEKDAY_IDX: Record<string, number> = { '一': 0, '二': 1, '三': 2, '四': 3, '五': 4, '六': 5, '日': 6, '天': 6 };
+// 绝对日期：YYYY年M月D日 / YYYY-M-D / YYYY.M.D / YYYY/M/D
+const ABS_DATE_RE = /([0-9]{4})\s*[年/.\-]\s*([0-9]{1,2})\s*[月/.\-]\s*([0-9]{1,2})\s*日?/;
+// 相对日期：今天 / 昨天 / 前天
+const REL_DATE_RE = /今天|昨天|前天/;
+// 星期X / 周X
+const WEEKDAY_RE = /[星期周]([一二三四五六日天])/;
+// M月D日
+const MD_MONTH_RE = /([0-9]{1,2})\s*月\s*([0-9]{1,2})/;
+// M-D / M.D / M/D（迭代用，需手动重置 lastIndex）
+const MD_SEP_ALL_RE = /([0-9]{1,2})\s*[-/.]\s*([0-9]{1,2})/g;
+// 粘连的"月-日+时钟"（OCR 丢空格/冒号读成点）：09-2909:50 / 09-28.16.00 / 09-22 09:45
+const GLUED_RE = /([0-9]{1,2})\s*[-/.]\s*([0-9]{1,2})\s*([0-9]{1,2})\s*[.:：时]\s*([0-9]{2})/;
+// 时刻：12 小时制前缀 + HH:MM / HH时MM（迭代用，需手动重置 lastIndex）
+const CLOCK_ALL_RE = /(上午|下午|中午|凌晨|早上|晚上)?\s*([0-9]{1,2})\s*[:：时]\s*([0-9]{1,2})/g;
 
 // ---------------- 基础工具：归一化 / 码点统计 ----------------
 
@@ -427,10 +466,226 @@ export function extractAmount(text: string): BillAmountMatch | null {
   return { value: bestValue, sign: bestSign };
 }
 
+// ---------------- 时间抽取（与训练侧逐位一致） ----------------
+
+// 儒略日序号：y-m-d 距 1970-01-01 的天数（纯整数运算）
+export function daysFromCivil(y: number, m: number, d: number): number {
+  const y2 = m <= 2 ? y - 1 : y;
+  const era = Math.floor((y2 >= 0 ? y2 : y2 - 399) / 400);
+  const yoe = y2 - era * 400;
+  const doy = Math.floor((153 * (m > 2 ? m - 3 : m + 9) + 2) / 5) + d - 1;
+  const doe = yoe * 365 + Math.floor(yoe / 4) - Math.floor(yoe / 100) + doy;
+  return era * 146097 + doe - 719468;
+}
+
+// daysFromCivil 的逆运算
+export function civilFromDays(z: number): BillYmd {
+  const zz = z + 719468;
+  const era = Math.floor((zz >= 0 ? zz : zz - 146096) / 146097);
+  const doe = zz - era * 146097;
+  const yoe = Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365);
+  const y = yoe + era * 400;
+  const doy = doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100));
+  const mp = Math.floor((5 * doy + 2) / 153);
+  const d = doy - Math.floor((153 * mp + 2) / 5) + 1;
+  const m = mp < 10 ? mp + 3 : mp - 9;
+  return { y: y + (m <= 2 ? 1 : 0), m: m, d: d };
+}
+
+// 本地时区的 (y,m,d,hh,mm) -> 毫秒时间戳
+function localMs(y: number, m: number, d: number, hh: number, mm: number): number {
+  return new Date(y, m - 1, d, hh, mm, 0, 0).getTime();
+}
+
+// 字符是否为数字（用于匹配边界检查）
+function isDigitCh(ch: string): boolean {
+  return ch >= '0' && ch <= '9';
+}
+
+// 字符是否为日期匹配的禁邻字符（分隔符/货币符）
+function isSepCh(ch: string): boolean {
+  return '-/.¥￥'.indexOf(ch) >= 0;
+}
+
+/**
+ * 从文本抽取支付时间。返回 (毫秒时间戳, 是否含日期)；无法解析返回 null。
+ * 优先级：绝对日期 > 今天/昨天/前天 > 星期X > 粘连月日+时钟 > M月D日 > M-D/M.D/M/D。
+ * 年份规则：月日形式取当前年，晚于 now 一天以上视为去年；星期X 取过去 7 天内。
+ * 只有时刻：取今天，若在未来（超 now 一分钟）视为昨天；只有日期：时刻取 00:00。
+ * 在 nfkcLite 后（保留空格）的文本上匹配，避免 squeeze 把"10-01 14:30"粘连。
+ */
+export function extractPayTime(text: string, nowMs: number): BillPayTime | null {
+  const t = nfkcLite(text);
+  if (t.length === 0) {
+    return null;
+  }
+  const nowDate = new Date(nowMs);
+  const ny = nowDate.getFullYear();
+  const nm = nowDate.getMonth() + 1;
+  const ndd = nowDate.getDate();
+  const nowDays = daysFromCivil(ny, nm, ndd);
+
+  // ---- 日期部分 ----
+  let dateDays: number | null = null;
+  let gluedHh: number | null = null;
+  let gluedMm: number | null = null;
+  const m3 = ABS_DATE_RE.exec(t);
+  if (m3 !== null) {
+    const y = parseInt(m3[1], 10);
+    const mo = parseInt(m3[2], 10);
+    const d = parseInt(m3[3], 10);
+    if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) {
+      dateDays = daysFromCivil(y, mo, d);
+    }
+  }
+  if (dateDays === null) {
+    const m2 = REL_DATE_RE.exec(t);
+    if (m2 !== null) {
+      const w = m2[0];
+      dateDays = nowDays + (w === '今天' ? 0 : (w === '昨天' ? -1 : -2));
+    }
+  }
+  if (dateDays === null) {
+    const m2 = WEEKDAY_RE.exec(t);
+    if (m2 !== null) {
+      const target = WEEKDAY_IDX[m2[1]] ?? -1;
+      if (target >= 0) {
+        const todayWd = (nowDays + 3) % 7;   // 1970-01-01 是周四：0=周一
+        dateDays = nowDays - (((todayWd - target) % 7 + 7) % 7);
+      }
+    }
+  }
+  if (dateDays === null) {
+    // 粘连的"月-日+时钟"：前后不能紧邻数字/分隔符/货币符（排除 ¥12-20 类金额）
+    const m4 = GLUED_RE.exec(t);
+    if (m4 !== null) {
+      const s = m4.index;
+      const e = s + m4[0].length;
+      let ok = true;
+      if (s > 0 && (isDigitCh(t.charAt(s - 1)) || isSepCh(t.charAt(s - 1)))) {
+        ok = false;
+      }
+      if (e < t.length && isDigitCh(t.charAt(e))) {
+        ok = false;
+      }
+      if (ok) {
+        const mo = parseInt(m4[1], 10);
+        const d = parseInt(m4[2], 10);
+        const hh2 = parseInt(m4[3], 10);
+        const mi2 = parseInt(m4[4], 10);
+        if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31 && hh2 <= 23 && mi2 <= 59) {
+          const year = daysFromCivil(ny, mo, d) <= nowDays + 1 ? ny : ny - 1;
+          dateDays = daysFromCivil(year, mo, d);
+          gluedHh = hh2;
+          gluedMm = mi2;
+        }
+      }
+    }
+  }
+  if (dateDays === null) {
+    // M月D日：块首不能紧邻数字（排除 202410月01 之类的残片）
+    const m2 = MD_MONTH_RE.exec(t);
+    let mdOk = false;
+    let moM = 0;
+    let dM = 0;
+    if (m2 !== null && !(m2.index > 0 && isDigitCh(t.charAt(m2.index - 1)))) {
+      const mo = parseInt(m2[1], 10);
+      const d = parseInt(m2[2], 10);
+      if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) {
+        mdOk = true;
+        moM = mo;
+        dM = d;
+      }
+    }
+    if (mdOk) {
+      const year = daysFromCivil(ny, moM, dM) <= nowDays + 1 ? ny : ny - 1;
+      dateDays = daysFromCivil(year, moM, dM);
+    } else {
+      // M-D / M.D / M/D：前后不能紧邻数字/分隔符/货币符
+      // （数字=残片，分隔符=数值区间/版本号如 4.7/5/6，¥=金额如 ¥5.20）
+      MD_SEP_ALL_RE.lastIndex = 0;
+      let msep: RegExpExecArray | null = MD_SEP_ALL_RE.exec(t);
+      while (dateDays === null && msep !== null) {
+        const s = msep.index;
+        const e = s + msep[0].length;
+        if (s > 0 && (isDigitCh(t.charAt(s - 1)) || isSepCh(t.charAt(s - 1)))) {
+          msep = MD_SEP_ALL_RE.exec(t);
+          continue;
+        }
+        if (e < t.length && (isDigitCh(t.charAt(e)) || '-/.'.indexOf(t.charAt(e)) >= 0)) {
+          msep = MD_SEP_ALL_RE.exec(t);
+          continue;
+        }
+        const mo = parseInt(msep[1], 10);
+        const d = parseInt(msep[2], 10);
+        if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) {
+          const year = daysFromCivil(ny, mo, d) <= nowDays + 1 ? ny : ny - 1;
+          dateDays = daysFromCivil(year, mo, d);
+        }
+        msep = MD_SEP_ALL_RE.exec(t);
+      }
+    }
+  }
+
+  // ---- 时刻部分 ----
+  let hh: number | null = null;
+  let mm: number | null = null;
+  if (gluedHh !== null) {
+    hh = gluedHh;
+    mm = gluedMm;
+  } else {
+    CLOCK_ALL_RE.lastIndex = 0;
+    let mc: RegExpExecArray | null = CLOCK_ALL_RE.exec(t);
+    while (hh === null && mc !== null) {
+      const prefix = mc[1] ?? '';
+      const h12 = parseInt(mc[2], 10);
+      const mi = parseInt(mc[3], 10);
+      if (mi <= 59) {
+        if (prefix.length > 0) {
+          if (h12 <= 12) {
+            if (prefix === '下午' || prefix === '晚上' || prefix === '中午') {
+              hh = h12 === 12 ? 12 : h12 + 12;
+            } else if (prefix === '凌晨') {
+              hh = h12 === 12 ? 0 : h12;
+            } else {  // 上午 / 早上
+              hh = h12 === 12 ? 0 : h12;
+            }
+            mm = mi;
+          }
+        } else {
+          if (h12 <= 23) {
+            hh = h12;
+            mm = mi;
+          }
+        }
+      }
+      mc = CLOCK_ALL_RE.exec(t);
+    }
+  }
+
+  if (dateDays === null && hh === null) {
+    return null;
+  }
+  if (dateDays === null) {
+    // 只有时刻：默认今天；超 now 一分钟视为昨天
+    const ymdA = civilFromDays(nowDays);
+    let ts = localMs(ymdA.y, ymdA.m, ymdA.d, hh as number, mm as number);
+    if (ts > nowMs + 60000) {
+      const ymdB = civilFromDays(nowDays - 1);
+      ts = localMs(ymdB.y, ymdB.m, ymdB.d, hh as number, mm as number);
+    }
+    return { ms: ts, dated: false };
+  }
+  const ymd = civilFromDays(dateDays);
+  const ms = localMs(ymd.y, ymd.m, ymd.d, hh === null ? 0 : hh, mm === null ? 0 : mm);
+  return { ms: ms, dated: true };
+}
+
 // ---------------- 主流程 ----------------
 
-// 块分类 -> 去 noise -> 相邻块分组 -> 合并启发式 -> 抽取金额/商户/置信度
-export function predictBillTransactions(model: BillModel, blocks: BillModelBlock[]): BillTxnPrediction[] {
+// 块分类 -> 去 noise -> 相邻块分组 -> 合并启发式 -> 抽取金额/商户/置信度/时间
+// nowMs：相对日期（今天/昨天/星期X）与无时间回退的基准时间戳（毫秒）
+export function predictBillTransactions(model: BillModel, blocks: BillModelBlock[], nowMs: number): BillTxnPrediction[] {
   // 过滤空文本块（与训练侧 load_dataset 一致）
   const valid: BillModelBlock[] = [];
   for (const b of blocks) {
@@ -513,6 +768,103 @@ export function predictBillTransactions(model: BillModel, blocks: BillModelBlock
     merged.push(g);
   }
   // 每组抽取交易
+  // ---- 时间解析（只对产出交易的组做；全局去重，阅读序先到先得）----
+  // 候选顺序：组内块（time 预测优先，再其他非 amount 的时间/日期命中块，允许纯时刻）
+  //   -> 组跨度内的洞（noise 块，必须带日期）-> 外圈逐距离（同距先上后下，必须带日期）
+  const opos: number[] = [];
+  for (let i = 0; i < valid.length; i++) {
+    opos.push(0);
+  }
+  for (let k = 0; k < order.length; k++) {
+    opos[order[k]] = k;
+  }
+  const usedTimeBlocks = new Set<number>();
+  const isTimeText = (i: number): boolean => {
+    const sq = squeezeText(valid[i].text);
+    return TIME_RE.test(sq) || DATE_RE.test(sq);
+  };
+  const tryExtractTime = (i: number, needDate: boolean): BillPayTime | null => {
+    if (usedTimeBlocks.has(i)) {
+      return null;
+    }
+    const r = extractPayTime(valid[i].text, nowMs);
+    if (r === null) {
+      return null;
+    }
+    if (needDate && !r.dated) {
+      return null;
+    }
+    return r;
+  };
+  const resolveGroupTime = (g: number[]): BillTimeResolve | null => {
+    if (g.length === 0) {
+      return null;
+    }
+    const inGroup = g.slice().sort((a: number, b: number): number => opos[a] - opos[b]);
+    const cands: number[] = [];
+    for (const i of inGroup) {
+      if (labels[i] === 'time') {
+        cands.push(i);
+      }
+    }
+    for (const i of inGroup) {
+      if (labels[i] !== 'time' && labels[i] !== 'amount' && isTimeText(i)) {
+        cands.push(i);
+      }
+    }
+    for (const i of cands) {
+      const r = tryExtractTime(i, false);
+      if (r !== null) {
+        return { ms: r.ms, hitIdx: i };
+      }
+    }
+    let lo = opos[g[0]];
+    let hi = opos[g[0]];
+    for (const i of g) {
+      if (opos[i] < lo) {
+        lo = opos[i];
+      }
+      if (opos[i] > hi) {
+        hi = opos[i];
+      }
+    }
+    const gset = new Set<number>(g);
+    // 组内洞：跨度内不属于本组的块（noise），需带日期
+    for (let p = lo; p <= hi; p++) {
+      const j = order[p];
+      if (gset.has(j) || labels[j] === 'amount') {
+        continue;
+      }
+      if (isTimeText(j)) {
+        const r = tryExtractTime(j, true);
+        if (r !== null) {
+          return { ms: r.ms, hitIdx: j };
+        }
+      }
+    }
+    // 外圈：按距离扩展，同距先上后下，需带日期
+    for (let dist = 1; dist <= 8; dist++) {
+      const ring: number[] = [];
+      if (lo - dist >= 0) {
+        ring.push(order[lo - dist]);
+      }
+      if (hi + dist < order.length) {
+        ring.push(order[hi + dist]);
+      }
+      for (const j of ring) {
+        if (labels[j] === 'amount') {
+          continue;
+        }
+        if (labels[j] === 'time' || isTimeText(j)) {
+          const r = tryExtractTime(j, true);
+          if (r !== null) {
+            return { ms: r.ms, hitIdx: j };
+          }
+        }
+      }
+    }
+    return null;
+  };
   const out: BillTxnPrediction[] = [];
   for (const g of merged) {
     let amtVal: number | null = null;
@@ -586,11 +938,18 @@ export function predictBillTransactions(model: BillModel, blocks: BillModelBlock
       if (amountFromFallback) {
         conf *= 0.5;
       }
+      // 时间解析：仅对产出交易的组做（组内候选 + 洞 + 外圈，全局去重）
+      const resolved = resolveGroupTime(g);
+      let payMs = nowMs;
+      if (resolved !== null) {
+        usedTimeBlocks.add(resolved.hitIdx);
+        payMs = resolved.ms;
+      }
       const amountAbs = Math.abs(amtVal);
       const merchant = (merText ?? '').trim();
       const dup = out.some((o: BillTxnPrediction): boolean => o.amount === amountAbs && o.merchant === merchant);
       if (!dup) {
-        out.push({ amount: amountAbs, merchant: merchant, isIncome: sign === '+', confidence: conf });
+        out.push({ amount: amountAbs, merchant: merchant, isIncome: sign === '+', confidence: conf, payTime: payMs });
       }
     }
   }
