@@ -22,6 +22,8 @@ export interface RecognitionResult {
   autoClassified?: boolean;
   // 是否与已有账单疑似重复，供确认页高亮并默认不勾选
   duplicated?: boolean;
+  // 识别引擎标识：'local_model'（端侧模型）/ 'cloud'（云端大模型）/ 'ocr_rule'（纯 OCR 规则）
+  engine?: string;
 }
 
 // 深拷贝单条识别结果：缓存与训练样本需要与后续流水线的就地修改隔离
@@ -35,6 +37,7 @@ export function copyRecognitionResult(source: RecognitionResult): RecognitionRes
     confidence: source.confidence,
     isBill: source.isBill,
     autoClassified: source.autoClassified,
-    duplicated: source.duplicated
+    duplicated: source.duplicated,
+    engine: source.engine
   };
 }

@@ -53,7 +53,8 @@ export class CloudResultParser {
       payTime: payTime,
       categoryName: categoryName,
       confidence: 1,
-      isBill: true
+      isBill: true,
+      engine: 'cloud'
     };
     return result;
   }

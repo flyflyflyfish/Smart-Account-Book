@@ -21,7 +21,7 @@ let cachedModel: BillModel | null | undefined = undefined;
  * 本地账单识别器（阶段5）：端侧 OCR 文本块 + 自训练小模型抽取交易。
  * 流程：recognizeBlocks（相对坐标文本块）-> predictBillTransactions（块分类/分组/抽取）。
  * 模型文件缺失或解析失败时抛错，交给 FallbackRecognizer 降级（云端大模型或纯 OCR 规则）。
- * 时间不由模型抽取：图上时间块仅参与分组，payTime 先取当前时间，由用户在确认页调整。
+ * payTime 由模型从图中时间块抽取（支持绝对/相对日期与粘连文本）；图上无时间信息时回退当前时间。
  */
 export class LocalBillModelRecognizer implements Recognizer {
   async recognize(imageUri: string): Promise<RecognitionResult[]> {
@@ -31,17 +31,19 @@ export class LocalBillModelRecognizer implements Recognizer {
     }
     const vision = await new LocalOcrRecognizer().recognizeBlocks(imageUri);
     const blocks: BillModelBlock[] = vision.blocks;
-    const txns: BillTxnPrediction[] = predictBillTransactions(model, blocks);
+    const nowMs = Date.now();
+    const txns: BillTxnPrediction[] = predictBillTransactions(model, blocks, nowMs);
     const out: RecognitionResult[] = [];
     for (const t of txns) {
       out.push({
         accountType: t.isIncome ? AccountType.INCOME : AccountType.EXPENSES,
         amount: t.amount,
         merchant: t.merchant,
-        payTime: Date.now(),
+        payTime: t.payTime,
         categoryName: '',
         confidence: t.confidence,
-        isBill: true
+        isBill: true,
+        engine: 'local_model'
       });
     }
     if (out.length === 0) {

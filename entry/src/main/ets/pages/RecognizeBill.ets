@@ -395,6 +395,20 @@ struct RecognizeBill {
     this.loadExpanded();
   }
 
+  // 识别引擎标识 -> 确认页徽标文案
+  engineLabel(engine: string): Resource | string {
+    if (engine === 'local_model') {
+      return $r('app.string.engine_local_model');
+    }
+    if (engine === 'cloud') {
+      return $r('app.string.engine_cloud');
+    }
+    if (engine === 'ocr_rule') {
+      return $r('app.string.engine_ocr_rule');
+    }
+    return '';
+  }
+
   commitExpanded(): void {
     const index = this.expandedIndex;
     if (index < 0 || index >= this.drafts.length) {
@@ -916,12 +930,22 @@ struct RecognizeBill {
               .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
           Row({ space: SPACE_SMALL }) {
+            if (draft.engine !== '') {
+              Text(this.engineLabel(draft.engine))
+                .fontSize(this.fs(10))
+                .fontColor(this.tk().primary)
+                .padding({ left: SPACE_TINY, right: SPACE_TINY, top: 2, bottom: 2 })
+                .borderRadius(4)
+                .backgroundColor(this.tk().primarySoft)
+            }
             Text(draft.selectType?.name ?? '')
               .fontSize(this.fs(12))
               .fontColor(this.tk().textSecondary)
             Text(dayjs(draft.payTime).format('YYYY-MM-DD HH:mm'))
               .fontSize(this.fs(12))
               .fontColor(this.tk().textSecondary)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
         }.alignItems(HorizontalAlign.Start)
         .layoutWeight(1)

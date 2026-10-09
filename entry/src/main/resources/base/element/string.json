@@ -1017,6 +1017,18 @@
       "value": "端侧识别在设备本地完成，无需联网和 API Key：由端侧 OCR 加自训练小模型识别金额与商家；结果可疑时自动回退云端大模型（若已开启）。"
     },
     {
+      "name": "engine_local_model",
+      "value": "端侧模型"
+    },
+    {
+      "name": "engine_cloud",
+      "value": "云端大模型"
+    },
+    {
+      "name": "engine_ocr_rule",
+      "value": "本地OCR"
+    },
+    {
       "name": "widget_name",
       "value": "记账小组件"
     },

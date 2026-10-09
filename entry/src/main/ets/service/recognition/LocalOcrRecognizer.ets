@@ -168,7 +168,8 @@ export class LocalOcrRecognizer implements Recognizer {
       payTime: this.extractPayTime(text),
       categoryName: '',
       confidence: OCR_CONFIDENCE,
-      isBill: true
+      isBill: true,
+      engine: 'ocr_rule'
     };
     return [result];
   }
