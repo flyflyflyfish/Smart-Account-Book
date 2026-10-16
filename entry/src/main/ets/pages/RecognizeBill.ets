@@ -21,7 +21,9 @@ import { RecognitionPipeline } from '../service/recognition/pipeline/Recognition
 import learnedClassifier from '../service/recognition/classifier/LearnedClassifier';
 import AccountService from '../service/account';
 import { SOURCE_IMAGE } from '../common/constants';
-import { MAX_PICK_IMAGES, RECOGNIZE_CONCURRENCY } from '../common/Config';
+import { MAX_PICK_IMAGES, RECOGNIZE_CONCURRENCY, RECOGNIZE_RETRY_MAX_ATTEMPTS, RECOGNIZE_RETRY_BASE_DELAY_MS } from '../common/Config';
+import { CloudLlmRecognizer } from '../service/recognition/CloudLlmRecognizer';
+import { RetryRecognizer } from '../service/recognition/decorators/RetryRecognizer';
 import { isDuplicateBill } from '../common/dedup';
 import { Toast } from '../components/ToastDialog';
 import { Logger } from '../utils/Logger';
@@ -231,19 +233,25 @@ struct RecognizeBill {
   }
 
   // 识别单张图片：走流水线得到草稿，失败只标记该任务不影响其他，返回是否成功
-  async recognizeOne(task: ImageTask, recognizer: Recognizer): Promise<boolean> {
+  // cacheTrainSample 为 false 时跳过训练样本采集（手动回退大模型场景，保留首次识别的样本不覆盖）
+  async recognizeOne(task: ImageTask, recognizer: Recognizer, cacheTrainSample: boolean = true): Promise<boolean> {
     task.status = ImageTaskStatus.RECOGNIZING;
     this.refreshTasks();
     try {
       // 阶段1：并行采集训练数据。本地 OCR 与主识别（多模态）同时进行；
       // 关闭开关时 collectOcr 立即返回 null，采集失败也不影响主流程。
       // 这里只缓存，等用户入账确认后才真正落盘（标签用人工确认结果）。
-      const ocrPromise = OcrSampleCollector.collectOcr(task.uri);
+      let ocrPromise: Promise<OcrVisionResult | null> | null = null;
+      if (cacheTrainSample) {
+        ocrPromise = OcrSampleCollector.collectOcr(task.uri);
+      }
       const raws = await recognizer.recognize(task.uri);
-      // 训练样本要的是大模型原始输出：识别后立刻快照，避免流水线就地修改污染样本
-      const rawSnapshot = this.snapshotRaws(raws);
-      const samplePromise = this.cacheSample(ocrPromise, rawSnapshot, task.uri);
-      this.samplePromises.set(task.uri, samplePromise);
+      if (cacheTrainSample && ocrPromise !== null) {
+        // 训练样本要的是识别器原始输出：识别后立刻快照，避免流水线就地修改污染样本
+        const rawSnapshot = this.snapshotRaws(raws);
+        const samplePromise = this.cacheSample(ocrPromise, rawSnapshot, task.uri);
+        this.samplePromises.set(task.uri, samplePromise);
+      }
       if (raws.length === 0) {
         task.status = ImageTaskStatus.FAILED;
         task.error = getContext().resourceManager.getStringSync($r('app.string.not_a_bill'));
@@ -329,6 +337,93 @@ struct RecognizeBill {
       }
       this.dedupWithinBatch();
     }
+  }
+
+  // 手动回退大模型：端侧结果置信度达标但用户不满意时，改用云端大模型重新识别该图并替换草稿
+  async fallbackToCloud(taskIndex: number): Promise<void> {
+    const task = this.tasks[taskIndex];
+    if (!task || task.status === ImageTaskStatus.RECOGNIZING || task.drafts.length === 0) {
+      return;
+    }
+    const cloudEnabled = await CloudLlmConfigStore.loadCloudEnabled();
+    if (!cloudEnabled) {
+      Toast.error($r('app.string.cloud_fallback_disabled'));
+      return;
+    }
+    const consented = await this.ensureCloudConsent();
+    if (!consented) {
+      return;
+    }
+    task.status = ImageTaskStatus.RECOGNIZING;
+    task.error = '';
+    this.refreshTasks();
+    const recognizer = new RetryRecognizer(
+      new CloudLlmRecognizer(await CloudLlmConfigStore.loadConfig()),
+      RECOGNIZE_RETRY_MAX_ATTEMPTS, RECOGNIZE_RETRY_BASE_DELAY_MS);
+    // 不重复采集训练样本：保留首次识别缓存的端侧原始输出，避免被云端输出覆盖污染
+    const ok = await this.recognizeOne(task, recognizer, false);
+    if (this.destroyed) {
+      return;
+    }
+    if (ok) {
+      this.replaceTaskDrafts(task);
+      return;
+    }
+    // 云端识别失败：恢复成功态并保留原端侧草稿，用户可继续编辑或再次回退
+    task.status = ImageTaskStatus.SUCCESS;
+    task.error = '';
+    this.refreshTasks();
+    Toast.error($r('app.string.cloud_fallback_failed'));
+  }
+
+  // 用该图最新识别结果替换确认页草稿：手动补录的保留，展开编辑状态尽量恢复
+  replaceTaskDrafts(task: ImageTask): void {
+    if (this.expandedIndex >= 0) {
+      this.commitExpanded();
+    }
+    const expandedUid = this.expandedIndex >= 0 && this.expandedIndex < this.drafts.length
+      ? this.drafts[this.expandedIndex].uid : -1;
+    const merged: BillDraft[] = [];
+    for (const d of this.drafts) {
+      if (d.imageUri === task.uri && !d.manual) {
+        continue;
+      }
+      merged.push(d);
+    }
+    for (const d of task.drafts) {
+      merged.push(d);
+    }
+    this.drafts = merged;
+    this.expandedIndex = -1;
+    for (let i = 0; i < this.drafts.length; i++) {
+      if (this.drafts[i].uid === expandedUid) {
+        this.expandedIndex = i;
+        break;
+      }
+    }
+    if (this.expandedIndex >= 0) {
+      this.loadExpanded();
+    }
+    this.dedupWithinBatch();
+  }
+
+  // 该任务使用的识别引擎：同一张图的草稿来自同一次识别，取第一条即可
+  taskEngine(task: ImageTask): string {
+    if (task.drafts.length === 0) {
+      return '';
+    }
+    return task.drafts[0].engine;
+  }
+
+  // 该任务草稿的最小置信度换算成百分比：反映这张图“最差一笔”的识别可靠程度
+  taskConfidencePercent(task: ImageTask): number {
+    let min = 1;
+    for (const d of task.drafts) {
+      if (d.confidence < min) {
+        min = d.confidence;
+      }
+    }
+    return Math.round(min * 100);
   }
 
   // 触发任务列表刷新：V1 数组元素字段变更需整体替换
@@ -630,6 +725,7 @@ struct RecognizeBill {
     draft.payTime = Date.now();
     draft.selected = true;
     draft.autoClassified = false;
+    draft.manual = true;
     draft.imageUri = this.firstSuccessUri();
     this.drafts.push(draft);
     this.drafts = this.drafts.slice();
@@ -892,7 +988,8 @@ struct RecognizeBill {
                 this.autoClassified = false;
               })
             }.width('100%')
-          }, (item: AccountTypeModel) => item.id.toString())
+          // key 带上收支侧前缀：两侧分类 id 均从 0 编号，仅用 id 切换收支时会残留旧分类
+          }, (item: AccountTypeModel) => this.accountType + '_' + item.id.toString())
         }.columnsTemplate('1fr 1fr 1fr 1fr')
         .rowsGap(16)
         .width('100%')
@@ -1015,35 +1112,79 @@ struct RecognizeBill {
           this.addManualDraft();
         })
 
-      // 失败项：可单独重试
-      ForEach(this.tasks, (task: ImageTask, index: number) => {
-        if (task.status === ImageTaskStatus.FAILED) {
-          Row({ space: SPACE_SMALL }) {
-            Image($r('app.media.error'))
-              .width(14)
-              .height(14)
-              .fillColor(this.tk().danger)
-            Text(task.error)
-              .fontSize(this.fs(12))
-              .fontColor(this.tk().danger)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .layoutWeight(1)
-            Text($r('app.string.retry'))
-              .fontSize(this.fs(13))
-              .fontColor(this.tk().primary)
-              .onClick(() => {
-                this.retryTask(index);
-              })
-          }.width('100%')
-          .height(40)
-          .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM })
-          .backgroundColor(this.tk().surface)
-          .borderRadius(SPACE_SMALL)
-        }
-      }, (task: ImageTask, index: number) => 'failed_' + index + task.status)
-
+      // 失败重试行、端侧置信度行与草稿同列一个滚动列表：图片多时不挤占下方草稿空间
       List({ space: SPACE_SMALL }) {
+        // 失败项：可单独重试
+        ForEach(this.tasks, (task: ImageTask, index: number) => {
+          if (task.status === ImageTaskStatus.FAILED) {
+            ListItem() {
+              Row({ space: SPACE_SMALL }) {
+                Image($r('app.media.error'))
+                  .width(14)
+                  .height(14)
+                  .fillColor(this.tk().danger)
+                Text(task.error)
+                  .fontSize(this.fs(12))
+                  .fontColor(this.tk().danger)
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .layoutWeight(1)
+                Text($r('app.string.retry'))
+                  .fontSize(this.fs(13))
+                  .fontColor(this.tk().primary)
+                  .onClick(() => {
+                    this.retryTask(index);
+                  })
+              }.width('100%')
+              .height(40)
+              .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM })
+              .backgroundColor(this.tk().surface)
+              .borderRadius(SPACE_SMALL)
+            }
+          }
+        }, (task: ImageTask, index: number) => 'failed_' + index + task.status)
+
+        // 端侧置信度展示与手动回退：非云端结果可随时改用大模型重新识别该图
+        ForEach(this.tasks, (task: ImageTask, index: number) => {
+          if (task.drafts.length > 0 && this.taskEngine(task) !== 'cloud') {
+            ListItem() {
+              Row({ space: SPACE_SMALL }) {
+                if (task.status === ImageTaskStatus.RECOGNIZING) {
+                  LoadingProgress()
+                    .width(14)
+                    .height(14)
+                    .color(this.tk().primary)
+                }
+                Text($r('app.string.task_index', index + 1))
+                  .fontSize(this.fs(12))
+                  .fontColor(this.tk().textPrimary)
+                Text($r('app.string.confidence_percent', this.taskConfidencePercent(task)))
+                  .fontSize(this.fs(12))
+                  .fontColor(this.tk().textSecondary)
+                  .layoutWeight(1)
+                if (task.status === ImageTaskStatus.RECOGNIZING) {
+                  Text($r('app.string.recognizing'))
+                    .fontSize(this.fs(12))
+                    .fontColor(this.tk().primary)
+                } else {
+                  Text($r('app.string.fallback_cloud'))
+                    .fontSize(this.fs(13))
+                    .fontColor(this.tk().primary)
+                    .onClick(() => {
+                      this.fallbackToCloud(index);
+                    })
+                }
+              }
+              .width('100%')
+              .height(40)
+              .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM })
+              .backgroundColor(this.tk().surface)
+              .borderRadius(SPACE_SMALL)
+            }
+          }
+        }, (task: ImageTask, index: number) => 'fallback_' + index + task.status + this.taskEngine(task) +
+          this.taskConfidencePercent(task))
+
         ForEach(this.drafts, (draft: BillDraft, index: number) => {
           ListItem() {
             this.DraftItem(draft, index)

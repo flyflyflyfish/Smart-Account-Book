@@ -333,7 +333,8 @@ struct RecurringBillEdit {
                 GridItem() {
                   this.CategoryItem(item)
                 }.width('100%')
-              }, (item: AccountTypeModel) => item.id.toString())
+                // key 带上收支侧前缀：两侧分类 id 均从 0 编号，仅用 id 切换收支时会残留旧分类
+              }, (item: AccountTypeModel) => this.accountType + '_' + item.id.toString())
             }
             .columnsTemplate('1fr 1fr 1fr 1fr')
             .rowsGap(16)

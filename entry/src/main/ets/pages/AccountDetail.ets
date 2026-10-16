@@ -3,6 +3,7 @@ import Navigator from '../components/Navigator';
 import AccountItem from '../components/AccountItem';
 import GroupHeader from '../components/GroupHeader';
 import { AccountType, GroupByDate, ItemRecordInfo } from '../models/account/account';
+import AccountPO from '../models/account/accountPO';
 import AccountService from '../service/account';
 import StatsService from '../service/stats';
 import BillStore, { BillChangeListener } from '../common/BillStore';
@@ -19,6 +20,10 @@ export interface AccountDetailParams {
   startTime: number;
   endTime: number;
   accountType: number;
+  // 分类下钻：传则只展示该分类（type = 分类 id）的账单，不传展示全部
+  typeId?: number;
+  // 页面标题：分类下钻时传分类名，不传用默认“详情”
+  title?: string;
 }
 
 @Entry
@@ -37,6 +42,10 @@ struct AccountDetail {
 
   @State accountType: number = AccountType.EXPENSES;
   @State accountList: GroupByDate[] = [];
+  // 页面标题：分类下钻时为分类名
+  @State detailTitle: ResourceStr = $r('app.string.detail');
+  // 分类下钻过滤：-1 表示不过滤
+  private typeId: number = -1;
   // 批量删除模式
   @State batchMode: boolean = false;
   // 批量模式下勾选的账单 id
@@ -56,6 +65,9 @@ struct AccountDetail {
     this.startTime = params && typeof params.startTime === 'number' ? params.startTime : 0;
     this.endTime = params && typeof params.endTime === 'number' ? params.endTime : 0;
     this.accountType = params && typeof params.accountType === 'number' ? params.accountType : AccountType.EXPENSES;
+    this.typeId = params && typeof params.typeId === 'number' ? params.typeId : -1;
+    this.detailTitle = params && typeof params.title === 'string' && params.title.length > 0
+      ? params.title : $r('app.string.detail');
     await this.loadData();
   }
 
@@ -66,7 +78,11 @@ struct AccountDetail {
   async loadData(): Promise<void> {
     try {
       const res = await AccountService.getRangeAccountByType(this.startTime, this.endTime, this.accountType);
-      this.accountList = StatsService.groupByDate(res);
+      // 分类下钻：只保留该分类的账单
+      const filtered = this.typeId >= 0
+        ? res.filter((item: AccountPO): boolean => item.type === this.typeId)
+        : res;
+      this.accountList = StatsService.groupByDate(filtered);
     } catch (err) {
       Logger.error('加载账单详情失败', (err as Error).message);
     }
@@ -259,7 +275,7 @@ struct AccountDetail {
 
   build() {
     Column() {
-      Navigator({ title: $r('app.string.detail') })
+      Navigator({ title: this.detailTitle })
       Column() {
         if (this.accountList.length) {
           this.BatchToolbar()
