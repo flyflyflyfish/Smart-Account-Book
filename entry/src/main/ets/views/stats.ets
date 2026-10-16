@@ -7,6 +7,7 @@ import { AccountType, StatsByDate, StatsByType, StatsData } from '../models/acco
 import AccountService from '../service/account';
 import StatsService from '../service/stats';
 import BillStore, { BillChangeListener } from '../common/BillStore';
+import CategoryStore from '../models/accountType/CategoryStore';
 import { AccountDetailParams } from '../pages/AccountDetail';
 import { Logger } from '../utils/Logger';
 import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_TINY } from '../common/dimens';
@@ -165,6 +166,28 @@ export default struct Stats {
     })
   }
 
+  // 分类下钻：查看该时间段内此分类的账单明细，标题用分类名
+  toAccountDetailByType(item: StatsByType): void {
+    const isMonth = this.statsType === StatsType.MONTH;
+    const startTime = isMonth
+      ? dayjs(this.time).startOf('month').valueOf()
+      : dayjs(this.time).startOf('year').valueOf();
+    const endTime = isMonth
+      ? dayjs(this.time).endOf('month').valueOf()
+      : dayjs(this.time).endOf('year').valueOf();
+    const params: AccountDetailParams = {
+      startTime: startTime,
+      endTime: endTime,
+      accountType: this.accountType,
+      typeId: item.info.id,
+      title: CategoryStore.nameText(item.info.id, this.accountType)
+    };
+    router.pushUrl({
+      url: 'pages/AccountDetail',
+      params: params
+    })
+  }
+
   @Builder TotalStats() {
     Row() {
       Column({ space: 8 }) {
@@ -253,8 +276,14 @@ export default struct Stats {
           .color(this.chartColor(index))
           .style({ strokeWidth: 4 })
       }.layoutWeight(1)
+      Image($r('app.media.arrow_left'))
+        .rotate({ angle: 180 })
+        .height(14)
+        .objectFit(ImageFit.Contain)
+        .fillColor(this.tk().textSecondary)
     }.width('100%')
     .padding({ top: 10, bottom: 10 })
+    .onClick(() => this.toAccountDetailByType(item))
   }
 
   @Builder PieChart() {

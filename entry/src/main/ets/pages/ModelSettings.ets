@@ -259,6 +259,28 @@ struct ModelSettings {
     }
   }
 
+  // 端侧识别开关：切换即持久化，退出重进不丢
+  async onToggleOcr(value: boolean): Promise<void> {
+    this.ocrEnabled = value;
+    try {
+      await CloudLlmConfigStore.saveOcrEnabled(value);
+    } catch (error) {
+      Logger.error('保存端侧识别开关失败', (error as Error).message);
+      Toast.error($r('app.string.save_failed'));
+    }
+  }
+
+  // 云端大模型开关：切换即持久化，退出重进不丢
+  async onToggleCloud(value: boolean): Promise<void> {
+    this.cloudEnabled = value;
+    try {
+      await CloudLlmConfigStore.saveCloudEnabled(value);
+    } catch (error) {
+      Logger.error('保存云端识别开关失败', (error as Error).message);
+      Toast.error($r('app.string.save_failed'));
+    }
+  }
+
   async onTestConnection(): Promise<void> {
     const provider = LLM_PROVIDERS[this.providerIndex];
     const config: CloudLlmConfig = {
@@ -433,7 +455,10 @@ struct ModelSettings {
                   .fontWeight(FontWeight.Medium)
                   .fontColor(this.tk().textPrimary)
                 Blank()
-                Toggle({ type: ToggleType.Switch, isOn: $$this.ocrEnabled })
+                Toggle({ type: ToggleType.Switch, isOn: this.ocrEnabled })
+                  .onChange((value: boolean) => {
+                    this.onToggleOcr(value);
+                  })
               }.width('100%')
               Text($r('app.string.ocr_hint'))
                 .width('100%')
@@ -449,7 +474,10 @@ struct ModelSettings {
                   .fontWeight(FontWeight.Medium)
                   .fontColor(this.tk().textPrimary)
                 Blank()
-                Toggle({ type: ToggleType.Switch, isOn: $$this.cloudEnabled })
+                Toggle({ type: ToggleType.Switch, isOn: this.cloudEnabled })
+                  .onChange((value: boolean) => {
+                    this.onToggleCloud(value);
+                  })
               }.width('100%')
               Text($r('app.string.cloud_hint'))
                 .width('100%')

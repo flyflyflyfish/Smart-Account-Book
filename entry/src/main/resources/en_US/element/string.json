@@ -285,6 +285,26 @@
       "value": "Retry"
     },
     {
+      "name": "confidence_percent_short",
+      "value": "Confidence %d%"
+    },
+    {
+      "name": "confidence_percent",
+      "value": "On-device confidence %d%"
+    },
+    {
+      "name": "fallback_cloud",
+      "value": "Retry with LLM"
+    },
+    {
+      "name": "cloud_fallback_disabled",
+      "value": "Cloud LLM is disabled. Enable it in Settings first"
+    },
+    {
+      "name": "cloud_fallback_failed",
+      "value": "LLM recognition failed, original results kept"
+    },
+    {
       "name": "all_recognize_failed",
       "value": "All failed, please retry"
     },

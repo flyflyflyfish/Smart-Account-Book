@@ -281,6 +281,26 @@
       "value": "重试"
     },
     {
+      "name": "confidence_percent_short",
+      "value": "置信度 %d%"
+    },
+    {
+      "name": "confidence_percent",
+      "value": "端侧置信度 %d%"
+    },
+    {
+      "name": "fallback_cloud",
+      "value": "回退大模型"
+    },
+    {
+      "name": "cloud_fallback_disabled",
+      "value": "云端大模型未开启，请先在设置中开启"
+    },
+    {
+      "name": "cloud_fallback_failed",
+      "value": "大模型识别失败，已保留原结果"
+    },
+    {
       "name": "all_recognize_failed",
       "value": "全部识别失败，请重试"
     },

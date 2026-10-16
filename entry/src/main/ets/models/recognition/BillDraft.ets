@@ -27,6 +27,10 @@ export class BillDraft {
   duplicated: boolean = false;
   // 识别引擎标识：'local_model' / 'cloud' / 'ocr_rule'，确认页展示徽标
   engine: string = '';
+  // 识别置信度 0~1，确认页展示端侧可靠程度百分比
+  confidence: number = 1;
+  // 是否为手动补录：回退大模型替换草稿时手动补录的保留
+  manual: boolean = false;
   // 是否勾选待入账
   selected: boolean = true;
   // 来源图片地址，用于编辑面板展示与失败定位
@@ -49,6 +53,7 @@ export class BillDraft {
     draft.autoClassified = result.autoClassified === true;
     draft.duplicated = result.duplicated === true;
     draft.engine = result.engine ?? '';
+    draft.confidence = result.confidence;
     draft.selected = !draft.duplicated;
     draft.imageUri = imageUri;
     return draft;
