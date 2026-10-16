@@ -747,7 +747,8 @@ export default struct AiAssistant {
               this.editCategory = item;
             })
           }
-        }, (item: AccountTypeModel) => item.id.toString())
+          // key 带上收支侧前缀：两侧分类 id 均从 0 编号，仅用 id 切换收支时会残留旧分类
+        }, (item: AccountTypeModel) => this.editAccountType + '_' + item.id.toString())
       }
       .columnsTemplate('1fr 1fr 1fr 1fr')
       .rowsGap(SPACE_SMALL)

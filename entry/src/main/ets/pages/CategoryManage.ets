@@ -252,69 +252,75 @@ struct CategoryManage {
   }
 
   @Builder AddSheetBuilder() {
-    Column({ space: SPACE_LARGE }) {
-      Text($r('app.string.category_add'))
-        .fontSize(this.fs(17))
-        .fontWeight(FontWeight.Bold)
-        .fontColor(this.tk().textPrimary)
+    // 外层套 Scroll：任意弹窗高度下都能滚动到底部按钮，不再需要拖拽弹窗
+    Scroll() {
+      Column({ space: SPACE_LARGE }) {
+        Text($r('app.string.category_add'))
+          .fontSize(this.fs(17))
+          .fontWeight(FontWeight.Bold)
+          .fontColor(this.tk().textPrimary)
 
-      Column({ space: SPACE_SMALL }) {
-        Text($r('app.string.category_add_name_label'))
-          .fontSize(this.fs(14))
-          .fontColor(this.tk().textSecondary)
-        TextInput({ text: this.newCategoryName, placeholder: $r('app.string.category_add_name_placeholder') })
+        Column({ space: SPACE_SMALL }) {
+          Text($r('app.string.category_add_name_label'))
+            .fontSize(this.fs(14))
+            .fontColor(this.tk().textSecondary)
+          TextInput({ text: this.newCategoryName, placeholder: $r('app.string.category_add_name_placeholder') })
+            .height(44)
+            .fontSize(this.fs(15))
+            .backgroundColor(this.tk().surfaceVariant)
+            .borderRadius(SPACE_MEDIUM)
+            .onChange((value: string) => {
+              this.newCategoryName = value;
+            })
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Start)
+
+        Column({ space: SPACE_SMALL }) {
+          Text($r('app.string.category_add_icon_label'))
+            .fontSize(this.fs(14))
+            .fontColor(this.tk().textSecondary)
+          Flex({ wrap: FlexWrap.Wrap }) {
+            ForEach(CATEGORY_ICON_OPTIONS, (option: CategoryIconOption) => {
+              this.IconOptionItem(option)
+            }, (option: CategoryIconOption) => option.key)
+          }
+          .width('100%')
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Start)
+
+        Column({ space: SPACE_SMALL }) {
+          Text($r('app.string.category_add_color_label'))
+            .fontSize(this.fs(14))
+            .fontColor(this.tk().textSecondary)
+          Row({ space: SPACE_MEDIUM }) {
+            ForEach(CATEGORY_COLOR_OPTIONS, (option: CategoryColorOption) => {
+              this.ColorOptionItem(option)
+            }, (option: CategoryColorOption) => option.key)
+          }
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Start)
+
+        Button($r('app.string.category_add'))
+          .width('100%')
           .height(44)
           .fontSize(this.fs(15))
-          .backgroundColor(this.tk().surfaceVariant)
+          .fontColor(this.tk().surface)
+          .backgroundColor(this.tk().primary)
+          .type(ButtonType.Normal)
           .borderRadius(SPACE_MEDIUM)
-          .onChange((value: string) => {
-            this.newCategoryName = value;
+          .onClick(() => {
+            this.confirmAdd();
           })
       }
       .width('100%')
-      .alignItems(HorizontalAlign.Start)
-
-      Column({ space: SPACE_SMALL }) {
-        Text($r('app.string.category_add_icon_label'))
-          .fontSize(this.fs(14))
-          .fontColor(this.tk().textSecondary)
-        Flex({ wrap: FlexWrap.Wrap }) {
-          ForEach(CATEGORY_ICON_OPTIONS, (option: CategoryIconOption) => {
-            this.IconOptionItem(option)
-          }, (option: CategoryIconOption) => option.key)
-        }
-        .width('100%')
-      }
-      .width('100%')
-      .alignItems(HorizontalAlign.Start)
-
-      Column({ space: SPACE_SMALL }) {
-        Text($r('app.string.category_add_color_label'))
-          .fontSize(this.fs(14))
-          .fontColor(this.tk().textSecondary)
-        Row({ space: SPACE_MEDIUM }) {
-          ForEach(CATEGORY_COLOR_OPTIONS, (option: CategoryColorOption) => {
-            this.ColorOptionItem(option)
-          }, (option: CategoryColorOption) => option.key)
-        }
-      }
-      .width('100%')
-      .alignItems(HorizontalAlign.Start)
-
-      Button($r('app.string.category_add'))
-        .width('100%')
-        .height(44)
-        .fontSize(this.fs(15))
-        .fontColor(this.tk().surface)
-        .backgroundColor(this.tk().primary)
-        .type(ButtonType.Normal)
-        .borderRadius(SPACE_MEDIUM)
-        .onClick(() => {
-          this.confirmAdd();
-        })
+      .padding({ left: SPACE_XLARGE, right: SPACE_XLARGE, top: SPACE_LARGE, bottom: SPACE_XLARGE })
     }
+    .scrollBar(BarState.Off)
+    .align(Alignment.Top)
     .width('100%')
-    .padding({ left: SPACE_XLARGE, right: SPACE_XLARGE, top: SPACE_LARGE, bottom: SPACE_XLARGE })
   }
 
   build() {
@@ -338,7 +344,8 @@ struct CategoryManage {
           Column({ space: SPACE_SMALL }) {
             ForEach(this.currentList(), (item: AccountTypeModel) => {
               this.CategoryRow(item)
-            }, (item: AccountTypeModel) => item.id.toString())
+              // key 带上收支侧前缀：两侧分类 id 均从 0 编号，仅用 id 切换标签页时会残留旧分类
+            }, (item: AccountTypeModel) => this.currentIndex + '_' + item.id.toString())
           }
           .width('100%')
           .padding({ top: SPACE_TINY, bottom: SPACE_SMALL })
@@ -383,7 +390,8 @@ struct CategoryManage {
     .height('100%')
     .backgroundColor(this.tk().background)
     .bindSheet($$this.showAddSheet, this.AddSheetBuilder(), {
-      detents: [SheetSize.MEDIUM, SheetSize.LARGE],
+      // 默认打开 LARGE 档位，保证底部“添加分类”按钮完整可见；可下拉收到 MEDIUM
+      detents: [SheetSize.LARGE, SheetSize.MEDIUM],
       dragBar: true,
       onDisappear: () => {
         this.showAddSheet = false;
