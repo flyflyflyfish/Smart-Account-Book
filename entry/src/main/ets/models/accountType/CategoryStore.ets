@@ -8,6 +8,7 @@ import {
   PREF_CATEGORY_CONFIG
 } from '../../common/constants';
 import PreferenceUtil from '../../utils/PreferenceUtil';
+import CloudSettingSync from '../../service/CloudSettingSync';
 import { Logger } from '../../utils/Logger';
 
 // 自定义分类 id 起始值，避开默认分类的枚举 id（0-12）
@@ -327,7 +328,64 @@ class CategoryStore {
     this.rebuild();
   }
 
+  /** 供端云同步：当前分类配置快照 */
+  getSnapshotJson(): string {
+    return JSON.stringify(this.config);
+  }
+
+  /**
+   * 端云同步拉取后调用：与云端配置做并集合并——
+   * 自定义分类按 id 去重（双方新增都保留）、隐藏列表取并集、nextId 取最大，
+   * 保证账单里的分类 id 在任一设备上都能反查到同名分类。
+   * 仅落本地不回推云端，合并结果的回推由同步服务统一处理；返回本地是否发生变化
+   */
+  mergeFromCloud(cloudJson: string): boolean {
+    const cloud = this.parseConfig(cloudJson);
+    const changed = this.mergeConfig(cloud);
+    if (changed) {
+      this.persistLocal();
+      this.rebuild();
+    }
+    return changed;
+  }
+
+  private mergeConfig(cloud: CategoryConfig): boolean {
+    let changed = false;
+    if (cloud.nextId > this.config.nextId) {
+      this.config.nextId = cloud.nextId;
+      changed = true;
+    }
+    changed = this.mergeSide(this.config.expenses, cloud.expenses) || changed;
+    changed = this.mergeSide(this.config.incomes, cloud.incomes) || changed;
+    return changed;
+  }
+
+  private mergeSide(local: CategorySideConfig, cloud: CategorySideConfig): boolean {
+    let changed = false;
+    cloud.custom.forEach((item: CustomCategoryRaw) => {
+      const exists = local.custom.some((mine: CustomCategoryRaw): boolean => mine.id === item.id);
+      if (!exists) {
+        local.custom.push(item);
+        changed = true;
+      }
+    });
+    cloud.hidden.forEach((id: number) => {
+      if (local.hidden.indexOf(id) < 0) {
+        local.hidden.push(id);
+        changed = true;
+      }
+    });
+    return changed;
+  }
+
   private persist(): void {
+    this.persistLocal();
+    // 云同步：登录后分类配置变更即时上传，未登录静默跳过
+    CloudSettingSync.pushSetting(PREF_CATEGORY_CONFIG, JSON.stringify(this.config));
+  }
+
+  // 仅落本地：合并云端配置时不回推，避免同步回环
+  private persistLocal(): void {
     PreferenceUtil.putPreferenceValue(PREF_CATEGORY_CONFIG, JSON.stringify(this.config)).catch((): void => {
       Logger.error('保存自定义分类配置失败');
     });

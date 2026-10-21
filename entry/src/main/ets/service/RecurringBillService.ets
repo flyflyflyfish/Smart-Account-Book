@@ -7,6 +7,7 @@ import * as CONSTANTS from '../common/constants';
 import AccountService from './account';
 import BillStore from '../common/BillStore';
 import CategoryStore from '../models/accountType/CategoryStore';
+import CloudSettingSync from './CloudSettingSync';
 import { RecurringBill, RecurringRepeatMode } from '../models/recurring/RecurringBill';
 import { AccountInfo, AccountType } from '../models/account/account';
 import { Logger } from '../utils/Logger';
@@ -106,6 +107,8 @@ class RecurringBillService {
 
   private async saveAll(list: RecurringBill[]): Promise<void> {
     await PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_RECURRING_BILLS, JSON.stringify(list));
+    // 云同步：快捷记账规则即时上传，未登录静默跳过
+    CloudSettingSync.pushSetting(CONSTANTS.PREF_RECURRING_BILLS, JSON.stringify(list));
   }
 
   /**

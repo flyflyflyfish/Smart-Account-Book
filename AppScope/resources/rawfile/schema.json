@@ -1,1 +1,71 @@
-{"schemaVersion":1,"objectTypes":[{"objectTypeName":"account","fields":[{"fieldName":"id","fieldType":"String","belongPrimaryKey":true,"notNull":true,"isNeedEncrypt":false,"isSensitive":false},{"fieldName":"type","fieldType":"Integer","belongPrimaryKey":false,"notNull":false,"isNeedEncrypt":false,"isSensitive":false},{"fieldName":"account_type","fieldType":"Integer","belongPrimaryKey":false,"notNull":false,"isNeedEncrypt":false,"isSensitive":false},{"fieldName":"amount","fieldType":"Double","belongPrimaryKey":false,"notNull":false,"isNeedEncrypt":false,"isSensitive":false},{"fieldName":"create_time","fieldType":"Long","belongPrimaryKey":false,"notNull":false,"isNeedEncrypt":false,"isSensitive":false},{"fieldName":"description","fieldType":"String","belongPrimaryKey":false,"notNull":false,"isNeedEncrypt":false,"isSensitive":false},{"fieldName":"time","fieldType":"Long","belongPrimaryKey":false,"notNull":false,"isNeedEncrypt":false,"isSensitive":false},{"fieldName":"merchant","fieldType":"String","belongPrimaryKey":false,"notNull":false,"isNeedEncrypt":false,"isSensitive":false},{"fieldName":"source","fieldType":"Integer","belongPrimaryKey":false,"notNull":false,"isNeedEncrypt":false,"isSensitive":false},{"fieldName":"pay_time","fieldType":"Long","belongPrimaryKey":false,"notNull":false,"isNeedEncrypt":false,"isSensitive":false},{"fieldName":"owner_uid","fieldType":"String","belongPrimaryKey":false,"notNull":false,"isNeedEncrypt":false,"isSensitive":false}],"indexes":[]}],"permissions":[{"objectTypeName":"account","permissions":[{"role":"World","rights":[]},{"role":"Authenticated","rights":["Read","Upsert"]},{"role":"Creator","rights":["Read","Upsert","Delete"]},{"role":"Administrator","rights":["Read","Upsert","Delete"]}]}]}
+{
+  "schemaVersion": 2,
+  "objectTypes": [
+    {
+      "objectTypeName": "account",
+      "fields": [
+        {"fieldName": "id", "fieldType": "String", "belongPrimaryKey": true, "notNull": true, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "type", "fieldType": "Integer", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "account_type", "fieldType": "Integer", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "amount", "fieldType": "Double", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "create_time", "fieldType": "Long", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "description", "fieldType": "String", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "time", "fieldType": "Long", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "merchant", "fieldType": "String", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "source", "fieldType": "Integer", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "pay_time", "fieldType": "Long", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "owner_uid", "fieldType": "String", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false}
+      ],
+      "indexes": []
+    },
+    {
+      "objectTypeName": "user_setting",
+      "fields": [
+        {"fieldName": "id", "fieldType": "String", "belongPrimaryKey": true, "notNull": true, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "setting_key", "fieldType": "String", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "setting_value", "fieldType": "String", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "update_time", "fieldType": "Long", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "owner_uid", "fieldType": "String", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false}
+      ],
+      "indexes": []
+    },
+    {
+      "objectTypeName": "bill_tombstone",
+      "fields": [
+        {"fieldName": "id", "fieldType": "String", "belongPrimaryKey": true, "notNull": true, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "delete_time", "fieldType": "Long", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "owner_uid", "fieldType": "String", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false}
+      ],
+      "indexes": []
+    }
+  ],
+  "permissions": [
+    {
+      "objectTypeName": "account",
+      "permissions": [
+        {"role": "World", "rights": []},
+        {"role": "Authenticated", "rights": ["Read", "Upsert"]},
+        {"role": "Creator", "rights": ["Read", "Upsert", "Delete"]},
+        {"role": "Administrator", "rights": ["Read", "Upsert", "Delete"]}
+      ]
+    },
+    {
+      "objectTypeName": "user_setting",
+      "permissions": [
+        {"role": "World", "rights": []},
+        {"role": "Authenticated", "rights": ["Read", "Upsert"]},
+        {"role": "Creator", "rights": ["Read", "Upsert", "Delete"]},
+        {"role": "Administrator", "rights": ["Read", "Upsert", "Delete"]}
+      ]
+    },
+    {
+      "objectTypeName": "bill_tombstone",
+      "permissions": [
+        {"role": "World", "rights": []},
+        {"role": "Authenticated", "rights": ["Read", "Upsert"]},
+        {"role": "Creator", "rights": ["Read", "Upsert", "Delete"]},
+        {"role": "Administrator", "rights": ["Read", "Upsert", "Delete"]}
+      ]
+    }
+  ]
+}

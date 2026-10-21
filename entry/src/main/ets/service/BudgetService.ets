@@ -5,6 +5,7 @@ import PreferenceUtil from '../utils/PreferenceUtil';
 import * as CONSTANTS from '../common/constants';
 import AccountService from './account';
 import StatsService from './stats';
+import CloudSettingSync from './CloudSettingSync';
 import { Logger } from '../utils/Logger';
 
 /**
@@ -58,6 +59,9 @@ class BudgetService {
     await PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_BUDGET_ENABLED, enabled);
     await PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_BUDGET_LIMIT, limit);
     await PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_BUDGET_ALERT_MONTH, '');
+    // 云同步：额度配置即时上传，未登录静默跳过
+    CloudSettingSync.pushSetting(CONSTANTS.PREF_BUDGET_ENABLED, enabled);
+    CloudSettingSync.pushSetting(CONSTANTS.PREF_BUDGET_LIMIT, limit);
     const version = AppStorage.get<number>('budgetVersion') ?? 0;
     AppStorage.setOrCreate('budgetVersion', version + 1);
   }

@@ -1,6 +1,7 @@
 import AccountNavigator from '../components/Navigator';
 import AuthService from '../service/AuthService';
 import CloudInit from '../data/CloudInit';
+import CloudSyncService from '../service/CloudSyncService';
 import { Toast } from '../components/ToastDialog';
 import { Logger } from '../utils/Logger';
 import BreakpointConstants from '../common/breakpoint';
@@ -40,11 +41,13 @@ struct AccountLogin {
   async onSignIn(): Promise<void> {
     const currentUid = await AuthService.signInWithHuaweiId();
     if (currentUid) {
-      CloudInit.init();
+      CloudInit.init(currentUid);
       this.signedIn = true;
       this.uid = currentUid;
       if (CloudInit.isReady()) {
         Toast.success($r('app.string.sign_in_success'));
+        // 登录成功：立即做一次端云全量同步，把云端的账单/分类/设置恢复到本机，本机新增上传云端
+        CloudSyncService.syncAll(true);
       } else {
         // 登录成功但云服务初始化失败：本地记账不受影响，但需明确告知云端同步不可用
         Toast.error($r('app.string.cloud_sync_unavailable'));
