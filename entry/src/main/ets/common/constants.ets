@@ -63,3 +63,17 @@ export const PREF_GLOW_LEVEL = 'theme_glow_level';
 // 云数据库存储区名称与 schema 文件名，需与 AGC 控制台配置保持一致
 export const CLOUD_ZONE_NAME: string = 'AccountZone';
 export const CLOUD_SCHEMA_FILE: string = 'schema.json';
+
+// 端云同步：各设置最近一次本地变更时间（JSON：{设置键: 毫秒时间戳}）的 Preferences 键，
+// 拉取时用于判断云端值是否比本地新，避免旧值覆盖新值
+export const PREF_CLOUD_SYNC_META = 'cloud_sync_meta';
+
+// 端云同步：已删除账单的墓碑 id 列表（JSON 数组）的 Preferences 键，
+// 防止某台设备删除后又被另一台设备同步时推回云端（复活）
+export const PREF_CLOUD_TOMBSTONES = 'cloud_bill_tombstones';
+
+// 本地墓碑记录上限，超过后淘汰最早记录
+export const CLOUD_TOMBSTONE_MAX: number = 500;
+
+// 端云全量同步的最小间隔（毫秒）：回前台等高频触发时按此节流
+export const CLOUD_SYNC_MIN_INTERVAL_MS: number = 10 * 60 * 1000;

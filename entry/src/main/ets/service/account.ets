@@ -10,6 +10,7 @@ import { SOURCE_MANUAL } from '../common/constants';
 import { Logger } from '../utils/Logger';
 import AuthService from './AuthService';
 import CloudAccountRepository from '../data/CloudAccountRepository';
+import CloudSettingSync from './CloudSettingSync';
 
 class AccountService {
   // 依赖仓储接口而非具体实现，便于测试时替换为内存实现
@@ -40,6 +41,8 @@ class AccountService {
 
   private async syncDelete(id: string): Promise<void> {
     await CloudAccountRepository.deleteById(id);
+    // 记录删除墓碑：防止其他设备同步时把已删账单重新推回云端（复活）
+    await CloudSettingSync.recordBillDeletion(id);
   }
 
   /**

@@ -10,6 +10,7 @@ import DBUtil from '../utils/DBUtil';
 import CategoryStore from '../models/accountType/CategoryStore';
 import AuthService from '../service/AuthService';
 import CloudInit from '../data/CloudInit';
+import CloudSyncService from '../service/CloudSyncService';
 import RecurringBillService from '../service/RecurringBillService';
 import { ThemeKit } from '../common/theme/Theme';
 import {
@@ -60,7 +61,9 @@ export default class EntryAbility extends UIAbility {
       AuthService.init(this.context);
       const uid = await AuthService.getCurrentUid();
       if (uid) {
-        CloudInit.init();
+        CloudInit.init(uid);
+        // 已登录：启动后做一次端云全量同步（恢复云端账单/分类/设置，上传本地新增），不阻塞启动
+        CloudSyncService.syncAll(true);
       }
     } catch (err) {
       const e = err as Error;
@@ -144,6 +147,8 @@ export default class EntryAbility extends UIAbility {
     // Ability has brought to foreground
     // 回前台立即检查一次重复性账单，避免后台期间错过的到点账单延迟记入
     RecurringBillService.start(this.context);
+    // 回前台节流触发一次端云全量同步，多设备间保持数据最新
+    CloudSyncService.syncAll();
     hilog.info(0x0000, 'testTag', '%{private}s', 'Ability onForeground');
   }
 
