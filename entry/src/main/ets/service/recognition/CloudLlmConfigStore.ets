@@ -1,6 +1,7 @@
 import PreferenceUtil from '../../utils/PreferenceUtil';
 import * as CONSTANTS from '../../common/constants';
 import { CloudLlmConfig, SavedProviderConfig } from '../../models/recognition/CloudLlmModels';
+import CloudSettingSync from '../CloudSettingSync';
 
 /**
  * 云端识别配置与引擎开关存取：支持多服务商，API Key 仅保存在本机 Preferences，绝不写入代码或仓库
@@ -44,7 +45,10 @@ class CloudLlmConfigStore {
 
   // 多服务商配置列表（JSON 数组）
   async saveProviders(providers: SavedProviderConfig[]): Promise<void> {
-    await PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_CLOUD_PROVIDERS, JSON.stringify(providers));
+    const text = JSON.stringify(providers);
+    await PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_CLOUD_PROVIDERS, text);
+    // 云同步：识别服务商配置即时上传，未登录静默跳过
+    CloudSettingSync.pushSetting(CONSTANTS.PREF_CLOUD_PROVIDERS, text);
   }
 
   async loadProviders(): Promise<SavedProviderConfig[]> {
@@ -66,6 +70,7 @@ class CloudLlmConfigStore {
   // 当前激活的服务商 id
   async setActiveProvider(id: string): Promise<void> {
     await PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_CLOUD_ACTIVE_PROVIDER, id);
+    CloudSettingSync.pushSetting(CONSTANTS.PREF_CLOUD_ACTIVE_PROVIDER, id);
   }
 
   async loadActiveProvider(): Promise<string> {
@@ -79,6 +84,7 @@ class CloudLlmConfigStore {
 
   async saveOcrEnabled(enabled: boolean): Promise<void> {
     await PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_OCR_ENABLED, enabled);
+    CloudSettingSync.pushSetting(CONSTANTS.PREF_OCR_ENABLED, enabled);
   }
 
   async loadCloudEnabled(): Promise<boolean> {
@@ -88,6 +94,7 @@ class CloudLlmConfigStore {
 
   async saveCloudEnabled(enabled: boolean): Promise<void> {
     await PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_CLOUD_ENABLED, enabled);
+    CloudSettingSync.pushSetting(CONSTANTS.PREF_CLOUD_ENABLED, enabled);
   }
 
   // 读取云端识别上传同意状态：默认 false，未同意前不得上传图片
@@ -98,6 +105,7 @@ class CloudLlmConfigStore {
 
   async saveCloudConsent(agreed: boolean): Promise<void> {
     await PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_CLOUD_CONSENT, agreed);
+    CloudSettingSync.pushSetting(CONSTANTS.PREF_CLOUD_CONSENT, agreed);
   }
 
   // 训练数据采集开关：默认关闭，仅存本机，不上传

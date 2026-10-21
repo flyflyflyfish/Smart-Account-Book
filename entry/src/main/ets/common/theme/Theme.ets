@@ -10,6 +10,7 @@ import preferences from '@ohos.data.preferences';
 import { BusinessError } from '@kit.BasicServicesKit';
 import PreferenceUtil from '../../utils/PreferenceUtil';
 import { Logger } from '../../utils/Logger';
+import CloudSettingSync from '../../service/CloudSettingSync';
 import { PREF_THEME_ID, PREF_COLOR_MODE, PREF_FONT_SCALE, PREF_GLOW_LEVEL } from '../constants';
 
 // 主题 id
@@ -474,6 +475,32 @@ class ThemeManager {
     PreferenceUtil.putPreferenceValue(key, value).catch((err: BusinessError): void => {
       Logger.error('保存主题偏好失败', err.message);
     });
+    // 云同步：主题偏好变更即时上传，未登录静默跳过
+    CloudSettingSync.pushSetting(key, value);
+  }
+
+  /**
+   * 端云同步拉取后重载四项主题偏好并立即生效；只读盘不回推云端，避免同步回环
+   */
+  async reloadSynced(): Promise<void> {
+    const savedId = await PreferenceUtil.getPreferenceValue(PREF_THEME_ID, THEME_ID_PINE);
+    if (typeof savedId === 'string') {
+      this.themeId = savedId;
+    }
+    const savedMode = await PreferenceUtil.getPreferenceValue(PREF_COLOR_MODE, THEME_MODE_SYSTEM);
+    if (typeof savedMode === 'string') {
+      this.mode = savedMode;
+    }
+    const savedScale = await PreferenceUtil.getPreferenceValue(PREF_FONT_SCALE, FONT_SCALE_DEFAULT);
+    if (typeof savedScale === 'number') {
+      this.fontScale = savedScale;
+    }
+    const savedGlow = await PreferenceUtil.getPreferenceValue(PREF_GLOW_LEVEL, GLOW_LEVEL_STANDARD);
+    if (typeof savedGlow === 'string') {
+      this.glowLevel = savedGlow;
+    }
+    this.applyColorMode();
+    this.bump();
   }
 
   /** 系统深浅色变化（跟随系统模式时联动） */

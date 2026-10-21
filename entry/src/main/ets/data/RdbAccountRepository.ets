@@ -107,4 +107,23 @@ export class RdbAccountRepository implements AccountRepository {
     predicates.equalTo(ID_COLUMN, id);
     return DBUtil.update(predicates, this.buildValueBucket(record));
   }
+
+  /** 查询全部本地账单，供端云全量同步做合并比较 */
+  async queryAll(): Promise<AccountPO[]> {
+    const predicates = new relationalStore.RdbPredicates(ACCOUNT_TABLE_NAME);
+    return this.queryAccount(predicates);
+  }
+
+  /** 按主键插入或整体替换，供端云同步恢复云端账单时写入本地库 */
+  async upsert(record: AccountPO): Promise<void> {
+    await DBUtil.executeSql(
+      `INSERT OR REPLACE INTO ${ACCOUNT_TABLE_NAME}` +
+      ' (id, type, account_type, amount, create_time, description, time, merchant, source, pay_time)' +
+      ' VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        record.id, record.type, record.accountType, record.amount, record.createTime,
+        record.description, record.time, record.merchant, record.source, record.payTime
+      ]
+    );
+  }
 }

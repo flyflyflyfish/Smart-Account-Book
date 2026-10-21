@@ -38,6 +38,54 @@ class CloudAccountRepository {
     }
   }
 
+  /** 批量上传本地账单到云端（原子写入），供全量同步补推本地新增账单 */
+  async upsertAll(records: AccountPO[], ownerUid: string): Promise<void> {
+    const zone = CloudInit.getZone();
+    if (!zone || records.length === 0) {
+      return;
+    }
+    try {
+      const clouds = records.map((item: AccountPO): AccountCloud => this.toCloud(item, ownerUid));
+      await zone.upsert(clouds);
+    } catch (err) {
+      const e = err as Error;
+      Logger.error('云端批量同步账单失败', e.message);
+    }
+  }
+
+  /** 拉取指定用户在云端的全部账单，供全量同步时合并回本地 */
+  async queryAll(ownerUid: string): Promise<AccountCloud[]> {
+    const zone = CloudInit.getZone();
+    if (!zone) {
+      return [];
+    }
+    try {
+      const condition = new cloudDatabase.DatabaseQuery(AccountCloud);
+      condition.equalTo('owner_uid', ownerUid);
+      return await zone.query(condition);
+    } catch (err) {
+      const e = err as Error;
+      Logger.error('云端拉取账单失败', e.message);
+      return [];
+    }
+  }
+
+  /** 云端模型映射回本地 PO，供恢复/合并时写入本地库 */
+  toLocalPO(cloud: AccountCloud): AccountPO {
+    const po = new AccountPO();
+    po.id = cloud.id;
+    po.type = cloud.type;
+    po.accountType = cloud.account_type;
+    po.amount = cloud.amount;
+    po.createTime = cloud.create_time;
+    po.description = cloud.description;
+    po.time = cloud.time;
+    po.merchant = cloud.merchant;
+    po.source = cloud.source;
+    po.payTime = cloud.pay_time;
+    return po;
+  }
+
   // 云数据库按主键删除，只需填充 id
   async deleteById(id: string): Promise<void> {
     const zone = CloudInit.getZone();
