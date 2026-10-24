@@ -1,6 +1,7 @@
 import AccountNavigator from '../components/Navigator';
 import CloudLlmConfigStore from '../service/recognition/CloudLlmConfigStore';
 import learnedClassifier from '../service/recognition/classifier/LearnedClassifier';
+import MerchantLearningSync from '../service/MerchantLearningSync';
 import { Toast } from '../components/ToastDialog';
 import { Logger } from '../utils/Logger';
 import BreakpointConstants from '../common/breakpoint';
@@ -66,6 +67,8 @@ struct PrivacySecurity {
   async clearLearned(): Promise<void> {
     try {
       const count = await learnedClassifier.clearLearned();
+      // 记录清除时间并删除云端行，防止已清记忆被下次同步从云端拉回
+      await MerchantLearningSync.recordCleared();
       Logger.debug('清除学习到的商家分类数量: ', count);
       Toast.success($r('app.string.clear_learned_success'));
     } catch (error) {

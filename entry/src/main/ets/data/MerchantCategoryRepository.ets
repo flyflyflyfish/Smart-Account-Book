@@ -9,6 +9,8 @@ import { MERCHANT_CATEGORY_TABLE_NAME } from './schema';
 export interface MerchantCategoryStore {
   queryByMerchant(merchant: string): Promise<MerchantCategory | null>;
 
+  queryAll(): Promise<MerchantCategory[]>;
+
   upsert(record: MerchantCategory): Promise<void>;
 
   clearAll(): Promise<number>;
@@ -47,6 +49,23 @@ export default class MerchantCategoryRepository implements MerchantCategoryStore
       // 读取抛错时 ResultSet 也不能泄漏
       result.close();
     }
+  }
+
+  // 全量读取学习记忆，按商家名升序保证快照 JSON 顺序稳定
+  async queryAll(): Promise<MerchantCategory[]> {
+    const predicates = new relationalStore.RdbPredicates(MERCHANT_CATEGORY_TABLE_NAME);
+    predicates.greaterThanOrEqualTo(COL_UPDATED_AT, 0);
+    predicates.orderByAsc(COL_MERCHANT);
+    const result = await DBUtil.query(predicates, QUERY_COLUMNS);
+    const list: MerchantCategory[] = [];
+    try {
+      while (result.goToNextRow()) {
+        list.push(this.parseRecord(result));
+      }
+    } finally {
+      result.close();
+    }
+    return list;
   }
 
   // merchant 为主键：INSERT OR REPLACE 原子完成“存在则更新/不存在则插入”，
