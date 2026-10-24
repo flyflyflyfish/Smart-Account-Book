@@ -158,6 +158,16 @@ class CloudSyncService {
     for (const row of cloudRows) {
       cloudMap.set(row.setting_key, row);
     }
+    // 安全清理：早期版本曾把含明文 API key 的多服务商配置上传云端，发现残留行立即删除
+    const legacyProvidersRow = cloudMap.get(CONSTANTS.PREF_CLOUD_PROVIDERS);
+    if (legacyProvidersRow) {
+      try {
+        await CloudSettingSync.deleteSettingRow(legacyProvidersRow.id);
+        Logger.info('已清理云端残留的API配置行');
+      } catch (err) {
+        Logger.error('清理云端残留的API配置失败', (err as Error).message);
+      }
+    }
     const meta = await CloudSettingSync.loadMeta();
     let themeTouched = false;
     let budgetTouched = false;
