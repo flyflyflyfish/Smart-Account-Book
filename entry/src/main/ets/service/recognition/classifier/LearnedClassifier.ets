@@ -1,5 +1,7 @@
 import MerchantCategory from '../../../models/recognition/MerchantCategory';
 import MerchantCategoryRepository, { MerchantCategoryStore } from '../../../data/MerchantCategoryRepository';
+import MerchantLearningSync from '../../MerchantLearningSync';
+import { Logger } from '../../../utils/Logger';
 import { Classifier } from './Classifier';
 
 /**
@@ -35,6 +37,12 @@ export class LearnedClassifier implements Classifier {
     record.accountType = accountType;
     record.updatedAt = Date.now();
     await this.repository.upsert(record);
+    // 学习成功后即时合并上传；失败不影响本地学习，下次全量同步按内容差异补推
+    try {
+      await MerchantLearningSync.pushAfterLearn();
+    } catch (err) {
+      Logger.error('学习记忆上传云端失败', (err as Error).message);
+    }
   }
 
   // 清除全部学习到的“商家 → 分类”记忆，返回删除条数
