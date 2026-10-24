@@ -38,6 +38,10 @@ export const PREF_RECURRING_BILLS = 'recurring_bills';
 // 重复性账单记入成功的系统通知 requestId
 export const RECURRING_NOTIFICATION_ID: number = 2001;
 
+// 商家→分类学习记忆：云端 user_setting 行键（JSON 数组）+ 本机清除时间（防已清记忆被云端拉回）
+export const PREF_MERCHANT_LEARNING = 'merchant_learning';
+export const PREF_MERCHANT_LEARNING_CLEARED_AT = 'merchant_learning_cleared_at';
+
 // 分类名称（纯字符串，按 id 顺序），供识别/分类逻辑使用，避免依赖资源上下文
 export const EXPENSE_CATEGORY_NAMES: string[] = [
   '早午晚餐', '医疗', '交通运输', '住房', '零食烟酒', '学习', '通讯', '社交', '投资支出', '购物', '娱乐', '外借', '其他支出'

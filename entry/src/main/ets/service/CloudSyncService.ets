@@ -14,6 +14,7 @@ import { SettingCloud } from '../models/cloud/SettingCloud';
 import CategoryStore from '../models/accountType/CategoryStore';
 import BillStore from '../common/BillStore';
 import PreferenceUtil from '../utils/PreferenceUtil';
+import MerchantLearningSync from './MerchantLearningSync';
 import { ThemeKit } from '../common/theme/Theme';
 import * as CONSTANTS from '../common/constants';
 import { Logger } from '../utils/Logger';
@@ -167,6 +168,13 @@ class CloudSyncService {
       } catch (err) {
         Logger.error('清理云端残留的API配置失败', (err as Error).message);
       }
+    }
+    // 商家→分类学习记忆：本地 rdb 表与 user_setting 的 JSON 行并集合并（独立于通用设置流）
+    const learningRow = cloudMap.get(CONSTANTS.PREF_MERCHANT_LEARNING);
+    try {
+      await MerchantLearningSync.syncAndPush(learningRow ? learningRow.setting_value : undefined);
+    } catch (err) {
+      Logger.error('学习记忆同步失败', (err as Error).message);
     }
     const meta = await CloudSettingSync.loadMeta();
     let themeTouched = false;
