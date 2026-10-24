@@ -30,6 +30,9 @@
 /.clang-tidy
 .cxx
 
+# AI 工具目录（含嵌套 .git，不入库）
+/.codegenie
+
 # 测试产物
 **/.test
 
