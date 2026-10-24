@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 11,
   "objectTypes": [
     {
       "objectTypeName": "account",
@@ -9,7 +9,7 @@
         {"fieldName": "account_type", "fieldType": "Integer", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
         {"fieldName": "amount", "fieldType": "Double", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
         {"fieldName": "create_time", "fieldType": "Long", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
-        {"fieldName": "description", "fieldType": "String", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "description", "fieldType": "Text", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
         {"fieldName": "time", "fieldType": "Long", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
         {"fieldName": "merchant", "fieldType": "String", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
         {"fieldName": "source", "fieldType": "Integer", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
@@ -23,7 +23,7 @@
       "fields": [
         {"fieldName": "id", "fieldType": "String", "belongPrimaryKey": true, "notNull": true, "isNeedEncrypt": false, "isSensitive": false},
         {"fieldName": "setting_key", "fieldType": "String", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
-        {"fieldName": "setting_value", "fieldType": "String", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "setting_value", "fieldType": "Text", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
         {"fieldName": "update_time", "fieldType": "Long", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
         {"fieldName": "owner_uid", "fieldType": "String", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false}
       ],

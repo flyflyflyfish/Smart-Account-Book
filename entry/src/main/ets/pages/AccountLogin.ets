@@ -54,7 +54,20 @@ struct AccountLogin {
         Logger.error('云同步初始化失败', '登录成功但云开发服务不可用，账单将不会同步到云端');
       }
     } else {
-      Toast.error($r('app.string.sign_in_failed'));
+      if (AuthService.needsRestartHint()) {
+        AlertDialog.show({
+          title: $r('app.string.agc_credential_reset_title'),
+          message: $r('app.string.agc_credential_reset_message'),
+          primaryButton: {
+            value: $r('app.string.confirm'),
+            action: () => {
+            }
+          },
+          alignment: DialogAlignment.Center
+        });
+      } else {
+        Toast.error($r('app.string.sign_in_failed'));
+      }
     }
   }
 

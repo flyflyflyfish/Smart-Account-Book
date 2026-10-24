@@ -21,12 +21,12 @@ export class SyncableSettingDef {
 
 /**
  * 参与端云同步的全部设置键。
- * 不同步的本地状态：训练采集开关（明确仅存本机）、小组件卡片列表（设备相关）、
+ * 不同步的本地状态：多服务商 API 配置（含明文 API key，仅存本机）、
+ * 训练采集开关（明确仅存本机）、小组件卡片列表（设备相关）、
  * 预算当月提醒标记（设备本地去重状态）、旧版单服务商三键（已被多服务商配置取代）
  */
 export const SYNCABLE_SETTINGS: SyncableSettingDef[] = [
   new SyncableSettingDef(CONSTANTS.PREF_USER_FIRST_KEY, 'number'),
-  new SyncableSettingDef(CONSTANTS.PREF_CLOUD_PROVIDERS, 'string'),
   new SyncableSettingDef(CONSTANTS.PREF_CLOUD_ACTIVE_PROVIDER, 'string'),
   new SyncableSettingDef(CONSTANTS.PREF_OCR_ENABLED, 'boolean'),
   new SyncableSettingDef(CONSTANTS.PREF_CLOUD_ENABLED, 'boolean'),
@@ -150,6 +150,17 @@ class CloudSettingSyncService {
     row.update_time = updateTime;
     row.owner_uid = this.ownerUid;
     await zone.upsert(row);
+  }
+
+  /** 按主键删除一行云端设置（清理早期版本误传的敏感配置） */
+  async deleteSettingRow(rowId: string): Promise<void> {
+    const zone = this.zone;
+    if (!zone || !this.ownerUid) {
+      return;
+    }
+    const row = new SettingCloud();
+    row.id = rowId;
+    await zone.delete([row]);
   }
 
   /** 拉取当前用户全部云端设置行 */
