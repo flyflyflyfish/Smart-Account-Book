@@ -38,18 +38,24 @@ class CloudAccountRepository {
     }
   }
 
-  /** 批量上传本地账单到云端（原子写入），供全量同步补推本地新增账单 */
+  /** 批量上传本地账单到云端（原子写入），供全量同步补推本地新增账单；分批规避单次条数/大小限制 */
   async upsertAll(records: AccountPO[], ownerUid: string): Promise<void> {
     const zone = CloudInit.getZone();
     if (!zone || records.length === 0) {
       return;
     }
-    try {
-      const clouds = records.map((item: AccountPO): AccountCloud => this.toCloud(item, ownerUid));
-      await zone.upsert(clouds);
-    } catch (err) {
-      const e = err as Error;
-      Logger.error('云端批量同步账单失败', e.message);
+    // 云数据库单次 upsert 限制：总条数 <= 1000、总大小 <= 2MB，按 100 条一批留足余量
+    const BATCH_SIZE = 100;
+    for (let start = 0; start < records.length; start += BATCH_SIZE) {
+      const end = Math.min(start + BATCH_SIZE, records.length);
+      const slice = records.slice(start, end);
+      try {
+        const clouds = slice.map((item: AccountPO): AccountCloud => this.toCloud(item, ownerUid));
+        await zone.upsert(clouds);
+      } catch (err) {
+        const e = err as Error;
+        Logger.error('云端批量同步账单失败', e.message);
+      }
     }
   }
 

@@ -757,6 +757,14 @@
       "value": "登录失败，请重试"
     },
     {
+      "name": "agc_credential_reset_title",
+      "value": "云服务凭证已重置"
+    },
+    {
+      "name": "agc_credential_reset_message",
+      "value": "检测到云服务本地凭证异常，已自动修复。请完全退出应用（从最近任务中划掉）后重新打开，再点击登录。"
+    },
+    {
       "name": "cloud_sync_unavailable",
       "value": "登录成功，但云同步暂不可用，账单仅保存在本机"
     },
