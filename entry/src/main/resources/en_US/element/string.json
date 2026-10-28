@@ -1,4 +1,4 @@
-{
+﻿{
   "string": [
     {
       "name": "module_desc",
@@ -1403,6 +1403,146 @@
     {
       "name": "add_manual",
       "value": "Add manually"
+    },
+    {
+      "name": "ledger",
+      "value": "Ledger"
+    },
+    {
+      "name": "appearance_second_tab_section",
+      "value": "Bottom Tab"
+    },
+    {
+      "name": "ledger_add",
+      "value": "New Ledger"
+    },
+    {
+      "name": "ledger_add_hint",
+      "value": "New"
+    },
+    {
+      "name": "ledger_rename",
+      "value": "Rename"
+    },
+    {
+      "name": "ledger_name_placeholder",
+      "value": "Enter ledger name"
+    },
+    {
+      "name": "ledger_name_required",
+      "value": "Please enter a ledger name"
+    },
+    {
+      "name": "ledger_amount_placeholder",
+      "value": "Enter amount"
+    },
+    {
+      "name": "ledger_amount_required",
+      "value": "Please enter a valid amount"
+    },
+    {
+      "name": "ledger_note_placeholder",
+      "value": "Note (optional)"
+    },
+    {
+      "name": "ledger_card_sub",
+      "value": "%d records · Income ¥%s"
+    },
+    {
+      "name": "ledger_record_count",
+      "value": "%d records"
+    },
+    {
+      "name": "ledger_record_add",
+      "value": "Add Record"
+    },
+    {
+      "name": "ledger_empty_tip",
+      "value": "No ledgers yet"
+    },
+    {
+      "name": "ledger_empty_sub",
+      "value": "Create a ledger to track different scenarios separately"
+    },
+    {
+      "name": "ledger_record_empty",
+      "value": "No records in this ledger yet"
+    },
+    {
+      "name": "ledger_delete_confirm",
+      "value": "This ledger and all its records will be deleted. Continue?"
+    },
+    {
+      "name": "ledger_import_from_bills",
+      "value": "Import bills"
+    },
+    {
+      "name": "ledger_recognize",
+      "value": "Scan bill"
+    },
+    {
+      "name": "ledger_sync_to_bills",
+      "value": "Also add to main bills"
+    },
+    {
+      "name": "ledger_pick_title",
+      "value": "Select bills"
+    },
+    {
+      "name": "ledger_imported_tag",
+      "value": "Imported"
+    },
+    {
+      "name": "ledger_no_bills",
+      "value": "No bills to import"
+    },
+    {
+      "name": "ledger_import_count",
+      "value": "Import (%d)"
+    },
+    {
+      "name": "ledger_import_success",
+      "value": "Imported %d bill(s)"
+    },
+    {
+      "name": "settings_ledger_sync",
+      "value": "Ledger sync to bills"
+    },
+    {
+      "name": "settings_ledger_sync_desc",
+      "value": "New ledger records also count into main bills by default"
+    },
+    {
+      "name": "ledger_filter_month",
+      "value": "This month"
+    },
+    {
+      "name": "ledger_filter_3m",
+      "value": "Last 3 months"
+    },
+    {
+      "name": "ledger_filter_year",
+      "value": "This year"
+    },
+    {
+      "name": "ledger_filter_all",
+      "value": "All"
+    },
+    {
+      "name": "ledger_filter_custom",
+      "value": "Custom"
+    },
+    {
+      "name": "ledger_custom_pick_start",
+      "value": "Tap to pick a start date"
+    },
+    {
+      "name": "ledger_custom_pick_end",
+      "value": "Start %s, tap to pick an end date"
+    },
+    {
+      "name": "ledger_custom_range",
+      "value": "%s ~ %s, tap to re-pick"
     }
   ]
 }

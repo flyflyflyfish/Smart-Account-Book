@@ -1,5 +1,14 @@
 import router from '@ohos.router';
+import { BusinessError } from '@kit.BasicServicesKit';
 import BreakpointConstants from '../common/breakpoint';
+import SecondTabStore from '../common/SecondTabStore';
+import {
+  PREF_LEDGER_SYNC_BILLS,
+  SECOND_TAB_STYLE_AI,
+  SECOND_TAB_STYLE_LEDGER
+} from '../common/constants';
+import PreferenceUtil from '../utils/PreferenceUtil';
+import { Logger } from '../utils/Logger';
 import { PAGE_PADDING, RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_TINY } from '../common/dimens';
 import {
   ThemeKit,
@@ -106,6 +115,10 @@ struct Appearance {
   @State glowLevel: string = GLOW_LEVEL_STANDARD;
   // 首页汇总口径（本地镜像 ThemeKit，点击即写回，默认按月）
   @State homeScope: string = HOME_SCOPE_MONTH;
+  // 底部第二页签样式：AI 助手 / 账本（存 Preferences + AppStorage，Index 据此切换）
+  @State secondTab: string = SECOND_TAB_STYLE_AI;
+  // 账本同步主账单默认开关（账本内记一笔/图片识别入账时是否同步计入主账单）
+  @State ledgerSyncDefault: boolean = true;
 
   aboutToAppear(): void {
     this.colorMode = ThemeKit.currentMode();
@@ -113,6 +126,31 @@ struct Appearance {
     this.previewSize = APPEARANCE_BASE_FONT * ThemeKit.currentFontScale();
     this.glowLevel = ThemeKit.currentGlowLevel();
     this.homeScope = ThemeKit.currentHomeScope();
+    this.secondTab = SecondTabStore.current();
+    this.loadLedgerSyncDefault();
+  }
+
+  // 读取“账本同步主账单”默认开关；读取失败保持默认 true
+  async loadLedgerSyncDefault(): Promise<void> {
+    try {
+      const value = await PreferenceUtil.getPreferenceValue(PREF_LEDGER_SYNC_BILLS, true);
+      this.ledgerSyncDefault = value === true;
+    } catch (err) {
+      Logger.error('读取账本同步默认设置失败', (err as Error).message);
+    }
+  }
+
+  // 切换并持久化“账本同步主账单”默认开关
+  setLedgerSyncDefault(isOn: boolean): void {
+    this.ledgerSyncDefault = isOn;
+    PreferenceUtil.putPreferenceValue(PREF_LEDGER_SYNC_BILLS, isOn).catch((err: BusinessError) => {
+      Logger.error('保存账本同步默认设置失败', err.message);
+    });
+  }
+
+  selectSecondTab(style: string): void {
+    this.secondTab = style;
+    SecondTabStore.set(style);
   }
 
   tk(): ThemePalette {
@@ -582,9 +620,139 @@ struct Appearance {
       .backgroundColor(this.tk().surfaceVariant)
       .borderRadius(999)
       .justifyContent(FlexAlign.Center)
+
+      // 分隔线：区分“汇总口径”与“底部页签”两组设置
+      Divider()
+        .color(this.tk().surfaceVariant)
+        .width('100%')
+
+      // 底部页签：第二个页签可切换为 AI 助手或账本
+      Text($r('app.string.appearance_second_tab_section'))
+        .fontSize(this.fs(13))
+        .fontColor(this.tk().textSecondary)
+
+      // 预览卡：模拟底部导航栏，第二个页签按所选样式实时变化
+      Row() {
+        this.SecondTabPreviewItem($r('app.media.home'), $r('app.string.home'), false)
+        this.SecondTabPreviewLedgerItem()
+        Column() {
+          Text('+')
+            .fontSize(this.fs(13))
+            .fontWeight(FontWeight.Medium)
+            .fontColor(this.tk().onPrimary)
+        }
+        .width(30)
+        .height(30)
+        .borderRadius(15)
+        .backgroundColor(this.tk().primary)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
+        this.SecondTabPreviewItem($r('app.media.stats'), $r('app.string.statistics'), false)
+        this.SecondTabPreviewItem($r('app.media.settings'), $r('app.string.settings'), false)
+      }
+      .width('100%')
+      .padding({ top: SPACE_MEDIUM, bottom: SPACE_MEDIUM })
+      .backgroundColor(this.tk().surface)
+      .borderRadius(RADIUS_CARD)
+      .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
+      .justifyContent(FlexAlign.SpaceEvenly)
+
+      // 样式分段：AI 助手 / 账本
+      Row() {
+        Text($r('app.string.ai_assistant'))
+          .fontSize(this.fs(13))
+          .fontWeight(this.secondTab === SECOND_TAB_STYLE_AI ? FontWeight.Medium : FontWeight.Normal)
+          .fontColor(this.secondTab === SECOND_TAB_STYLE_AI ? this.tk().onPrimary : this.tk().textSecondary)
+          .padding({ top: 8, bottom: 8, left: SPACE_LARGE, right: SPACE_LARGE })
+          .backgroundColor(this.secondTab === SECOND_TAB_STYLE_AI ? this.tk().primary : Color.Transparent)
+          .borderRadius(999)
+          .onClick(() => {
+            this.selectSecondTab(SECOND_TAB_STYLE_AI);
+          })
+        Text($r('app.string.ledger'))
+          .fontSize(this.fs(13))
+          .fontWeight(this.secondTab === SECOND_TAB_STYLE_LEDGER ? FontWeight.Medium : FontWeight.Normal)
+          .fontColor(this.secondTab === SECOND_TAB_STYLE_LEDGER ? this.tk().onPrimary : this.tk().textSecondary)
+          .padding({ top: 8, bottom: 8, left: SPACE_LARGE, right: SPACE_LARGE })
+          .backgroundColor(this.secondTab === SECOND_TAB_STYLE_LEDGER ? this.tk().primary : Color.Transparent)
+          .borderRadius(999)
+          .onClick(() => {
+            this.selectSecondTab(SECOND_TAB_STYLE_LEDGER);
+          })
+      }
+      .width('100%')
+      .padding(4)
+      .backgroundColor(this.tk().surfaceVariant)
+      .borderRadius(999)
+      .justifyContent(FlexAlign.Center)
+
+      // 分隔线：区分“底部页签”与“账本行为”两组设置
+      Divider()
+        .color(this.tk().surfaceVariant)
+        .width('100%')
+
+      // 账本行为：记一笔/图片识别入账时是否默认同步计入主账单
+      Text($r('app.string.ledger'))
+        .fontSize(this.fs(13))
+        .fontColor(this.tk().textSecondary)
+
+      Row({ space: SPACE_MEDIUM }) {
+        Column({ space: 2 }) {
+          Text($r('app.string.settings_ledger_sync'))
+            .fontSize(this.fs(14))
+            .fontWeight(FontWeight.Medium)
+            .fontColor(this.tk().textPrimary)
+          Text($r('app.string.settings_ledger_sync_desc'))
+            .fontSize(this.fs(11))
+            .fontColor(this.tk().textSecondary)
+            .lineHeight(this.fs(16))
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+
+        Toggle({ type: ToggleType.Switch, isOn: this.ledgerSyncDefault })
+          .selectedColor(this.tk().primary)
+          .onChange((isOn: boolean) => {
+            this.setLedgerSyncDefault(isOn);
+          })
+      }
+      .width('100%')
+      .padding(SPACE_LARGE)
+      .backgroundColor(this.tk().surface)
+      .borderRadius(RADIUS_CARD)
+      .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
+      .alignItems(VerticalAlign.Center)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
+  }
+
+  // 底部页签预览的单个迷你页签项：被自定义的第二个页签高亮
+  @Builder SecondTabPreviewItem(icon: ResourceStr, label: ResourceStr, highlight: boolean) {
+    Column({ space: 2 }) {
+      Image(icon)
+        .width(16)
+        .height(16)
+        .fillColor(highlight ? this.tk().primary : this.tk().textSecondary)
+      Text(label)
+        .fontSize(this.fs(9))
+        .fontColor(highlight ? this.tk().primary : this.tk().textSecondary)
+    }
+    .justifyContent(FlexAlign.Center)
+  }
+
+  // 第二页签的迷你预览：@Builder 按值传参不随状态刷新，图标/文案必须在 Builder 体内直读状态
+  @Builder SecondTabPreviewLedgerItem() {
+    Column({ space: 2 }) {
+      Image(this.secondTab === SECOND_TAB_STYLE_LEDGER ? $r('app.media.ledger') : $r('app.media.ai'))
+        .width(16)
+        .height(16)
+        .fillColor(this.tk().primary)
+      Text(this.secondTab === SECOND_TAB_STYLE_LEDGER ? $r('app.string.ledger') : $r('app.string.ai_assistant'))
+        .fontSize(this.fs(9))
+        .fontColor(this.tk().primary)
+    }
+    .justifyContent(FlexAlign.Center)
   }
 
   @Builder GlowTab() {
