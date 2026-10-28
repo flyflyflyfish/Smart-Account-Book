@@ -21,6 +21,10 @@
       "value": "今天"
     },
     {
+      "name": "home_month_current",
+      "value": "本月"
+    },
+    {
       "name": "day_expenses",
       "value": "当日支出"
     },
@@ -181,12 +185,36 @@
       "value": "统计明细"
     },
     {
+      "name": "share_label",
+      "value": "占比"
+    },
+    {
+      "name": "stats_empty",
+      "value": "这段时间还没有账单"
+    },
+    {
+      "name": "stats_empty_sub",
+      "value": "记一笔后就能看到统计啦"
+    },
+    {
       "name": "monthly_bill",
       "value": "月账单"
     },
     {
       "name": "annual_bill",
       "value": "年账单"
+    },
+    {
+      "name": "stats_avg_daily",
+      "value": "日均"
+    },
+    {
+      "name": "stats_avg_monthly",
+      "value": "月均"
+    },
+    {
+      "name": "stats_peak",
+      "value": "最高"
     },
     {
       "name": "home",
@@ -881,8 +909,8 @@
       "value": "字体与排版"
     },
     {
-      "name": "appearance_tab_motion",
-      "value": "流式动效"
+      "name": "appearance_tab_home",
+      "value": "首页统计"
     },
     {
       "name": "appearance_tab_glow",
@@ -997,8 +1025,16 @@
       "value": "支出合计"
     },
     {
-      "name": "appearance_motion_placeholder",
-      "value": "流式动效设置即将上线，可控制页面过渡与列表动画"
+      "name": "appearance_home_scope_desc",
+      "value": "设置首页顶部收支汇总的统计范围，切换后立即生效"
+    },
+    {
+      "name": "appearance_home_scope_day",
+      "value": "按日"
+    },
+    {
+      "name": "appearance_home_scope_month",
+      "value": "按月"
     },
     {
       "name": "appearance_glow_placeholder",

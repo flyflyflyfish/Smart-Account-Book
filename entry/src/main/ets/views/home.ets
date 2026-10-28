@@ -1,11 +1,13 @@
 import dayjs from 'dayjs';
 import router from '@ohos.router';
 import { GroupByDate, ItemRecordInfo } from '../models/account/account';
+import { StatsType } from '../models/stats/stats';
 import AccountService from '../service/account';
 import StatsService from '../service/stats';
 import BudgetService from '../service/BudgetService';
 import BillStore, { BillChangeListener } from '../common/BillStore';
 import GroupHeader from '../components/GroupHeader';
+import PeriodPickerDialog from '../components/stats/PeriodPickerDialog';
 import { Toast } from '../components/ToastDialog';
 import AccountItem from '../components/AccountItem';
 import DBUtil from '../utils/DBUtil';
@@ -19,7 +21,7 @@ import {
   SPACE_SMALL,
   SPACE_TINY
 } from '../common/dimens';
-import { ThemeKit, ThemePalette } from '../common/theme/Theme';
+import { ThemeKit, ThemePalette, HOME_SCOPE_DAY, HOME_SCOPE_MONTH } from '../common/theme/Theme';
 
 @Extend(Text) function infoFont(fontSize: number, lineHeight: number) {
   .fontSize(fontSize)
@@ -29,7 +31,7 @@ import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 @Component
 export default struct Home {
 
-  @StorageProp('themeSeq') themeSeq: number = 0;
+  @StorageProp('themeSeq') @Watch('onThemeSeqChanged') themeSeq: number = 0;
 
   tk(): ThemePalette {
     return ThemeKit.palette(this.themeSeq);
@@ -47,12 +49,27 @@ export default struct Home {
   @State budgetEnabled: boolean = false;
   @State budgetLimit: number = 0;
   @State budgetMonthExpenses: number = 0;
-  // 首页所选日期，默认今天，可切换查看其他日期
+  // 首页所选日期，默认今天；按日口径看当天，按月口径看所在月
   @State selectedDate: number = dayjs().startOf('day').valueOf();
   // 批量删除模式
   @State batchMode: boolean = false;
   // 批量模式下勾选的账单 id
   @State selectedIds: string[] = [];
+  // 月份选择弹窗（按月口径下顶部点击打开）
+  monthPickerController = new CustomDialogController({
+    builder: PeriodPickerDialog({
+      mode: StatsType.MONTH,
+      time: this.selectedDate,
+      getTime: (): number => this.selectedDate,
+      minYear: dayjs().year() - 4,
+      onChange: (picked: number) => {
+        this.selectedDate = dayjs(picked).startOf('month').valueOf();
+        this.queryByDate();
+      }
+    }),
+    customStyle: true,
+    alignment: DialogAlignment.Center
+  });
   // 账单增删后由 BillStore 通知刷新
   private billListener: BillChangeListener = () => {
     this.queryByDate();
@@ -62,8 +79,10 @@ export default struct Home {
     try {
       // 冷启动时数据库初始化与页面加载并行，先等待就绪再查询，避免查询失败误显示空态
       await DBUtil.ready;
-      const start = dayjs(this.selectedDate).startOf('day').valueOf();
-      const end = dayjs(this.selectedDate).endOf('day').valueOf();
+      // 按日口径查当天，按月口径查所选日期所在月，列表与顶部汇总同口径
+      const anchor = dayjs(this.selectedDate);
+      const start = this.scopeIsMonth() ? anchor.startOf('month').valueOf() : anchor.startOf('day').valueOf();
+      const end = this.scopeIsMonth() ? anchor.endOf('month').valueOf() : anchor.endOf('day').valueOf();
       const res = await AccountService.queryByDateRange(start, end);
       this.accountList = StatsService.groupByDate(res);
       const total = StatsService.statsConsume(res);
@@ -71,10 +90,20 @@ export default struct Home {
       this.income = total.income;
       this.refreshBudgetStatus();
     } catch (err) {
-      Logger.error('查询当日记录失败', (err as Error).message);
+      Logger.error('查询记录失败', (err as Error).message);
     } finally {
       this.loading = false;
     }
+  }
+
+  // 首页汇总口径：按日 / 按月（设置页可改，默认按月）
+  scopeIsMonth(): boolean {
+    return ThemeKit.currentHomeScope() === HOME_SCOPE_MONTH;
+  }
+
+  // 外观设置（含汇总口径）变更后按新口径重查
+  onThemeSeqChanged(): void {
+    this.queryByDate();
   }
 
   // 查询本月支出与消费额度使用情况
@@ -141,6 +170,24 @@ export default struct Home {
 
   isToday(): boolean {
     return dayjs(this.selectedDate).isSame(dayjs(), 'day');
+  }
+
+  isThisMonth(): boolean {
+    return dayjs(this.selectedDate).isSame(dayjs(), 'month');
+  }
+
+  // 顶部时间段文案：按月口径显示“本月/YYYY-MM”，按日口径显示“今天/YYYY-MM-DD”
+  periodLabel(): ResourceStr {
+    if (this.scopeIsMonth()) {
+      return this.isThisMonth() ? $r('app.string.home_month_current')
+        : dayjs(this.selectedDate).format('YYYY-MM');
+    }
+    return this.isToday() ? $r('app.string.today')
+      : dayjs(this.selectedDate).format('YYYY-MM-DD');
+  }
+
+  openMonthPicker(): void {
+    this.monthPickerController.open();
   }
 
   showDatePicker(): void {
@@ -289,7 +336,7 @@ export default struct Home {
   @Builder DateSelector() {
     Row({ space: SPACE_SMALL }) {
       Row({ space: SPACE_SMALL }) {
-        Text(this.isToday() ? $r('app.string.today') : dayjs(this.selectedDate).format('YYYY-MM-DD'))
+        Text(this.periodLabel())
           .fontSize(this.fs(16))
           .fontWeight(FontWeight.Medium)
           .fontColor(this.tk().textPrimary)
@@ -299,7 +346,11 @@ export default struct Home {
           .fillColor(this.tk().textSecondary)
       }
       .onClick(() => {
-        this.showDatePicker();
+        if (this.scopeIsMonth()) {
+          this.openMonthPicker();
+        } else {
+          this.showDatePicker();
+        }
       })
       Blank()
       Text(this.batchMode ? $r('app.string.cancel') : $r('app.string.batch_manage'))
@@ -340,7 +391,7 @@ export default struct Home {
 
   @Builder BalanceBadge() {
     Row({ space: SPACE_TINY }) {
-      Text($r('app.string.day_balance_label'))
+      Text(this.scopeIsMonth() ? $r('app.string.month_balance_label') : $r('app.string.day_balance_label'))
         .fontSize(this.fs(12))
         .lineHeight(this.fs(15))
         .fontColor(this.balance() >= 0 ? this.tk().primary : this.tk().danger)
@@ -445,7 +496,7 @@ export default struct Home {
   build() {
     Column({ space: SPACE_MEDIUM }) {
       this.DateSelector()
-      Text($r('app.string.day_expenses'))
+      Text(this.scopeIsMonth() ? $r('app.string.month_expenses') : $r('app.string.day_expenses'))
         .infoFont(this.fs(12), this.fs(15))
         .opacity(0.7)
       Text('¥ ' + this.expenses.toFixed(2))
@@ -453,7 +504,7 @@ export default struct Home {
         .fontWeight(FontWeight.Bold)
       Row({ space: SPACE_MEDIUM }) {
         Row({ space: SPACE_TINY }) {
-          Text($r('app.string.day_income_label'))
+          Text(this.scopeIsMonth() ? $r('app.string.home_income_label') : $r('app.string.day_income_label'))
             .infoFont(this.fs(12), this.fs(15))
             .opacity(0.7)
           Text('¥ ' + this.income.toFixed(2))
