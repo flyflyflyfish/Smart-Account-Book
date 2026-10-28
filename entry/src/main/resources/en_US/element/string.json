@@ -21,6 +21,10 @@
       "value": "Today"
     },
     {
+      "name": "home_month_current",
+      "value": "This month"
+    },
+    {
       "name": "day_expenses",
       "value": "Expenses today"
     },
@@ -31,6 +35,10 @@
     {
       "name": "day_balance_label",
       "value": "Balance today"
+    },
+    {
+      "name": "month_balance_label",
+      "value": "Balance this month"
     },
     {
       "name": "batch_manage",
@@ -185,12 +193,36 @@
       "value": "Statistics details"
     },
     {
+      "name": "share_label",
+      "value": "Share"
+    },
+    {
+      "name": "stats_empty",
+      "value": "No bills in this period"
+    },
+    {
+      "name": "stats_empty_sub",
+      "value": "Add a bill to see statistics"
+    },
+    {
       "name": "monthly_bill",
       "value": "Monthly bill"
     },
     {
       "name": "annual_bill",
       "value": "Annual bill"
+    },
+    {
+      "name": "stats_avg_daily",
+      "value": "Daily avg"
+    },
+    {
+      "name": "stats_avg_monthly",
+      "value": "Monthly avg"
+    },
+    {
+      "name": "stats_peak",
+      "value": "Peak"
     },
     {
       "name": "home",
@@ -1149,8 +1181,8 @@
       "value": "Typography"
     },
     {
-      "name": "appearance_tab_motion",
-      "value": "Motion"
+      "name": "appearance_tab_home",
+      "value": "Home Stats"
     },
     {
       "name": "appearance_tab_glow",
@@ -1265,8 +1297,16 @@
       "value": "Total expenses"
     },
     {
-      "name": "appearance_motion_placeholder",
-      "value": "Motion settings are coming soon — page transitions and list animations"
+      "name": "appearance_home_scope_desc",
+      "value": "Choose what the home summary counts — daily or monthly totals"
+    },
+    {
+      "name": "appearance_home_scope_day",
+      "value": "Daily"
+    },
+    {
+      "name": "appearance_home_scope_month",
+      "value": "Monthly"
     },
     {
       "name": "appearance_glow_placeholder",

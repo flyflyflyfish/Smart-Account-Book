@@ -59,11 +59,12 @@ export const WARN_PAYTIME_INVALID: string = '支付时间未识别，已使用�
 export const PREF_FORM_IDS = 'widget_form_ids';
 export const FORM_DIM_PREFIX = 'form_dim_';
 
-// 显示与外观：主题 / 深浅色模式 / 字号缩放 / 光感（阴影浓度）的 Preferences 键
+// 显示与外观：主题 / 深浅色模式 / 字号缩放 / 光感（阴影浓度）/ 首页汇总口径的 Preferences 键
 export const PREF_THEME_ID = 'theme_id';
 export const PREF_COLOR_MODE = 'theme_color_mode';
 export const PREF_FONT_SCALE = 'theme_font_scale';
 export const PREF_GLOW_LEVEL = 'theme_glow_level';
+export const PREF_HOME_STAT_SCOPE = 'home_stat_scope';
 
 // 云数据库存储区名称与 schema 文件名，需与 AGC 控制台配置保持一致
 export const CLOUD_ZONE_NAME: string = 'AccountZone';

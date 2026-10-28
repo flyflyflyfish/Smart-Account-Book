@@ -29,6 +29,19 @@ const AI_GREETING: string = '你好，我是你的记账助手，可以帮你记
 // 发送给大模型的最大历史消息条数（含当前输入），超出只保留最近若干条
 const MAX_HISTORY_MESSAGES: number = 20;
 
+// 快捷提问：仅初始问候语时展示，点击直接发送对应提示词
+interface AiSuggestion {
+  label: string;
+  prompt: string;
+}
+
+const AI_SUGGESTIONS: AiSuggestion[] = [
+  { label: '记一笔', prompt: '帮我记一笔：午餐 25 元' },
+  { label: '本月支出', prompt: '这个月我花了多少钱？' },
+  { label: '消费分析', prompt: '分析一下我的消费习惯，指出可以节省的地方' },
+  { label: '月度小结', prompt: '给我生成一份本月的消费小结' }
+];
+
 // 是否带有记账意图：包含常见记账动词/场景词即认为用户在记账
 function hasBookingIntent(text: string): boolean {
   const keywords: string[] = [
@@ -634,17 +647,59 @@ export default struct AiAssistant {
     await this.processUserInput(this.inputText);
   }
 
+  // 快捷提问 chips：点击即发送
+  @Builder SuggestionChips() {
+    Flex({ wrap: FlexWrap.Wrap }) {
+      ForEach(AI_SUGGESTIONS, (suggestion: AiSuggestion) => {
+        Text(suggestion.label)
+          .fontSize(this.fs(13))
+          .lineHeight(this.fs(18))
+          .fontColor(this.tk().primary)
+          .padding({ left: SPACE_MEDIUM + 2, right: SPACE_MEDIUM + 2, top: 7, bottom: 7 })
+          .backgroundColor(this.tk().surface)
+          .borderRadius(20)
+          .border({ width: 1, color: this.tk().primarySoft })
+          .margin({ right: SPACE_SMALL, bottom: SPACE_SMALL })
+          .onClick(() => {
+            this.processUserInput(suggestion.prompt);
+          })
+      }, (suggestion: AiSuggestion) => suggestion.prompt)
+    }
+    .width('100%')
+  }
+
+  // 等待云端回复时的“思考中”气泡
+  @Builder ThinkingBubble() {
+    Row() {
+      Row({ space: SPACE_SMALL }) {
+        LoadingProgress()
+          .width(18)
+          .height(18)
+          .color(this.tk().primary)
+        Text($r('app.string.ai_thinking'))
+          .fontSize(this.fs(14))
+          .fontColor(this.tk().textSecondary)
+      }
+      .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM, top: SPACE_SMALL + 2, bottom: SPACE_SMALL + 2 })
+      .backgroundColor(this.tk().surface)
+      .borderRadius({ topLeft: 14, topRight: 14, bottomLeft: 4, bottomRight: 14 })
+      .border({ width: 1, color: this.tk().primarySoft })
+      Blank()
+    }
+    .width('100%')
+  }
+
   @Builder Bubble(bubble: ChatBubble) {
     Row() {
       if (bubble.role === 'user') {
         Blank()
         Text(bubble.content)
           .fontSize(this.fs(15))
-          .fontColor(this.tk().surface)
+          .fontColor(this.tk().onPrimary)
           .textAlign(TextAlign.Start)
           .backgroundColor(this.tk().primary)
           .borderRadius({ topLeft: 14, topRight: 14, bottomLeft: 14, bottomRight: 4 })
-          .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM, top: SPACE_SMALL, bottom: SPACE_SMALL })
+          .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM, top: SPACE_SMALL + 2, bottom: SPACE_SMALL + 2 })
           .constraintSize({ maxWidth: '80%' })
       } else {
         Text(this.stripMarkdown(bubble.content))
@@ -653,7 +708,8 @@ export default struct AiAssistant {
           .textAlign(TextAlign.Start)
           .backgroundColor(this.tk().surface)
           .borderRadius({ topLeft: 14, topRight: 14, bottomLeft: 4, bottomRight: 14 })
-          .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM, top: SPACE_SMALL, bottom: SPACE_SMALL })
+          .border({ width: 1, color: this.tk().primarySoft })
+          .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM, top: SPACE_SMALL + 2, bottom: SPACE_SMALL + 2 })
           .constraintSize({ maxWidth: '80%' })
         Blank()
       }
@@ -881,14 +937,35 @@ export default struct AiAssistant {
     .margin({ left: SPACE_LARGE, right: SPACE_LARGE, bottom: SPACE_SMALL })
   }
 
-  build() {
-    Column() {
+  // 页面顶部：AI 徽标 + 标题
+  @Builder Header() {
+    Row({ space: SPACE_MEDIUM }) {
+      Column() {
+        Image($r('app.media.ai'))
+          .width(22)
+          .height(22)
+          .fillColor(this.tk().primary)
+      }
+      .width(40)
+      .height(40)
+      .borderRadius(20)
+      .backgroundColor(this.tk().primarySoft)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
+
       Text($r('app.string.ai_assistant'))
-        .width('100%')
-        .fontSize(this.fs(24))
+        .fontSize(this.fs(22))
         .fontWeight(FontWeight.Bold)
         .fontColor(this.tk().textPrimary)
-        .padding({ left: SPACE_LARGE, right: SPACE_LARGE, top: SPACE_LARGE })
+        .layoutWeight(1)
+    }
+    .width('100%')
+    .padding({ left: SPACE_LARGE, right: SPACE_LARGE, top: SPACE_LARGE })
+  }
+
+  build() {
+    Column() {
+      this.Header()
 
       if (this.configMissing) {
         Row({ space: SPACE_SMALL }) {
@@ -899,7 +976,7 @@ export default struct AiAssistant {
           Button($r('app.string.ai_configure_model'))
             .height(30)
             .fontSize(this.fs(13))
-            .fontColor(this.tk().surface)
+            .fontColor(this.tk().onPrimary)
             .backgroundColor(this.tk().primary)
             .type(ButtonType.Normal)
             .borderRadius(SPACE_SMALL)
@@ -910,7 +987,7 @@ export default struct AiAssistant {
         .width('100%')
         .padding(SPACE_MEDIUM)
         .backgroundColor(this.tk().surface)
-        .margin({ left: SPACE_LARGE, right: SPACE_LARGE, bottom: SPACE_SMALL })
+        .margin({ left: SPACE_LARGE, right: SPACE_LARGE, top: SPACE_SMALL })
         .borderRadius(RADIUS_CARD)
         .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
       }
@@ -921,6 +998,20 @@ export default struct AiAssistant {
             this.Bubble(bubble)
           }
         }, (bubble: ChatBubble, index: number) => index.toString() + bubble.role)
+
+        // 仅有问候语时展示快捷提问
+        if (this.chatList.length === 1 && this.billDrafts.length === 0 && !this.loading) {
+          ListItem() {
+            this.SuggestionChips()
+          }
+        }
+
+        // 等待云端回复
+        if (this.loading) {
+          ListItem() {
+            this.ThinkingBubble()
+          }
+        }
       }
       .width('100%')
       .layoutWeight(1)
@@ -958,7 +1049,7 @@ export default struct AiAssistant {
           .fontSize(this.fs(15))
           .fontColor(this.tk().textPrimary)
           .layoutWeight(1)
-          .backgroundColor(this.tk().surface)
+          .backgroundColor(this.tk().surfaceVariant)
           .borderRadius(20)
           .onChange((value: string) => {
             this.inputText = value;
@@ -966,11 +1057,12 @@ export default struct AiAssistant {
         Button(this.loading ? $r('app.string.ai_thinking') : $r('app.string.ai_send'))
           .height(40)
           .fontSize(this.fs(14))
-          .fontColor(this.tk().surface)
+          .fontColor(this.tk().onPrimary)
           .backgroundColor(this.configMissing || this.loading ? this.tk().outline : this.tk().primary)
           .type(ButtonType.Normal)
           .borderRadius(20)
           .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM })
+          .enabled(!this.loading)
           .onClick(() => {
             this.send();
           })

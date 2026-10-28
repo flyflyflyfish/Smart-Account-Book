@@ -1,6 +1,6 @@
 import router from '@ohos.router';
 import BreakpointConstants from '../common/breakpoint';
-import { PAGE_PADDING, RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_XLARGE } from '../common/dimens';
+import { PAGE_PADDING, RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_TINY } from '../common/dimens';
 import {
   ThemeKit,
   ThemePalette,
@@ -21,6 +21,8 @@ import {
   GLOW_LEVEL_SOFT,
   GLOW_LEVEL_STANDARD,
   GLOW_LEVEL_STRONG,
+  HOME_SCOPE_DAY,
+  HOME_SCOPE_MONTH,
   glowShadowColor
 } from '../common/theme/Theme';
 
@@ -83,7 +85,7 @@ const APPEARANCE_GLOW_OPTIONS: AppearanceGlowOption[] = [
 const APPEARANCE_TAB_LABELS: ResourceStr[] = [
   $r('app.string.appearance_tab_theme'),
   $r('app.string.appearance_tab_font'),
-  $r('app.string.appearance_tab_motion'),
+  $r('app.string.appearance_tab_home'),
   $r('app.string.appearance_tab_glow')
 ];
 
@@ -93,7 +95,7 @@ struct Appearance {
 
   @StorageProp('themeSeq') themeSeq: number = 0;
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
-  // 当前页签：0 主题 / 1 字体与排版 / 2 流式动效 / 3 光感
+  // 当前页签：0 主题 / 1 字体与排版 / 2 首页统计 / 3 光感
   @State currentTab: number = 0;
   // 深浅色模式与主题 id（本地镜像 ThemeKit，点击即写回）
   @State colorMode: string = THEME_MODE_SYSTEM;
@@ -102,12 +104,15 @@ struct Appearance {
   @State previewSize: number = APPEARANCE_BASE_FONT;
   // 光感档位（本地镜像 ThemeKit，点击即写回）
   @State glowLevel: string = GLOW_LEVEL_STANDARD;
+  // 首页汇总口径（本地镜像 ThemeKit，点击即写回，默认按月）
+  @State homeScope: string = HOME_SCOPE_MONTH;
 
   aboutToAppear(): void {
     this.colorMode = ThemeKit.currentMode();
     this.themeId = ThemeKit.currentThemeId();
     this.previewSize = APPEARANCE_BASE_FONT * ThemeKit.currentFontScale();
     this.glowLevel = ThemeKit.currentGlowLevel();
+    this.homeScope = ThemeKit.currentHomeScope();
   }
 
   tk(): ThemePalette {
@@ -148,6 +153,11 @@ struct Appearance {
     ThemeKit.setGlowLevel(level);
   }
 
+  selectHomeScope(scope: string): void {
+    this.homeScope = scope;
+    ThemeKit.setHomeScope(scope);
+  }
+
   showCustomThemeToast(): void {
     this.getUIContext().getPromptAction().showToast({
       message: $r('app.string.appearance_theme_custom_toast'),
@@ -166,7 +176,7 @@ struct Appearance {
           } else if (this.currentTab === 1) {
             this.FontTab()
           } else if (this.currentTab === 2) {
-            this.PlaceholderCard($r('app.string.appearance_motion_placeholder'))
+            this.HomeTab()
           } else {
             this.GlowTab()
           }
@@ -498,26 +508,83 @@ struct Appearance {
     .alignItems(HorizontalAlign.Start)
   }
 
-  @Builder PlaceholderCard(message: ResourceStr) {
-    Column({ space: SPACE_MEDIUM }) {
-      Column()
-        .width(40)
-        .height(40)
-        .borderRadius(20)
-        .backgroundColor(this.tk().primarySoft)
-      Text(message)
+  @Builder HomeTab() {
+    Column({ space: SPACE_LARGE }) {
+      // 说明文案
+      Text($r('app.string.appearance_home_scope_desc'))
         .fontSize(this.fs(13))
         .fontColor(this.tk().textSecondary)
-        .textAlign(TextAlign.Center)
         .lineHeight(this.fs(20))
+
+      // 预览卡：按所选口径模拟首页顶部的汇总展示
+      Column({ space: SPACE_MEDIUM }) {
+        Text(this.homeScope === HOME_SCOPE_MONTH
+          ? $r('app.string.month_expenses') : $r('app.string.day_expenses'))
+          .fontSize(this.fs(12))
+          .fontColor(this.tk().textSecondary)
+          .opacity(0.7)
+        Text('¥ 1,280.00')
+          .fontSize(this.fs(36))
+          .fontWeight(FontWeight.Bold)
+          .fontColor(this.tk().primary)
+        Row({ space: SPACE_MEDIUM }) {
+          Row({ space: SPACE_TINY }) {
+            Text(this.homeScope === HOME_SCOPE_MONTH
+              ? $r('app.string.home_income_label') : $r('app.string.day_income_label'))
+              .fontSize(this.fs(12))
+              .fontColor(this.tk().textSecondary)
+              .opacity(0.7)
+            Text('¥ 3,200.00')
+              .fontSize(this.fs(14))
+              .fontColor(this.tk().textPrimary)
+          }.alignItems(VerticalAlign.Center)
+          Text(this.homeScope === HOME_SCOPE_MONTH
+            ? $r('app.string.month_balance_label') : $r('app.string.day_balance_label'))
+            .fontSize(this.fs(12))
+            .fontColor(this.tk().primary)
+            .padding({ left: SPACE_SMALL, right: SPACE_SMALL, top: SPACE_TINY, bottom: SPACE_TINY })
+            .backgroundColor(this.tk().primarySoft)
+            .borderRadius(999)
+        }.alignItems(VerticalAlign.Center)
+      }
+      .width('100%')
+      .padding(SPACE_LARGE)
+      .backgroundColor(this.tk().surface)
+      .borderRadius(RADIUS_CARD)
+      .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
+      .alignItems(HorizontalAlign.Start)
+
+      // 口径分段：按日 / 按月
+      Row() {
+        Text($r('app.string.appearance_home_scope_day'))
+          .fontSize(this.fs(13))
+          .fontWeight(this.homeScope === HOME_SCOPE_DAY ? FontWeight.Medium : FontWeight.Normal)
+          .fontColor(this.homeScope === HOME_SCOPE_DAY ? this.tk().onPrimary : this.tk().textSecondary)
+          .padding({ top: 8, bottom: 8, left: SPACE_LARGE, right: SPACE_LARGE })
+          .backgroundColor(this.homeScope === HOME_SCOPE_DAY ? this.tk().primary : Color.Transparent)
+          .borderRadius(999)
+          .onClick(() => {
+            this.selectHomeScope(HOME_SCOPE_DAY);
+          })
+        Text($r('app.string.appearance_home_scope_month'))
+          .fontSize(this.fs(13))
+          .fontWeight(this.homeScope === HOME_SCOPE_MONTH ? FontWeight.Medium : FontWeight.Normal)
+          .fontColor(this.homeScope === HOME_SCOPE_MONTH ? this.tk().onPrimary : this.tk().textSecondary)
+          .padding({ top: 8, bottom: 8, left: SPACE_LARGE, right: SPACE_LARGE })
+          .backgroundColor(this.homeScope === HOME_SCOPE_MONTH ? this.tk().primary : Color.Transparent)
+          .borderRadius(999)
+          .onClick(() => {
+            this.selectHomeScope(HOME_SCOPE_MONTH);
+          })
+      }
+      .width('100%')
+      .padding(4)
+      .backgroundColor(this.tk().surfaceVariant)
+      .borderRadius(999)
+      .justifyContent(FlexAlign.Center)
     }
     .width('100%')
-    .padding(SPACE_XLARGE)
-    .backgroundColor(this.tk().surface)
-    .borderRadius(RADIUS_CARD)
-    .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
-    .justifyContent(FlexAlign.Center)
-    .alignItems(HorizontalAlign.Center)
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder GlowTab() {
