@@ -1,10 +1,11 @@
 export const H_STORE = 'account_store';
 export const PREF_USER_FIRST_KEY = 'userFirstUsed';
 
-// 账单来源：手动录入 / 图片识别 / 快捷记账（一键添加与到点自动记入）
+// 账单来源：手动录入 / 图片识别 / 快捷记账（一键添加与到点自动记入）/ 账单文件导入
 export const SOURCE_MANUAL: number = 0;
 export const SOURCE_IMAGE: number = 1;
 export const SOURCE_RECURRING: number = 2;
+export const SOURCE_IMPORT: number = 3;
 
 // 云端识别配置与识别引擎开关的 Preferences 键
 // 旧版单配置三键（保留用于迁移历史数据）

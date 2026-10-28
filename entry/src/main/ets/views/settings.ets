@@ -165,6 +165,9 @@ export default struct SettingsView {
           this.MenuRow($r('app.media.stats'), $r('app.string.export_bill'),
             $r('app.string.export_bill_desc'), 'pages/ExportBill',
             this.tk().accentBlue, this.tk().accentBlueSoft)
+          this.MenuRow($r('app.media.date'), $r('app.string.import_bill'),
+            $r('app.string.import_bill_desc'), 'pages/ImportBill',
+            this.tk().accentBlue, this.tk().accentBlueSoft)
           this.MenuRow($r('app.media.shield'), $r('app.string.privacy_security'),
             $r('app.string.privacy_security_desc'), 'pages/PrivacySecurity',
             this.tk().accentGreen, this.tk().accentGreenSoft)
