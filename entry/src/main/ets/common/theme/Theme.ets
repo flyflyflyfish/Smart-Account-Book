@@ -11,7 +11,7 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import PreferenceUtil from '../../utils/PreferenceUtil';
 import { Logger } from '../../utils/Logger';
 import CloudSettingSync from '../../service/CloudSettingSync';
-import { PREF_THEME_ID, PREF_COLOR_MODE, PREF_FONT_SCALE, PREF_GLOW_LEVEL } from '../constants';
+import { PREF_THEME_ID, PREF_COLOR_MODE, PREF_FONT_SCALE, PREF_GLOW_LEVEL, PREF_HOME_STAT_SCOPE } from '../constants';
 
 // 主题 id
 export const THEME_ID_PINE: string = 'pine';
@@ -42,6 +42,10 @@ export const FONT_SCALE_OPTIONS: number[] = [
 export const GLOW_LEVEL_SOFT: string = 'soft';
 export const GLOW_LEVEL_STANDARD: string = 'standard';
 export const GLOW_LEVEL_STRONG: string = 'strong';
+
+// 首页汇总口径：按日 / 按月（默认按月）
+export const HOME_SCOPE_DAY: string = 'day';
+export const HOME_SCOPE_MONTH: string = 'month';
 
 function hexToRgb(hex: string): number[] {
   const clean = hex.startsWith('#') ? hex.substring(1) : hex;
@@ -164,14 +168,14 @@ function hslToHex(h: number, s: number, l: number): string {
 
 /**
  * 图表分类色：以主色为锚的和谐多色板。
- * 首色固定为主色，其余按色相环绕展开（邻色 + 互补色），
+ * 首色固定为主色，其余按色相环绕展开（邻色 + 互补色，8 色近似均分色环），
  * 饱和度继承主色气质、明度逐档抬升，避免整屏单色深浅的呆板感。
  */
 function buildChartPalette(primary: string, isDark: boolean): string[] {
   const hsl = hexToHsl(primary);
   const baseH = hsl[0];
   const baseS = hsl[1];
-  const offsets: number[] = [0, 32, -38, 70, 178, -74];
+  const offsets: number[] = [0, 32, -38, 70, 178, -74, 124, 232];
   const sat = Math.min(0.6, Math.max(0.34, baseS * 0.95));
   const baseL = isDark ? 0.6 : 0.45;
   const lStep = isDark ? 0.045 : 0.038;
@@ -313,7 +317,7 @@ function buildEntry(id: string, lightSeed: ThemeSeed, darkSeed: ThemeSeed): Them
     primary: lightSeed.primary,
     container: lightSeed.container,
     bg: lightSeed.bg,
-    surface: '#FCFBF8',
+    surface: '#FCFCFA',
     isDark: false
   };
   const dark: ThemeSeed = {
@@ -379,6 +383,7 @@ class ThemeManager {
   private systemDark: boolean = false;
   private fontScale: number = FONT_SCALE_DEFAULT;
   private glowLevel: string = GLOW_LEVEL_STANDARD;
+  private homeScope: string = HOME_SCOPE_MONTH;
   private seq: number = 0;
   private appContext: common.ApplicationContext | undefined = undefined;
 
@@ -399,6 +404,10 @@ class ThemeManager {
     const savedGlow = await PreferenceUtil.getPreferenceValue(PREF_GLOW_LEVEL, GLOW_LEVEL_STANDARD);
     if (typeof savedGlow === 'string') {
       this.glowLevel = savedGlow;
+    }
+    const savedScope = await PreferenceUtil.getPreferenceValue(PREF_HOME_STAT_SCOPE, HOME_SCOPE_MONTH);
+    if (typeof savedScope === 'string') {
+      this.homeScope = savedScope;
     }
     this.systemDark = this.readSystemDark(context);
     AppStorage.setOrCreate('themeSeq', 0);
@@ -470,6 +479,12 @@ class ThemeManager {
     this.bump();
   }
 
+  setHomeScope(scope: string): void {
+    this.homeScope = scope;
+    this.persistQuietly(PREF_HOME_STAT_SCOPE, scope);
+    this.bump();
+  }
+
   // 主题偏好写盘失败只记日志，不影响界面即时生效
   private persistQuietly(key: string, value: preferences.ValueType): void {
     PreferenceUtil.putPreferenceValue(key, value).catch((err: BusinessError): void => {
@@ -498,6 +513,10 @@ class ThemeManager {
     const savedGlow = await PreferenceUtil.getPreferenceValue(PREF_GLOW_LEVEL, GLOW_LEVEL_STANDARD);
     if (typeof savedGlow === 'string') {
       this.glowLevel = savedGlow;
+    }
+    const savedScope = await PreferenceUtil.getPreferenceValue(PREF_HOME_STAT_SCOPE, HOME_SCOPE_MONTH);
+    if (typeof savedScope === 'string') {
+      this.homeScope = savedScope;
     }
     this.applyColorMode();
     this.bump();
@@ -535,6 +554,10 @@ class ThemeManager {
 
   currentGlowLevel(): string {
     return this.glowLevel;
+  }
+
+  currentHomeScope(): string {
+    return this.homeScope;
   }
 
   /** 导出文档（HTML/PDF/Word）用调色板：固定取当前主题浅色套，保证打印可读性 */

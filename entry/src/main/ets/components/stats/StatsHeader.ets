@@ -1,15 +1,14 @@
 import dayjs from 'dayjs';
 import { StatsType } from '../../models/stats/stats';
-import OptionsGridDialog from '../OptionsGridDialog';
-import { OptionsItem } from '../../models/stats/StatsItem';
+import PeriodPickerDialog from './PeriodPickerDialog';
 import PreferenceUtil from '../../utils/PreferenceUtil';
 import * as CONSTANTS from '../../common/constants';
-import { SPACE_SMALL, SPACE_TINY } from '../../common/dimens';
+import { SPACE_SMALL } from '../../common/dimens';
 import { ThemeKit, ThemePalette } from '../../common/theme/Theme';
 
 /**
- * 统计页头部：月账单/年账单用分段控件切换，年份、月份用下拉网格弹窗选择，
- * 替代原先循环滚动的 TextPicker 与费劲的横向月份列表
+ * 统计页头部：左侧时间段（点击弹窗选年月），右侧月账单/年账单切换。
+ * 与首页日期选择行保持一致的视觉语言。
  */
 @Component
 export default struct StatsHeader {
@@ -27,24 +26,13 @@ export default struct StatsHeader {
   @Link time: number;
   private firstUseTime: number = 0;
 
-  yearController = new CustomDialogController({
-    builder: OptionsGridDialog({
-      title: '选择年份',
-      options: this.yearOptions(),
-      onChange: (year: number) => {
-        this.time = dayjs(this.time).set('year', year).valueOf();
-      }
-    }),
-    customStyle: true,
-    alignment: DialogAlignment.Center
-  })
-
-  monthController = new CustomDialogController({
-    builder: OptionsGridDialog({
-      title: '选择月份',
-      options: this.monthOptions(),
-      onChange: (month: number) => {
-        this.time = dayjs(this.time).set('month', month).valueOf();
+  periodController = new CustomDialogController({
+    builder: PeriodPickerDialog({
+      mode: this.type,
+      time: this.time,
+      minYear: this.minYear(),
+      onChange: (picked: number) => {
+        this.time = picked;
       }
     }),
     customStyle: true,
@@ -60,32 +48,26 @@ export default struct StatsHeader {
     this.time = dayjs().valueOf();
   }
 
-  yearOptions(): OptionsItem<number>[] {
-    const startYear = dayjs(this.firstUseTime || '2020-01-01').year();
+  // 年份可选下界：首次使用时间与“最近 5 年”取更早者
+  minYear(): number {
     const currentYear = dayjs().year();
-    const list: OptionsItem<number>[] = [];
-    for (let year = currentYear; year >= startYear; year--) {
-      list.push({ label: `${year}年`, value: year });
-    }
-    return list;
+    const firstYear = this.firstUseTime > 0 ? dayjs(this.firstUseTime).year() : currentYear;
+    return Math.min(firstYear, currentYear - 4);
   }
 
-  monthOptions(): OptionsItem<number>[] {
-    const list: OptionsItem<number>[] = [];
-    for (let i = 0; i < 12; i++) {
-      list.push({ label: `${i + 1}月`, value: i });
-    }
-    return list;
+  periodLabel(): string {
+    return this.type === StatsType.MONTH ? dayjs(this.time).format('YYYY年M月') : dayjs(this.time).format('YYYY年');
   }
 
   @Builder SegmentItem(label: ResourceStr, value: StatsType) {
     Text(label)
-      .fontSize(this.fs(14))
+      .fontSize(this.fs(13))
+      .lineHeight(this.fs(18))
       .fontWeight(this.type === value ? FontWeight.Medium : FontWeight.Normal)
       .fontColor(this.type === value ? this.tk().primary : this.tk().textSecondary)
-      .padding({ left: 16, right: 16, top: 6, bottom: 6 })
+      .padding({ left: SPACE_SMALL + 6, right: SPACE_SMALL + 6, top: 6, bottom: 6 })
       .backgroundColor(this.type === value ? this.tk().surface : Color.Transparent)
-      .borderRadius(SPACE_SMALL)
+      .borderRadius(SPACE_SMALL + 2)
       .onClick(() => {
         this.type = value;
       })
@@ -98,37 +80,33 @@ export default struct StatsHeader {
     }
     .padding(2)
     .backgroundColor(this.tk().surfaceVariant)
-    .borderRadius(10)
-  }
-
-  @Builder Chip(format: string, controller: CustomDialogController) {
-    Row({ space: SPACE_TINY }) {
-      Text(dayjs(this.time).format(format))
-        .fontSize(this.fs(14))
-        .lineHeight(this.fs(20))
-        .fontColor(this.tk().textPrimary)
-      Image($r('app.media.arrow_down'))
-        .width(12)
-        .objectFit(ImageFit.Contain)
-        .fillColor(this.tk().textSecondary)
-    }
-    .padding({ left: 10, right: 10, top: 6, bottom: 6 })
-    .backgroundColor(this.tk().surface)
-    .borderRadius(10)
-    .onClick(() => {
-      controller.open();
-    })
+    .borderRadius(SPACE_SMALL + 4)
   }
 
   build() {
-    Row({ space: SPACE_SMALL }) {
-      this.SegmentedControl()
-      Blank()
-      this.Chip('YYYY年', this.yearController)
-      if (this.type === StatsType.MONTH) {
-        this.Chip('M月', this.monthController)
+    Row() {
+      Row({ space: SPACE_SMALL }) {
+        Text(this.periodLabel())
+          .fontSize(this.fs(16))
+          .lineHeight(this.fs(22))
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.tk().textPrimary)
+        Image($r('app.media.arrow_down'))
+          .width(14)
+          .height(14)
+          .objectFit(ImageFit.Contain)
+          .fillColor(this.tk().textSecondary)
       }
+      .alignItems(VerticalAlign.Center)
+      .onClick(() => {
+        this.periodController.open();
+      })
+
+      Blank()
+
+      this.SegmentedControl()
     }
     .width('100%')
+    .alignItems(VerticalAlign.Center)
   }
 }

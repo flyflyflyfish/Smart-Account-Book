@@ -20,6 +20,8 @@ export default struct OptionsGridDialog {
   controller: CustomDialogController;
   title: string = '';
   options: OptionsItem<number>[] = [];
+  // 当前已选中的值：对应选项高亮展示
+  selectedValue?: number;
   onChange?: (value: number) => void;
 
   // Grid 是滚动容器，必须显式给定高度，否则弹窗会被撑满
@@ -44,11 +46,12 @@ export default struct OptionsGridDialog {
           GridItem() {
             Text(item.label)
               .fontSize(this.fs(15))
-              .fontColor(this.tk().textPrimary)
+              .fontWeight(item.value === this.selectedValue ? FontWeight.Medium : FontWeight.Normal)
+              .fontColor(item.value === this.selectedValue ? this.tk().primary : this.tk().textPrimary)
               .textAlign(TextAlign.Center)
               .width('100%')
               .height(40)
-              .backgroundColor(this.tk().surfaceVariant)
+              .backgroundColor(item.value === this.selectedValue ? this.tk().primarySoft : this.tk().surfaceVariant)
               .borderRadius(10)
               .onClick(() => {
                 if (this.onChange) {
