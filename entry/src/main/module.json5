@@ -46,6 +46,21 @@
             "resource": "$profile:form_config"
           }
         ]
+      },
+      {
+        "name": "AccountAgentExtAbility",
+        "srcEntry": "./ets/agentextability/AccountAgentExtAbility.ets",
+        "icon": "$media:icon",
+        "label": "$string:agent_name",
+        "description": "$string:agent_desc",
+        "type": "agent",
+        "exported": true,
+        "metadata": [
+          {
+            "name": "ohos.extension.agent",
+            "resource": "$profile:agent_config"
+          }
+        ]
       }
     ],
     "requestPermissions": [
