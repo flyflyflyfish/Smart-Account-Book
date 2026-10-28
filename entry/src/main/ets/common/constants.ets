@@ -25,6 +25,9 @@ export const PREF_TRAIN_COLLECT_ENABLED = 'train_collect_enabled';
 // 自定义分类配置（JSON：新增的自定义分类 + 被隐藏的默认分类 id）的 Preferences 键
 export const PREF_CATEGORY_CONFIG = 'category_config';
 
+// 账本默认同步主账单（true/false）：账本内记一笔与图片识别入账的默认开关
+export const PREF_LEDGER_SYNC_BILLS = 'ledger_sync_bills';
+
 // 月度消费额度：开关 / 金额 / 当月已提醒标记（YYYY-MM）的 Preferences 键
 export const PREF_BUDGET_ENABLED = 'budget_enabled';
 export const PREF_BUDGET_LIMIT = 'budget_limit';
@@ -65,6 +68,11 @@ export const PREF_COLOR_MODE = 'theme_color_mode';
 export const PREF_FONT_SCALE = 'theme_font_scale';
 export const PREF_GLOW_LEVEL = 'theme_glow_level';
 export const PREF_HOME_STAT_SCOPE = 'home_stat_scope';
+
+// 底部第二页签样式：AI 助手 / 账本（默认 AI 助手）的 Preferences 键
+export const PREF_SECOND_TAB_STYLE = 'second_tab_style';
+export const SECOND_TAB_STYLE_AI: string = 'ai';
+export const SECOND_TAB_STYLE_LEDGER: string = 'ledger';
 
 // 云数据库存储区名称与 schema 文件名，需与 AGC 控制台配置保持一致
 export const CLOUD_ZONE_NAME: string = 'AccountZone';

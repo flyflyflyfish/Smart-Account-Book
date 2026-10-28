@@ -13,6 +13,9 @@
     "pages/CategoryManage",
     "pages/BudgetSettings",
     "pages/RecurringBillManage",
-    "pages/RecurringBillEdit"
+    "pages/RecurringBillEdit",
+    "pages/LedgerDetail",
+    "pages/LedgerRecordEdit",
+    "pages/LedgerBillPicker"
   ]
 }

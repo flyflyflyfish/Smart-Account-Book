@@ -20,13 +20,17 @@ import CloudLlmConfigStore from '../service/recognition/CloudLlmConfigStore';
 import { RecognitionPipeline } from '../service/recognition/pipeline/RecognitionPipeline';
 import learnedClassifier from '../service/recognition/classifier/LearnedClassifier';
 import AccountService from '../service/account';
-import { SOURCE_IMAGE } from '../common/constants';
+import { PREF_LEDGER_SYNC_BILLS, SOURCE_IMAGE } from '../common/constants';
+import PreferenceUtil from '../utils/PreferenceUtil';
 import { MAX_PICK_IMAGES, RECOGNIZE_CONCURRENCY, RECOGNIZE_RETRY_MAX_ATTEMPTS, RECOGNIZE_RETRY_BASE_DELAY_MS, IMPORT_SAMPLE_WAIT_MS } from '../common/Config';
 import { CloudLlmRecognizer } from '../service/recognition/CloudLlmRecognizer';
 import { RetryRecognizer } from '../service/recognition/decorators/RetryRecognizer';
 import { isDuplicateBill } from '../common/dedup';
 import { Toast } from '../components/ToastDialog';
 import { Logger } from '../utils/Logger';
+import LedgerRepository from '../data/LedgerRepository';
+import LedgerStore from '../common/LedgerStore';
+import { LEDGER_RECORD_EXPENSE, LEDGER_RECORD_INCOME } from '../models/ledger/Ledger';
 import BreakpointConstants from '../common/breakpoint';
 import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_TINY, SPACE_XLARGE } from '../common/dimens';
 import { ThemeKit, ThemePalette } from '../common/theme/Theme';
@@ -36,9 +40,10 @@ const STEP_PICK: number = 0;
 const STEP_RECOGNIZING: number = 1;
 const STEP_CONFIRM: number = 2;
 
-// 加号菜单跳转来源：camera 直接拍照、gallery 直接选相册
+// 加号菜单跳转来源：camera 直接拍照、gallery 直接选相册；ledgerId 非空表示从账本详情进入（入账时同步进该账本）
 interface RecognizeSourceParam {
   source: string;
+  ledgerId?: string;
 }
 
 @Entry
@@ -75,16 +80,37 @@ struct RecognizeBill {
   private destroyed: boolean = false;
   // 入账执行中标志：防止双击“入账”导致同一批草稿重复入库
   @State importing: boolean = false;
+  // 从账本进入时是否同步记入主账单（首页统计）；非账本入口不显示开关、恒为 true
+  @State syncToBills: boolean = true;
   // 每张图的训练样本缓存协程：入账前需等它们完成，否则样本可能因“无缓存”被静默丢弃
   private samplePromises: Map<string, Promise<void>> = new Map();
+  // 账本入口：非空时入账的每笔同步复制进该账本
+  private ledgerId: string = '';
+  private ledgerRepository: LedgerRepository = new LedgerRepository();
 
   aboutToAppear(): void {
     const params = router.getParams() as RecognizeSourceParam | undefined;
     const source = params && typeof params.source === 'string' ? params.source : '';
+    const ledgerId = params?.ledgerId;
+    this.ledgerId = params && typeof ledgerId === 'string' ? ledgerId : '';
+    // 账本入口：同步开关初值读设置（设置页可配置，默认开）；非账本入口不显示开关、恒为 true
+    if (this.ledgerId.length > 0) {
+      this.loadSyncDefault();
+    }
     if (source === 'camera') {
       this.pickFromCamera();
     } else if (source === 'gallery') {
       this.pickFromGallery();
+    }
+  }
+
+  // 读取“同步记入主账单”的默认开关；读取失败保持默认 true
+  async loadSyncDefault(): Promise<void> {
+    try {
+      const value = await PreferenceUtil.getPreferenceValue(PREF_LEDGER_SYNC_BILLS, true);
+      this.syncToBills = value === true;
+    } catch (err) {
+      Logger.error('读取账本同步默认设置失败', (err as Error).message);
     }
   }
 
@@ -657,6 +683,7 @@ struct RecognizeBill {
     }
     // 入账：只处理勾选的（去重只影响是否入账，不影响训练标签）
     let imported = 0;
+    const toLedger = this.ledgerId.length > 0;
     for (const draft of this.drafts) {
       if (!draft.selected) {
         continue;
@@ -676,8 +703,19 @@ struct RecognizeBill {
         payTime: draft.payTime
       };
       try {
-        await AccountService.insert(info);
+        // 同步主账单（首页统计）；从账本进入且关闭开关时跳过，只进账本
+        let billId = '';
+        if (this.syncToBills) {
+          billId = await AccountService.insert(info);
+        }
         await learnedClassifier.learn(draft.merchant, draft.selectType.id, draft.accountType);
+        // 账本入口：每笔同步复制进账本，关联主账单 id 供防重复导入
+        if (toLedger) {
+          const recordType = draft.accountType === AccountType.INCOME
+            ? LEDGER_RECORD_INCOME : LEDGER_RECORD_EXPENSE;
+          await this.ledgerRepository.insertRecord(this.ledgerId, recordType, amount,
+            draft.merchant, draft.payTime, draft.selectType.id, billId);
+        }
         imported++;
       } catch (err) {
         Logger.error('导入账单失败', (err as Error).message);
@@ -721,6 +759,10 @@ struct RecognizeBill {
     confirmedByUri.forEach((confirmed: SampleTransaction[], uri: string) => {
       OcrSampleCollector.appendConfirmed(ctx, uri, confirmed);
     });
+    // 账本入口：通知账本详情/列表刷新
+    if (toLedger) {
+      LedgerStore.notifyChanged();
+    }
     Toast.success($r('app.string.save_success'));
     router.back();
   }
@@ -1125,6 +1167,23 @@ struct RecognizeBill {
         .onClick(() => {
           this.addManualDraft();
         })
+
+      // 从账本进入时：可选是否同步记入主账单（关闭则只进账本）
+      if (this.ledgerId.length > 0) {
+        Row() {
+          Text($r('app.string.ledger_sync_to_bills'))
+            .fontSize(this.fs(13))
+            .fontColor(this.tk().textPrimary)
+            .layoutWeight(1)
+          Toggle({ type: ToggleType.Switch, isOn: this.syncToBills })
+            .selectedColor(this.tk().primary)
+            .onChange((isOn: boolean) => {
+              this.syncToBills = isOn;
+            })
+        }
+        .width('100%')
+        .padding({ left: SPACE_SMALL, right: SPACE_SMALL })
+      }
 
       // 失败重试行、端侧置信度行与草稿同列一个滚动列表：图片多时不挤占下方草稿空间
       List({ space: SPACE_SMALL }) {

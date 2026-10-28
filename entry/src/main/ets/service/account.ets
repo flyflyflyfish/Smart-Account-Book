@@ -46,9 +46,9 @@ class AccountService {
   }
 
   /**
-   * 插入一条记录：主键由 UUID 生成
+   * 插入一条记录：主键由 UUID 生成，返回新账单 id（供账本记录关联主账单）
    */
-  async insert(info: AccountInfo): Promise<void> {
+  async insert(info: AccountInfo): Promise<string> {
     const po: AccountPO = new AccountPO();
     po.id = util.generateRandomUUID();
     po.type = info.type;
@@ -66,6 +66,7 @@ class AccountService {
       // 云同步失败不影响本地结果，只记日志
       Logger.error('云同步账单失败', error.message);
     });
+    return po.id;
   }
 
   /**

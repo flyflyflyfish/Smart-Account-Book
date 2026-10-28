@@ -4,11 +4,14 @@ import dayjs from 'dayjs';
 import { BusinessError } from '@kit.BasicServicesKit';
 import Home from '../views/home';
 import AiAssistant from '../views/aiAssistant';
+import LedgerView from '../views/ledger';
 import Stats from '../views/stats';
 import SettingsView from '../views/settings';
 import PreferenceUtil from '../utils/PreferenceUtil';
 import DBUtil from '../utils/DBUtil';
 import * as CONSTANTS from '../common/constants';
+import { SECOND_TAB_STYLE_LEDGER } from '../common/constants';
+import SecondTabStore, { SecondTabChangeListener } from '../common/SecondTabStore';
 import BreakpointSystem from '../utils/BreakpointSystem';
 import BreakpointConstants from '../common/breakpoint';
 import BillStore, { BillChangeListener } from '../common/BillStore';
@@ -39,12 +42,23 @@ struct Index {
   @State currentTab: number = 0;
   @State showAddMenu: boolean = false;
   @State keyboardVisible: boolean = false;
+  // 底部第二页签样式：AI 助手 / 账本（外观-首页统计里可改，经 SecondTabStore 单例读取）
+  @State secondTabStyle: string = SecondTabStore.current();
+
+  // 第二页签是否为账本
+  secondTabIsLedger(): boolean {
+    return this.secondTabStyle === SECOND_TAB_STYLE_LEDGER;
+  }
   private breakpointSystem: BreakpointSystem = new BreakpointSystem();
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
   // 额度设置变更后重新检查是否超支
   @StorageProp('budgetVersion')
   @Watch('onBudgetChanged')
   budgetVersion: number = 0;
+  // 第二页签样式变更：外观页切换时经 SecondTabStore 通知，即时刷新底部页签
+  private secondTabListener: SecondTabChangeListener = () => {
+    this.secondTabStyle = SecondTabStore.current();
+  };
   // 卡片/外部拉起指定 Tab：应用存活时也能响应 quickTab 变化
   @StorageProp('quickTab')
   @Watch('onQuickTabChanged')
@@ -68,6 +82,9 @@ struct Index {
       AppStorage.delete('quickTab');
     }
     await DBUtil.ready;
+    // 数据库就绪说明 EntryAbility 已完成偏好加载，重读一次避免启动竞态读到默认值
+    this.secondTabStyle = SecondTabStore.current();
+    SecondTabStore.subscribe(this.secondTabListener);
     BillStore.subscribe(this.billListener);
     this.refreshBudgetAlert();
     WidgetUpdater.refreshAllForms(getContext(this), ThemeKit.palette());
@@ -82,8 +99,14 @@ struct Index {
 
   aboutToDisappear() {
     this.breakpointSystem.unRegister();
+    SecondTabStore.unsubscribe(this.secondTabListener);
     BillStore.unsubscribe(this.billListener);
     this.unregisterKeyboardListener();
+  }
+
+  // 从外观页等返回时重读第二页签样式，保证切换立即生效
+  onPageShow(): void {
+    this.secondTabStyle = SecondTabStore.current();
   }
 
   onBudgetChanged(): void {
@@ -182,6 +205,26 @@ struct Index {
     .justifyContent(FlexAlign.Center)
     .onClick(() => {
       this.currentTab = index;
+    })
+  }
+
+  // 第二页签（AI 助手 / 账本）：@Builder 按值传参不随状态刷新，
+  // 图标与文案必须在 Builder 体内直接读取 secondTabStyle 才能即时切换
+  @Builder SecondTabItem() {
+    Column({ space: 2 }) {
+      Image(this.secondTabIsLedger() ? $r('app.media.ledger') : $r('app.media.ai'))
+        .width(22)
+        .height(22)
+        .fillColor(this.currentTab === 1 ? this.tk().primary : this.tk().textSecondary)
+      Text(this.secondTabIsLedger() ? $r('app.string.ledger') : $r('app.string.ai_assistant'))
+        .fontSize(this.fs(11))
+        .fontColor(this.currentTab === 1 ? this.tk().primary : this.tk().textSecondary)
+    }
+    .layoutWeight(1)
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .onClick(() => {
+      this.currentTab = 1;
     })
   }
 
@@ -284,7 +327,11 @@ struct Index {
           if (this.currentTab === 0) {
             Home()
           } else if (this.currentTab === 1) {
-            AiAssistant()
+            if (this.secondTabIsLedger()) {
+              LedgerView()
+            } else {
+              AiAssistant()
+            }
           } else if (this.currentTab === 2) {
             Stats()
           } else {
@@ -297,7 +344,7 @@ struct Index {
         if (!this.keyboardVisible) {
           Row() {
             this.TabItem($r('app.media.home'), $r('app.string.home'), 0)
-            this.TabItem($r('app.media.ai'), $r('app.string.ai_assistant'), 1)
+            this.SecondTabItem()
             this.AddButton()
             this.TabItem($r('app.media.stats'), $r('app.string.statistics'), 2)
             this.TabItem($r('app.media.settings'), $r('app.string.settings'), 3)
