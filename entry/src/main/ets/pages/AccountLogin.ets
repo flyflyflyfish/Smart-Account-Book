@@ -8,6 +8,9 @@ import BreakpointConstants from '../common/breakpoint';
 import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL } from '../common/dimens';
 import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
+// 本次进程内是否已尝试过拉起头像昵称授权页（避免每次进入账号页都弹授权）
+let profileAskTried: boolean = false;
+
 @Entry
 @Component
 struct AccountLogin {
@@ -24,27 +27,58 @@ struct AccountLogin {
 
   @State signedIn: boolean = false;
   @State uid: string = '';
+  @State displayName: string = '';
+  @State photoUrl: string = '';
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
 
   async aboutToAppear(): Promise<void> {
     try {
-      const currentUid = await AuthService.getCurrentUid();
-      if (currentUid) {
+      const profile = await AuthService.getCurrentProfile();
+      if (profile) {
         this.signedIn = true;
-        this.uid = currentUid;
+        this.uid = profile.uid;
+        this.displayName = profile.displayName;
+        this.photoUrl = profile.photoUrl;
+        // 已登录但缺头像昵称：拉起授权补全，每次进程最多弹一次，已授权过则静默返回
+        if (!profileAskTried && !(this.displayName && this.photoUrl)) {
+          profileAskTried = true;
+          await this.ensureProfileInfo(true);
+        }
       }
     } catch (error) {
       Logger.error('加载登录状态失败', (error as Error).message);
     }
   }
 
+  // 缺头像昵称时请求华为账号头像昵称授权（profile scope），并同步全局登录资料
+  async ensureProfileInfo(force: boolean): Promise<void> {
+    if (this.displayName && this.photoUrl) {
+      return;
+    }
+    const profile = await AuthService.requestHuaweiProfile(getContext(this), force);
+    if (profile) {
+      if (profile.nickName) {
+        this.displayName = profile.nickName;
+        AppStorage.setOrCreate('accountName', profile.nickName);
+      }
+      if (profile.avatarUri) {
+        this.photoUrl = profile.avatarUri;
+        AppStorage.setOrCreate('accountAvatar', profile.avatarUri);
+      }
+    }
+  }
+
   async onSignIn(): Promise<void> {
-    const currentUid = await AuthService.signInWithHuaweiId();
-    if (currentUid) {
-      CloudInit.init(currentUid);
-      AppStorage.setOrCreate('accountUid', currentUid);
+    const profile = await AuthService.signInWithHuaweiId();
+    if (profile) {
+      CloudInit.init(profile.uid);
+      AppStorage.setOrCreate('accountUid', profile.uid);
+      AppStorage.setOrCreate('accountName', profile.displayName);
+      AppStorage.setOrCreate('accountAvatar', profile.photoUrl);
       this.signedIn = true;
-      this.uid = currentUid;
+      this.uid = profile.uid;
+      this.displayName = profile.displayName;
+      this.photoUrl = profile.photoUrl;
       if (CloudInit.isReady()) {
         Toast.success($r('app.string.sign_in_success'));
         // 登录成功：立即做一次端云全量同步，把云端的账单/分类/设置恢复到本机，本机新增上传云端
@@ -54,6 +88,9 @@ struct AccountLogin {
         Toast.error($r('app.string.cloud_sync_unavailable'));
         Logger.error('云同步初始化失败', '登录成功但云开发服务不可用，账单将不会同步到云端');
       }
+      // 登录后补全华为账号头像昵称：首次会拉起 profile 授权确认页，之后静默返回
+      profileAskTried = true;
+      this.ensureProfileInfo(true);
     } else {
       if (AuthService.needsRestartHint()) {
         AlertDialog.show({
@@ -76,9 +113,13 @@ struct AccountLogin {
     const success = await AuthService.signOut();
     if (success) {
       AppStorage.setOrCreate('accountUid', '');
+      AppStorage.setOrCreate('accountName', '');
+      AppStorage.setOrCreate('accountAvatar', '');
       CloudInit.reset();
       this.signedIn = false;
       this.uid = '';
+      this.displayName = '';
+      this.photoUrl = '';
       Toast.success($r('app.string.sign_out_success'));
     }
   }
@@ -89,24 +130,34 @@ struct AccountLogin {
       Scroll() {
         Column({ space: SPACE_MEDIUM }) {
           Column({ space: SPACE_MEDIUM }) {
-            Column() {
-              Image($r('app.media.user'))
-                .width(28)
-                .height(28)
-                .fillColor(this.tk().primary)
+            if (this.photoUrl) {
+              Image(this.photoUrl)
+                .width(64)
+                .height(64)
+                .borderRadius(32)
+                .objectFit(ImageFit.Cover)
+                .alt($r('app.media.user'))
+            } else {
+              Column() {
+                Image($r('app.media.user'))
+                  .width(28)
+                  .height(28)
+                  .fillColor(this.tk().primary)
+              }
+              .width(64)
+              .height(64)
+              .borderRadius(32)
+              .backgroundColor(this.tk().primarySoft)
+              .justifyContent(FlexAlign.Center)
+              .alignItems(HorizontalAlign.Center)
             }
-            .width(64)
-            .height(64)
-            .borderRadius(32)
-            .backgroundColor(this.tk().primarySoft)
-            .justifyContent(FlexAlign.Center)
-            .alignItems(HorizontalAlign.Center)
-            Text(this.signedIn ? $r('app.string.signed_in') : $r('app.string.not_signed_in'))
+            Text(this.displayName ? this.displayName :
+              (this.signedIn ? $r('app.string.signed_in') : $r('app.string.not_signed_in')))
               .fontSize(this.fs(18))
               .fontWeight(FontWeight.Medium)
               .fontColor(this.tk().textPrimary)
             if (this.signedIn) {
-              Text($r('app.string.uid_label') + ': ' + this.uid)
+              Text($r('app.string.uid_value_label', this.uid))
                 .fontSize(this.fs(13))
                 .fontColor(this.tk().textSecondary)
             }

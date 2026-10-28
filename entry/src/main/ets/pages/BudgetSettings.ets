@@ -166,7 +166,7 @@ struct BudgetSettings {
               Divider().color(this.tk().surfaceVariant)
 
               Row() {
-                Text($r('app.string.budget_month_spent_label') + '（' + dayjs().format('YYYY年M月') + '）')
+                Text($r('app.string.budget_month_spent_period_label', dayjs().format('YYYY年M月')))
                   .fontSize(this.fs(13))
                   .fontColor(this.tk().textSecondary)
                 Blank()
