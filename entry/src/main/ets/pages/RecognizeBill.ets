@@ -21,7 +21,7 @@ import { RecognitionPipeline } from '../service/recognition/pipeline/Recognition
 import learnedClassifier from '../service/recognition/classifier/LearnedClassifier';
 import AccountService from '../service/account';
 import { SOURCE_IMAGE } from '../common/constants';
-import { MAX_PICK_IMAGES, RECOGNIZE_CONCURRENCY, RECOGNIZE_RETRY_MAX_ATTEMPTS, RECOGNIZE_RETRY_BASE_DELAY_MS } from '../common/Config';
+import { MAX_PICK_IMAGES, RECOGNIZE_CONCURRENCY, RECOGNIZE_RETRY_MAX_ATTEMPTS, RECOGNIZE_RETRY_BASE_DELAY_MS, IMPORT_SAMPLE_WAIT_MS } from '../common/Config';
 import { CloudLlmRecognizer } from '../service/recognition/CloudLlmRecognizer';
 import { RetryRecognizer } from '../service/recognition/decorators/RetryRecognizer';
 import { isDuplicateBill } from '../common/dedup';
@@ -331,6 +331,9 @@ struct RecognizeBill {
       return;
     }
     const ok = await this.recognizeOne(task, recognizer);
+    if (this.destroyed) {
+      return;
+    }
     if (ok) {
       for (const d of task.drafts) {
         this.drafts.push(d);
@@ -630,13 +633,24 @@ struct RecognizeBill {
       this.commitExpanded();
     }
     // 等待仍在后台采集的 OCR/大模型原始输出缓存完成：
-    // appendConfirmed 对“无缓存”的图会静默忽略，不等会导致训练样本丢失
+    // appendConfirmed 对“无缓存”的图会静默忽略，不等会导致训练样本丢失。
+    // 有界等待：采集依赖 OCR 串行队列，积压或底层挂起时最多等 IMPORT_SAMPLE_WAIT_MS，
+    // 超时放弃等待继续入账（样本可能缺采），绝不阻塞用户入账
     const pending: Promise<void>[] = [];
     this.samplePromises.forEach((p: Promise<void>) => {
       pending.push(p);
     });
     if (pending.length > 0) {
-      await Promise.all(pending);
+      const timeoutPromise: Promise<void> = new Promise<void>((resolve: () => void) => {
+        setTimeout(resolve, IMPORT_SAMPLE_WAIT_MS);
+      });
+      const allPromise: Promise<void> = Promise.all(pending).then((): void => {
+      }, (): void => {
+      });
+      await Promise.race([allPromise, timeoutPromise]);
+      if (this.samplePromises.size > 0) {
+        Logger.warn('等待训练样本采集超时，继续入账');
+      }
     }
     if (this.destroyed) {
       return;
@@ -1114,27 +1128,47 @@ struct RecognizeBill {
 
       // 失败重试行、端侧置信度行与草稿同列一个滚动列表：图片多时不挤占下方草稿空间
       List({ space: SPACE_SMALL }) {
-        // 失败项：可单独重试
+        // 失败项：可单独重试；重试进行中也保留该行并显示识别中，
+        // 否则点重试后该行消失且无任何反馈，看起来像“重试没反应”
         ForEach(this.tasks, (task: ImageTask, index: number) => {
-          if (task.status === ImageTaskStatus.FAILED) {
+          if (task.status === ImageTaskStatus.FAILED ||
+            ((task.status === ImageTaskStatus.PENDING || task.status === ImageTaskStatus.RECOGNIZING) &&
+              task.drafts.length === 0)) {
             ListItem() {
               Row({ space: SPACE_SMALL }) {
-                Image($r('app.media.error'))
-                  .width(14)
-                  .height(14)
-                  .fillColor(this.tk().danger)
-                Text(task.error)
-                  .fontSize(this.fs(12))
-                  .fontColor(this.tk().danger)
-                  .maxLines(1)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-                  .layoutWeight(1)
-                Text($r('app.string.retry'))
-                  .fontSize(this.fs(13))
-                  .fontColor(this.tk().primary)
-                  .onClick(() => {
-                    this.retryTask(index);
-                  })
+                if (task.status === ImageTaskStatus.FAILED) {
+                  Image($r('app.media.error'))
+                    .width(14)
+                    .height(14)
+                    .fillColor(this.tk().danger)
+                } else {
+                  LoadingProgress()
+                    .width(14)
+                    .height(14)
+                    .color(this.tk().primary)
+                }
+                if (task.status === ImageTaskStatus.FAILED) {
+                  Text(task.error)
+                    .fontSize(this.fs(12))
+                    .fontColor(this.tk().danger)
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                    .layoutWeight(1)
+                  Text($r('app.string.retry'))
+                    .fontSize(this.fs(13))
+                    .fontColor(this.tk().primary)
+                    .onClick(() => {
+                      this.retryTask(index);
+                    })
+                } else {
+                  Text($r('app.string.task_index', index + 1))
+                    .fontSize(this.fs(12))
+                    .fontColor(this.tk().textSecondary)
+                    .layoutWeight(1)
+                  Text($r('app.string.recognizing'))
+                    .fontSize(this.fs(12))
+                    .fontColor(this.tk().primary)
+                }
               }.width('100%')
               .height(40)
               .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM })
