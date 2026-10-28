@@ -13,6 +13,9 @@ import { Logger } from '../../utils/Logger';
 const OCR_SYSCAP: string = 'SystemCapability.AI.OCR.TextRecognition';
 // 纯 OCR 无语义理解，置信度给中等值
 const OCR_CONFIDENCE: number = 0.6;
+// 单次 OCR 任务看门狗超时（毫秒）：底层 OCR/图片服务静默挂起时按超时失败，
+// 避免当前任务永久卡死、全局串行队列被堵死导致后续任务（含重试）全部无响应
+const OCR_TIMEOUT_MS: number = 30000;
 
 // OCR 原始结果 + 图片像素尺寸（供相对坐标换算）
 interface OcrRaw {
@@ -42,13 +45,34 @@ export class LocalOcrRecognizer implements Recognizer {
     return this.toVisionResult(raw);
   }
 
-  // OCR 核心：init -> 解码 -> recognizeText，返回 {宽,高,原始结果}，统一负责 release
+  // OCR 核心：init -> 解码 -> recognizeText，返回 {宽,高,原始结果}，统一负责 release。
+  // 外层包看门狗：底层静默卡死时按超时抛错，当前任务可见失败、ocrQueue 继续消化
+  // 后续任务（其他图片、重试、训练样本采集），而不是整个识别流程永久挂起。
+  // 注：超时后底层任务可能仍在后台持引擎，后续任务的 init/release 与其交错属降级路径，
+  // 相比整条队列永久死锁是更小的代价
   private runOcr(imageUri: string): Promise<OcrRaw> {
-    const job: Promise<OcrRaw> = ocrQueue.then((): Promise<OcrRaw> => this.doRunOcr(imageUri));
+    const job: Promise<OcrRaw> = ocrQueue.then((): Promise<OcrRaw> => this.doRunOcrWithWatchdog(imageUri));
     ocrQueue = job.then((): void => {
     }, (): void => {
     });
     return job;
+  }
+
+  // 看门狗包装：限定单次 OCR 任务的最长执行时间，超时抛与 OCR 失败相同的可读错误
+  private doRunOcrWithWatchdog(imageUri: string): Promise<OcrRaw> {
+    return new Promise<OcrRaw>((resolve: (value: OcrRaw) => void, reject: (reason: Error) => void) => {
+      const timer: number = setTimeout((): void => {
+        Logger.error('端侧 OCR 看门狗超时(ms): ', OCR_TIMEOUT_MS);
+        reject(new Error(getContext().resourceManager.getStringSync($r('app.string.ocr_failed'))));
+      }, OCR_TIMEOUT_MS);
+      this.doRunOcr(imageUri).then((value: OcrRaw): void => {
+        clearTimeout(timer);
+        resolve(value);
+      }, (error: Error): void => {
+        clearTimeout(timer);
+        reject(error);
+      });
+    });
   }
 
   private async doRunOcr(imageUri: string): Promise<OcrRaw> {
