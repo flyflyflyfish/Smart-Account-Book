@@ -60,6 +60,8 @@ export default class EntryAbility extends UIAbility {
       // 认证服务初始化；若已登录则继续初始化云开发服务以启用云端双写
       AuthService.init(this.context);
       const uid = await AuthService.getCurrentUid();
+      // 登录态写入 AppStorage，设置页账号栏据此切换“账号登录/头像+ID”显示
+      AppStorage.setOrCreate('accountUid', uid ?? '');
       if (uid) {
         CloudInit.init(uid);
         // 已登录：启动后做一次端云全量同步（恢复云端账单/分类/设置，上传本地新增），不阻塞启动

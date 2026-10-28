@@ -12,6 +12,8 @@ import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 export default struct SettingsView {
 
   @StorageProp('themeSeq') themeSeq: number = 0;
+  // 登录态：uid 非空表示已登录华为账号，账号栏切换为头像+ID 样式
+  @StorageProp('accountUid') accountUid: string = '';
 
   tk(): ThemePalette {
     return ThemeKit.palette(this.themeSeq);
@@ -67,6 +69,50 @@ export default struct SettingsView {
     .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
     .onClick(() => {
       router.pushUrl({ url: url });
+    })
+  }
+
+  // 已登录：账号栏显示头像与用户ID，点击进入账号页查看/退出
+  @Builder AccountProfileRow() {
+    Row({ space: SPACE_MEDIUM }) {
+      Column() {
+        Image($r('app.media.user'))
+          .width(22)
+          .height(22)
+          .fillColor(this.tk().primary)
+      }
+      .width(44)
+      .height(44)
+      .borderRadius(22)
+      .backgroundColor(this.tk().primarySoft)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
+      Column({ space: 2 }) {
+        Text(this.accountUid)
+          .fontSize(this.fs(16))
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.tk().textPrimary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text($r('app.string.account_signed_in_desc'))
+          .fontSize(this.fs(12))
+          .fontColor(this.tk().textSecondary)
+      }
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
+      Image($r('app.media.arrow_left'))
+        .width(14)
+        .objectFit(ImageFit.Contain)
+        .rotate({ angle: 180 })
+        .fillColor(this.tk().textSecondary)
+    }
+    .width('100%')
+    .padding({ left: SPACE_LARGE, right: SPACE_LARGE, top: SPACE_MEDIUM, bottom: SPACE_MEDIUM })
+    .backgroundColor(this.tk().surface)
+    .borderRadius(RADIUS_CARD)
+    .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
+    .onClick(() => {
+      router.pushUrl({ url: 'pages/AccountLogin' });
     })
   }
 
@@ -140,9 +186,13 @@ export default struct SettingsView {
       Scroll() {
         Column({ space: SPACE_MEDIUM }) {
           this.SectionLabel($r('app.string.settings_section_account'))
-          this.MenuRow($r('app.media.user'), $r('app.string.account_login'),
-            $r('app.string.account_login_desc'), 'pages/AccountLogin',
-            this.tk().accentBlue, this.tk().accentBlueSoft)
+          if (this.accountUid) {
+            this.AccountProfileRow()
+          } else {
+            this.MenuRow($r('app.media.user'), $r('app.string.account_login'),
+              $r('app.string.account_login_desc'), 'pages/AccountLogin',
+              this.tk().accentBlue, this.tk().accentBlueSoft)
+          }
 
           this.SectionLabel($r('app.string.settings_section_ai'))
           this.MenuRow($r('app.media.ai'), $r('app.string.model_settings'),
