@@ -821,6 +821,10 @@
       "value": "登录华为账号，账单云端备份"
     },
     {
+      "name": "account_signed_in_desc",
+      "value": "已登录华为账号，账单云端备份"
+    },
+    {
       "name": "model_settings_desc",
       "value": "云端大模型接口与识别引擎"
     },

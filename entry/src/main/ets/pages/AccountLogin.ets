@@ -42,6 +42,7 @@ struct AccountLogin {
     const currentUid = await AuthService.signInWithHuaweiId();
     if (currentUid) {
       CloudInit.init(currentUid);
+      AppStorage.setOrCreate('accountUid', currentUid);
       this.signedIn = true;
       this.uid = currentUid;
       if (CloudInit.isReady()) {
@@ -74,6 +75,7 @@ struct AccountLogin {
   async onSignOut(): Promise<void> {
     const success = await AuthService.signOut();
     if (success) {
+      AppStorage.setOrCreate('accountUid', '');
       CloudInit.reset();
       this.signedIn = false;
       this.uid = '';
