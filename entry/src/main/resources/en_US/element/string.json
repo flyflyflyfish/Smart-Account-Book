@@ -13,6 +13,14 @@
       "value": "Account Assistant"
     },
     {
+      "name": "agent_name",
+      "value": "Account Query Agent"
+    },
+    {
+      "name": "agent_desc",
+      "value": "Let Celia query local bill summaries"
+    },
+    {
       "name": "month_expenses",
       "value": "Expenses this month"
     },
