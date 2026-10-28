@@ -1,0 +1,29 @@
+{
+  "agentCards": [
+    {
+      "agentId": "account-query-agent",
+      "name": "记账查询助手",
+      "description": "查询记账应用中的本地账单数据：支持本月、上月、今年、去年的支出与收入总额及分类明细汇总。",
+      "version": "1.0.0",
+      "documentationUrl": "https://github.com/flyflyflyfish/Smart-Account-Book",
+      "defaultInputModes": ["text/plain"],
+      "defaultOutputModes": ["text/plain", "application/json"],
+      "iconUrl": "https://github.com/flyflyflyfish/Smart-Account-Book",
+      "category": "finance",
+      "skills": [
+        {
+          "id": "query-bill-summary",
+          "name": "查询账单汇总",
+          "description": "当用户询问本月、上月、今年或去年花了多少钱、支出多少、收入多少、消费汇总等情况时，查询记账应用中的本地账单数据，返回收支总额与分类明细。",
+          "tags": ["记账", "账单", "支出", "收入", "统计", "查询"],
+          "examples": [
+            "这个月我花了多少钱",
+            "上个月支出多少",
+            "今年收入多少",
+            "帮我看看本月的消费情况"
+          ]
+        }
+      ]
+    }
+  ]
+}
