@@ -12,12 +12,16 @@ import AuthService from '../service/AuthService';
 import CloudInit from '../data/CloudInit';
 import CloudSyncService from '../service/CloudSyncService';
 import RecurringBillService from '../service/RecurringBillService';
+import SecondTabStore from '../common/SecondTabStore';
 import { ThemeKit } from '../common/theme/Theme';
 import {
   ACCOUNT_CREATE_TABLE_SQL,
+  LEDGER_CREATE_TABLE_SQL,
+  LEDGER_RECORD_CREATE_TABLE_SQL,
   MERCHANT_CATEGORY_CREATE_TABLE_SQL,
   MIGRATION_STEPS
 } from '../data/schema';
+import * as CONSTANTS from '../common/constants';
 
 export default class EntryAbility extends UIAbility {
   private selectPage: string = '';
@@ -52,11 +56,17 @@ export default class EntryAbility extends UIAbility {
       await ThemeKit.init(this.context);
       // 加载用户自定义分类配置（增/减/恢复默认），页面加载前就绪
       await CategoryStore.init(this.context);
+      // 恢复底部第二页签样式（AI 助手 / 账本），Index 据此渲染第二个页签
+      const savedTabStyle = await PreferenceUtil.getPreferenceValue(
+        CONSTANTS.PREF_SECOND_TAB_STYLE, CONSTANTS.SECOND_TAB_STYLE_AI);
+      SecondTabStore.init(typeof savedTabStyle === 'string' ? savedTabStyle : CONSTANTS.SECOND_TAB_STYLE_AI);
       await DBUtil.initDB(this.context);
       // 先逐级迁移老库，再建表（IF NOT EXISTS 对新装生效、对老库为无操作）
       await DBUtil.migrate(MIGRATION_STEPS);
       await DBUtil.createTable(ACCOUNT_CREATE_TABLE_SQL);
       await DBUtil.createTable(MERCHANT_CATEGORY_CREATE_TABLE_SQL);
+      await DBUtil.createTable(LEDGER_CREATE_TABLE_SQL);
+      await DBUtil.createTable(LEDGER_RECORD_CREATE_TABLE_SQL);
       // 认证服务初始化；若已登录则继续初始化云开发服务以启用云端双写
       AuthService.init(this.context);
       const profile = await AuthService.getCurrentProfile();

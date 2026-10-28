@@ -1,4 +1,4 @@
-{
+﻿{
   "string": [
     {
       "name": "module_desc",
@@ -1799,6 +1799,146 @@
     {
       "name": "add_manual",
       "value": "手动添加一笔"
+    },
+    {
+      "name": "ledger",
+      "value": "账本"
+    },
+    {
+      "name": "appearance_second_tab_section",
+      "value": "底部页签"
+    },
+    {
+      "name": "ledger_add",
+      "value": "添加账本"
+    },
+    {
+      "name": "ledger_add_hint",
+      "value": "新建"
+    },
+    {
+      "name": "ledger_rename",
+      "value": "重命名"
+    },
+    {
+      "name": "ledger_name_placeholder",
+      "value": "输入账本名称"
+    },
+    {
+      "name": "ledger_name_required",
+      "value": "请输入账本名称"
+    },
+    {
+      "name": "ledger_amount_placeholder",
+      "value": "输入金额"
+    },
+    {
+      "name": "ledger_amount_required",
+      "value": "请输入有效金额"
+    },
+    {
+      "name": "ledger_note_placeholder",
+      "value": "备注（选填）"
+    },
+    {
+      "name": "ledger_card_sub",
+      "value": "%d笔 · 收入 ¥%s"
+    },
+    {
+      "name": "ledger_record_count",
+      "value": "%d 笔"
+    },
+    {
+      "name": "ledger_record_add",
+      "value": "记一笔"
+    },
+    {
+      "name": "ledger_empty_tip",
+      "value": "还没有账本"
+    },
+    {
+      "name": "ledger_empty_sub",
+      "value": "添加一个账本，分开记录不同场景的收支"
+    },
+    {
+      "name": "ledger_record_empty",
+      "value": "该账本还没有记录"
+    },
+    {
+      "name": "ledger_delete_confirm",
+      "value": "删除后账本内的所有记录将一并删除，确定删除该账本吗？"
+    },
+    {
+      "name": "ledger_import_from_bills",
+      "value": "从账单导入"
+    },
+    {
+      "name": "ledger_recognize",
+      "value": "图片识别"
+    },
+    {
+      "name": "ledger_sync_to_bills",
+      "value": "同步记入主账单"
+    },
+    {
+      "name": "ledger_pick_title",
+      "value": "选择账单"
+    },
+    {
+      "name": "ledger_imported_tag",
+      "value": "已导入"
+    },
+    {
+      "name": "ledger_no_bills",
+      "value": "暂无账单可导入"
+    },
+    {
+      "name": "ledger_import_count",
+      "value": "导入(%d)"
+    },
+    {
+      "name": "ledger_import_success",
+      "value": "已导入 %d 笔"
+    },
+    {
+      "name": "settings_ledger_sync",
+      "value": "账本同步主账单"
+    },
+    {
+      "name": "settings_ledger_sync_desc",
+      "value": "账本内记一笔与图片识别入账时默认同步计入主账单"
+    },
+    {
+      "name": "ledger_filter_month",
+      "value": "本月"
+    },
+    {
+      "name": "ledger_filter_3m",
+      "value": "近3月"
+    },
+    {
+      "name": "ledger_filter_year",
+      "value": "今年"
+    },
+    {
+      "name": "ledger_filter_all",
+      "value": "全部"
+    },
+    {
+      "name": "ledger_filter_custom",
+      "value": "自定义"
+    },
+    {
+      "name": "ledger_custom_pick_start",
+      "value": "请选择开始日期"
+    },
+    {
+      "name": "ledger_custom_pick_end",
+      "value": "已选开始 %s，点击选择结束日期"
+    },
+    {
+      "name": "ledger_custom_range",
+      "value": "%s ~ %s，点击重选"
     }
   ]
 }
