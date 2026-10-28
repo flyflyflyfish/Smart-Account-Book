@@ -59,11 +59,13 @@ export default class EntryAbility extends UIAbility {
       await DBUtil.createTable(MERCHANT_CATEGORY_CREATE_TABLE_SQL);
       // 认证服务初始化；若已登录则继续初始化云开发服务以启用云端双写
       AuthService.init(this.context);
-      const uid = await AuthService.getCurrentUid();
-      // 登录态写入 AppStorage，设置页账号栏据此切换“账号登录/头像+ID”显示
-      AppStorage.setOrCreate('accountUid', uid ?? '');
-      if (uid) {
-        CloudInit.init(uid);
+      const profile = await AuthService.getCurrentProfile();
+      // 登录态写入 AppStorage，设置页账号栏据此切换“账号登录/头像+昵称+ID”显示
+      AppStorage.setOrCreate('accountUid', profile ? profile.uid : '');
+      AppStorage.setOrCreate('accountName', profile ? profile.displayName : '');
+      AppStorage.setOrCreate('accountAvatar', profile ? profile.photoUrl : '');
+      if (profile) {
+        CloudInit.init(profile.uid);
         // 已登录：启动后做一次端云全量同步（恢复云端账单/分类/设置，上传本地新增），不阻塞启动
         CloudSyncService.syncAll(true);
       }
