@@ -4,6 +4,7 @@ import { Want } from '@kit.AbilityKit';
 import { Logger } from '../utils/Logger';
 import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_TINY } from '../common/dimens';
 import { ThemeKit, ThemePalette } from '../common/theme/Theme';
+import AuthService from '../service/AuthService';
 
 /**
  * 设置菜单：作为底部 Tab 展示分组列表，点击进入各子页面
@@ -12,8 +13,27 @@ import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 export default struct SettingsView {
 
   @StorageProp('themeSeq') themeSeq: number = 0;
-  // 登录态：uid 非空表示已登录华为账号，账号栏切换为头像+ID 样式
+  // 登录态：uid 非空表示已登录华为账号，账号栏切换为头像+昵称+ID 样式
   @StorageProp('accountUid') accountUid: string = '';
+  @StorageProp('accountName') accountName: string = '';
+  @StorageProp('accountAvatar') accountAvatar: string = '';
+
+  async aboutToAppear(): Promise<void> {
+    // 已登录但缺头像昵称：静默补全（此前授权过 profile 时直接返回，不弹窗）
+    if (this.accountUid && !(this.accountName && this.accountAvatar)) {
+      const profile = await AuthService.requestHuaweiProfile(getContext(this), false);
+      if (profile) {
+        if (profile.nickName) {
+          this.accountName = profile.nickName;
+          AppStorage.setOrCreate('accountName', profile.nickName);
+        }
+        if (profile.avatarUri) {
+          this.accountAvatar = profile.avatarUri;
+          AppStorage.setOrCreate('accountAvatar', profile.avatarUri);
+        }
+      }
+    }
+  }
 
   tk(): ThemePalette {
     return ThemeKit.palette(this.themeSeq);
@@ -72,31 +92,44 @@ export default struct SettingsView {
     })
   }
 
-  // 已登录：账号栏显示头像与用户ID，点击进入账号页查看/退出
+  // 已登录：账号栏显示头像/昵称/用户ID，点击进入账号页查看/退出
   @Builder AccountProfileRow() {
     Row({ space: SPACE_MEDIUM }) {
-      Column() {
-        Image($r('app.media.user'))
-          .width(22)
-          .height(22)
-          .fillColor(this.tk().primary)
+      if (this.accountAvatar) {
+        Image(this.accountAvatar)
+          .width(44)
+          .height(44)
+          .borderRadius(22)
+          .objectFit(ImageFit.Cover)
+          .alt($r('app.media.user'))
+      } else {
+        Column() {
+          Image($r('app.media.user'))
+            .width(22)
+            .height(22)
+            .fillColor(this.tk().primary)
+        }
+        .width(44)
+        .height(44)
+        .borderRadius(22)
+        .backgroundColor(this.tk().primarySoft)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
       }
-      .width(44)
-      .height(44)
-      .borderRadius(22)
-      .backgroundColor(this.tk().primarySoft)
-      .justifyContent(FlexAlign.Center)
-      .alignItems(HorizontalAlign.Center)
       Column({ space: 2 }) {
-        Text(this.accountUid)
+        Text(this.accountName ? this.accountName : this.accountUid)
           .fontSize(this.fs(16))
           .fontWeight(FontWeight.Medium)
           .fontColor(this.tk().textPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text($r('app.string.account_signed_in_desc'))
+        Text(this.accountName ?
+          $r('app.string.uid_value_label', this.accountUid) :
+          $r('app.string.account_signed_in_desc'))
           .fontSize(this.fs(12))
           .fontColor(this.tk().textSecondary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)

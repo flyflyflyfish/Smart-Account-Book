@@ -749,6 +749,10 @@
       "value": "用户ID"
     },
     {
+      "name": "uid_value_label",
+      "value": "用户ID: %s"
+    },
+    {
       "name": "sign_in_success",
       "value": "登录成功，账单将自动备份到云端"
     },
@@ -1451,6 +1455,10 @@
     {
       "name": "budget_month_spent_label",
       "value": "本月已支出"
+    },
+    {
+      "name": "budget_month_spent_period_label",
+      "value": "本月已支出（%s）"
     },
     {
       "name": "budget_usage_label",
