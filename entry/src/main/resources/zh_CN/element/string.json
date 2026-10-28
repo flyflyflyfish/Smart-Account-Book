@@ -701,6 +701,110 @@
       "value": "端侧识别失败，请重试"
     },
     {
+      "name": "import_bill",
+      "value": "导入账单"
+    },
+    {
+      "name": "import_bill_desc",
+      "value": "导入微信/支付宝账单文件"
+    },
+    {
+      "name": "import_bill_title",
+      "value": "导入账单"
+    },
+    {
+      "name": "import_supported_title",
+      "value": "选择账单文件"
+    },
+    {
+      "name": "import_supported_desc",
+      "value": "支持导入微信支付与支付宝导出的账单文件"
+    },
+    {
+      "name": "import_format_alipay",
+      "value": "支付宝 CSV"
+    },
+    {
+      "name": "import_format_wechat",
+      "value": "微信 CSV / XLSX"
+    },
+    {
+      "name": "import_privacy_tip",
+      "value": "账单文件仅在本机解析，不会上传云端"
+    },
+    {
+      "name": "import_pick_file",
+      "value": "选择账单文件"
+    },
+    {
+      "name": "import_unsupported_file",
+      "value": "仅支持 .csv 与 .xlsx 账单文件"
+    },
+    {
+      "name": "import_pick_failed",
+      "value": "选择文件失败，请重试"
+    },
+    {
+      "name": "import_parse_failed",
+      "value": "解析账单文件失败，请确认文件格式"
+    },
+    {
+      "name": "import_no_bills",
+      "value": "未解析到可导入的账单"
+    },
+    {
+      "name": "import_parsing",
+      "value": "正在解析账单…"
+    },
+    {
+      "name": "import_total_count",
+      "value": "总笔数"
+    },
+    {
+      "name": "import_dup_count",
+      "value": "疑似重复 %d 笔"
+    },
+    {
+      "name": "import_skipped_count",
+      "value": "已跳过 %d 笔"
+    },
+    {
+      "name": "import_select_all",
+      "value": "全选"
+    },
+    {
+      "name": "import_selected_count",
+      "value": "已选 %d 笔"
+    },
+    {
+      "name": "import_repick",
+      "value": "重新选择"
+    },
+    {
+      "name": "import_direction_income",
+      "value": "收入"
+    },
+    {
+      "name": "import_direction_expense",
+      "value": "支出"
+    },
+    {
+      "name": "import_do",
+      "value": "导入 %d 笔"
+    },
+    {
+      "name": "import_none_selected",
+      "value": "请先勾选要导入的账单"
+    },
+    {
+      "name": "import_success",
+      "value": "成功导入 %d 笔账单"
+    },
+    {
+      "name": "import_failed",
+      "value": "导入失败，请重试"
+    },
+    {
       "name": "export_bill",
       "value": "导出账单"
     },
