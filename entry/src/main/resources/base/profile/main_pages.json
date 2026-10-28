@@ -9,6 +9,7 @@
     "pages/Appearance",
     "pages/PrivacySecurity",
     "pages/ExportBill",
+    "pages/ImportBill",
     "pages/CategoryManage",
     "pages/BudgetSettings",
     "pages/RecurringBillManage",

@@ -705,6 +705,110 @@
       "value": "On-device recognition failed, please retry"
     },
     {
+      "name": "import_bill",
+      "value": "Import bills"
+    },
+    {
+      "name": "import_bill_desc",
+      "value": "Import WeChat/Alipay bill files"
+    },
+    {
+      "name": "import_bill_title",
+      "value": "Import bills"
+    },
+    {
+      "name": "import_supported_title",
+      "value": "Choose a bill file"
+    },
+    {
+      "name": "import_supported_desc",
+      "value": "Supports bill files exported from WeChat Pay and Alipay"
+    },
+    {
+      "name": "import_format_alipay",
+      "value": "Alipay CSV"
+    },
+    {
+      "name": "import_format_wechat",
+      "value": "WeChat CSV / XLSX"
+    },
+    {
+      "name": "import_privacy_tip",
+      "value": "Bill files are parsed on-device only, never uploaded"
+    },
+    {
+      "name": "import_pick_file",
+      "value": "Choose bill file"
+    },
+    {
+      "name": "import_unsupported_file",
+      "value": "Only .csv and .xlsx bill files are supported"
+    },
+    {
+      "name": "import_pick_failed",
+      "value": "Failed to choose file, please retry"
+    },
+    {
+      "name": "import_parse_failed",
+      "value": "Failed to parse the bill file, check the format"
+    },
+    {
+      "name": "import_no_bills",
+      "value": "No importable bills found"
+    },
+    {
+      "name": "import_parsing",
+      "value": "Parsing bills..."
+    },
+    {
+      "name": "import_total_count",
+      "value": "Total"
+    },
+    {
+      "name": "import_dup_count",
+      "value": "%d possible duplicates"
+    },
+    {
+      "name": "import_skipped_count",
+      "value": "%d skipped"
+    },
+    {
+      "name": "import_select_all",
+      "value": "Select all"
+    },
+    {
+      "name": "import_selected_count",
+      "value": "%d selected"
+    },
+    {
+      "name": "import_repick",
+      "value": "Re-choose"
+    },
+    {
+      "name": "import_direction_income",
+      "value": "Income"
+    },
+    {
+      "name": "import_direction_expense",
+      "value": "Expense"
+    },
+    {
+      "name": "import_do",
+      "value": "Import %d bills"
+    },
+    {
+      "name": "import_none_selected",
+      "value": "Select bills to import first"
+    },
+    {
+      "name": "import_success",
+      "value": "Imported %d bills"
+    },
+    {
+      "name": "import_failed",
+      "value": "Import failed, please retry"
+    },
+    {
       "name": "export_bill",
       "value": "Export bills"
     },
