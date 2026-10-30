@@ -54,6 +54,8 @@ struct LedgerBillPicker {
   // 自定义时间段起止（rangeIndex=4 时生效）
   @State customStart: number = 0;
   @State customEnd: number = 0;
+  // 搜索关键字：对已加载的账单做备注 / 商家 / 分类名模糊过滤
+  @State keyword: string = '';
 
   private ledgerId: string = '';
   private repository: LedgerRepository = new LedgerRepository();
@@ -229,6 +231,48 @@ struct LedgerBillPicker {
     return this.importedIds.indexOf(bill.id) >= 0;
   }
 
+  // 关键字匹配：备注 → 商家 → 分类名
+  matchKeyword(bill: AccountPO, keyword: string): boolean {
+    if (bill.description.toLowerCase().includes(keyword)) {
+      return true;
+    }
+    if (bill.merchant.toLowerCase().includes(keyword)) {
+      return true;
+    }
+    return CategoryStore.nameText(bill.type, bill.accountType).toLowerCase().includes(keyword);
+  }
+
+  // 关键字过滤后的展示列表：关键字为空时原样返回
+  displayBills(): AccountPO[] {
+    const keyword = this.keyword.trim().toLowerCase();
+    if (keyword.length === 0) {
+      return this.billList;
+    }
+    return this.billList.filter((bill: AccountPO): boolean => this.matchKeyword(bill, keyword));
+  }
+
+  // 展示列表中的支出合计
+  displayExpenses(): number {
+    let sum = 0;
+    this.displayBills().forEach((bill: AccountPO) => {
+      if (bill.accountType === AccountType.EXPENSES) {
+        sum += bill.amount;
+      }
+    });
+    return sum;
+  }
+
+  // 展示列表中的收入合计
+  displayIncome(): number {
+    let sum = 0;
+    this.displayBills().forEach((bill: AccountPO) => {
+      if (bill.accountType === AccountType.INCOME) {
+        sum += bill.amount;
+      }
+    });
+    return sum;
+  }
+
   // 用 checked 入参做幂等更新，避免“全选”时 onChange 反复取反
   toggleSelect(id: string, checked: boolean): void {
     const idx = this.selectedIds.indexOf(id);
@@ -245,10 +289,10 @@ struct LedgerBillPicker {
     }
   }
 
-  // 可选项 = 未导入过的账单
+  // 可选项 = 未导入过且匹配当前搜索的账单
   selectableCount(): number {
     let count = 0;
-    this.billList.forEach((bill: AccountPO) => {
+    this.displayBills().forEach((bill: AccountPO) => {
       if (!this.isImported(bill)) {
         count++;
       }
@@ -258,7 +302,7 @@ struct LedgerBillPicker {
 
   toggleSelectAll(): void {
     const selectable: string[] = [];
-    this.billList.forEach((bill: AccountPO) => {
+    this.displayBills().forEach((bill: AccountPO) => {
       if (!this.isImported(bill)) {
         selectable.push(bill.id);
       }
@@ -289,7 +333,7 @@ struct LedgerBillPicker {
     }
     try {
       let imported = 0;
-      for (const bill of this.billList) {
+      for (const bill of this.displayBills()) {
         if (this.selectedIds.indexOf(bill.id) < 0) {
           continue;
         }
@@ -428,9 +472,32 @@ struct LedgerBillPicker {
     .align(Alignment.Start)
   }
 
-  // 筛选卡：时间段 + 类型 + 分类，切换即重查；加载完成后常显，避免筛出空列表后无法换条件
+  // 筛选卡：搜索框 + 时间段 + 类型 + 分类；常显，切换筛选或加载中不隐藏（避免筛选栏闪动消失）
   @Builder FilterCard() {
     Column({ space: SPACE_SMALL }) {
+      // 搜索框：对已加载账单按备注 / 商家 / 分类名过滤
+      Row({ space: SPACE_SMALL }) {
+        Image($r('app.media.search'))
+          .width(16)
+          .height(16)
+          .objectFit(ImageFit.Contain)
+          .fillColor(this.tk().textSecondary)
+        TextInput({ placeholder: $r('app.string.search_placeholder'), text: this.keyword })
+          .placeholderColor(this.tk().textSecondary)
+          .placeholderFont({ size: this.fs(13) })
+          .fontSize(this.fs(13))
+          .layoutWeight(1)
+          .padding({ top: 0, bottom: 0 })
+          .backgroundColor(this.tk().surfaceVariant)
+          .caretColor(this.tk().primary)
+          .onChange((val: string) => {
+            this.keyword = val;
+            // 关键字变化后勾选可能指向不可见账单，清空避免“导入数与可见数不符”
+            this.selectedIds = [];
+          })
+      }
+      .width('100%')
+      .height(40)
       Row({ space: SPACE_SMALL }) {
         this.RangeChip(0)
         this.RangeChip(1)
@@ -485,6 +552,15 @@ struct LedgerBillPicker {
       })
   }
 
+  // 结果汇总行：共几笔、支出与收入合计（与全局搜索页一致）
+  @Builder ResultSummary() {
+    Text($r('app.string.search_result_summary', this.displayBills().length,
+      this.displayExpenses().toFixed(2), this.displayIncome().toFixed(2)))
+      .fontSize(this.fs(12))
+      .fontColor(this.tk().textSecondary)
+      .margin({ left: PAGE_PADDING, right: PAGE_PADDING, top: SPACE_MEDIUM })
+  }
+
   @Builder EmptyView() {
     Column({ space: SPACE_MEDIUM }) {
       Image($r('app.media.empty'))
@@ -502,37 +578,32 @@ struct LedgerBillPicker {
   build() {
     Column() {
       AccountNavigator({ title: $r('app.string.ledger_pick_title') })
-      if (!this.loading) {
-        this.FilterCard()
-      }
-      if (this.billList.length > 0) {
-        Scroll() {
-          List() {
-            ForEach(this.billList, (bill: AccountPO) => {
-              ListItem() {
-                this.BillItem(bill)
+      this.FilterCard()
+      if (this.displayBills().length > 0) {
+        this.ResultSummary()
+        // 结果列表独立滚动（不能嵌套在 Scroll 里，否则 List 全量渲染导致加载慢）
+        List() {
+          ForEach(this.displayBills(), (bill: AccountPO) => {
+            ListItem() {
+              this.BillItem(bill)
+            }
+            .onClick(() => {
+              if (!this.isImported(bill)) {
+                this.toggleSelect(bill.id, !(this.selectedIds.indexOf(bill.id) >= 0));
               }
-              .onClick(() => {
-                if (!this.isImported(bill)) {
-                  this.toggleSelect(bill.id, !(this.selectedIds.indexOf(bill.id) >= 0));
-                }
-              })
-            }, (bill: AccountPO): string => 'pick_bill_' + bill.id + '_' +
-              (this.selectedIds.indexOf(bill.id) >= 0 ? 1 : 0) +
-              (this.isImported(bill) ? 1 : 0))
-          }
-          .width('100%')
-          .divider({ strokeWidth: 1, color: this.tk().surfaceVariant })
-          .backgroundColor(this.tk().surface)
-          .borderRadius(RADIUS_CARD)
-          .padding(SPACE_LARGE)
-          .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
+            })
+          }, (bill: AccountPO): string => 'pick_bill_' + bill.id + '_' +
+            (this.selectedIds.indexOf(bill.id) >= 0 ? 1 : 0) +
+            (this.isImported(bill) ? 1 : 0))
         }
-        .scrollBar(BarState.Off)
-        .align(Alignment.Top)
-        .layoutWeight(1)
         .width('100%')
-        .padding({ left: PAGE_PADDING, right: PAGE_PADDING, top: SPACE_LARGE })
+        .layoutWeight(1)
+        .divider({ strokeWidth: 1, color: this.tk().surfaceVariant })
+        .backgroundColor(this.tk().surface)
+        .borderRadius(RADIUS_CARD)
+        .padding(SPACE_LARGE)
+        .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
+        .margin({ left: PAGE_PADDING, right: PAGE_PADDING, top: SPACE_MEDIUM })
       } else if (this.loading) {
         Column({ space: SPACE_MEDIUM }) {
           LoadingProgress()
@@ -541,6 +612,17 @@ struct LedgerBillPicker {
             .color(this.tk().primary)
           Text($r('app.string.loading_tip'))
             .fontSize(this.fs(13))
+            .fontColor(this.tk().textSecondary)
+        }
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+        .width('100%')
+      } else if (this.billList.length > 0) {
+        // 有关键字但无匹配账单
+        Column({ space: SPACE_MEDIUM }) {
+          Text($r('app.string.search_no_result'))
+            .fontSize(this.fs(13))
+            .lineHeight(this.fs(18))
             .fontColor(this.tk().textSecondary)
         }
         .layoutWeight(1)

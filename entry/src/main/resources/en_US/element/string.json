@@ -1446,7 +1446,11 @@
     },
     {
       "name": "ledger_card_sub",
-      "value": "%d records · Income ¥%s"
+      "value": "%d records · Expenses -¥%s · Income +¥%s"
+    },
+    {
+      "name": "ledger_balance_label",
+      "value": "Balance"
     },
     {
       "name": "ledger_record_count",
@@ -1543,6 +1547,22 @@
     {
       "name": "ledger_custom_range",
       "value": "%s ~ %s, tap to re-pick"
+    },
+    {
+      "name": "search_bills_title",
+      "value": "Search Bills"
+    },
+    {
+      "name": "search_placeholder",
+      "value": "Search note, merchant or category"
+    },
+    {
+      "name": "search_no_result",
+      "value": "No matching bills found"
+    },
+    {
+      "name": "search_result_summary",
+      "value": "Total %d records · Expenses -¥%s · Income +¥%s"
     }
   ]
 }

@@ -16,6 +16,7 @@
     "pages/RecurringBillEdit",
     "pages/LedgerDetail",
     "pages/LedgerRecordEdit",
-    "pages/LedgerBillPicker"
+    "pages/LedgerBillPicker",
+    "pages/BillSearch"
   ]
 }
