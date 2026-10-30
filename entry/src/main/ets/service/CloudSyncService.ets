@@ -256,7 +256,7 @@ class CloudSyncService {
   private isThemeKey(key: string): boolean {
     return key === CONSTANTS.PREF_THEME_ID || key === CONSTANTS.PREF_COLOR_MODE ||
       key === CONSTANTS.PREF_FONT_SCALE || key === CONSTANTS.PREF_GLOW_LEVEL ||
-      key === CONSTANTS.PREF_HOME_STAT_SCOPE;
+      key === CONSTANTS.PREF_HOME_STAT_SCOPE || key === CONSTANTS.PREF_CUSTOM_THEME_COLOR;
   }
 
   private defaultValueOf(def: SyncableSettingDef): preferences.ValueType {

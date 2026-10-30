@@ -14,6 +14,7 @@ import {
   ThemeKit,
   ThemePalette,
   THEME_ID_CLAUDE,
+  THEME_ID_CUSTOM,
   THEME_ID_LIST,
   THEME_ID_NOTION,
   THEME_ID_PINE,
@@ -32,6 +33,9 @@ import {
   GLOW_LEVEL_STRONG,
   HOME_SCOPE_DAY,
   HOME_SCOPE_MONTH,
+  buildCustomPalette,
+  colorFromHsl,
+  colorToHsl,
   glowShadowColor
 } from '../common/theme/Theme';
 
@@ -98,6 +102,18 @@ const APPEARANCE_TAB_LABELS: ResourceStr[] = [
   $r('app.string.appearance_tab_glow')
 ];
 
+// 自定义主题编辑器：预设种子色（#RRGGBB，小写与 colorFromHsl 输出一致便于选中比对）
+const CUSTOM_SWATCHES: string[] = [
+  '#2E9E73', '#3AA0A8', '#3B82D6', '#4A5B7A', '#8A63C2',
+  '#D6558A', '#D95757', '#C46A35', '#BF8A42', '#5A8A3C'
+];
+
+// 编辑器滑杆取值范围：饱和度/明度收窄到可保证对比度的区间
+const EDITOR_SAT_MIN: number = 0.15;
+const EDITOR_SAT_MAX: number = 0.9;
+const EDITOR_LIGHT_MIN: number = 0.25;
+const EDITOR_LIGHT_MAX: number = 0.6;
+
 @Entry
 @Component
 struct Appearance {
@@ -119,6 +135,12 @@ struct Appearance {
   @State secondTab: string = SECOND_TAB_STYLE_AI;
   // 账本同步主账单默认开关（账本内记一笔/图片识别入账时是否同步计入主账单）
   @State ledgerSyncDefault: boolean = true;
+  // 自定义主题：种子色（空串代表未创建）与编辑器开合/HSV 状态
+  @State customColor: string = '';
+  @State showCustomEditor: boolean = false;
+  @State editorH: number = 150;
+  @State editorS: number = 0.55;
+  @State editorL: number = 0.4;
 
   aboutToAppear(): void {
     this.colorMode = ThemeKit.currentMode();
@@ -127,6 +149,7 @@ struct Appearance {
     this.glowLevel = ThemeKit.currentGlowLevel();
     this.homeScope = ThemeKit.currentHomeScope();
     this.secondTab = SecondTabStore.current();
+    this.customColor = ThemeKit.currentCustomColor();
     this.loadLedgerSyncDefault();
   }
 
@@ -196,36 +219,76 @@ struct Appearance {
     ThemeKit.setHomeScope(scope);
   }
 
-  showCustomThemeToast(): void {
-    this.getUIContext().getPromptAction().showToast({
-      message: $r('app.string.appearance_theme_custom_toast'),
-      duration: 2000
-    });
+  // ===== 自定义主题编辑器 =====
+
+  // 编辑器当前种子色（由 HSV 状态实时计算）
+  editorColor(): string {
+    return colorFromHsl(this.editorH, this.editorS, this.editorL);
+  }
+
+  // 编辑器实时预览调色板（浅色套）
+  editorPreview(): ThemePalette {
+    return buildCustomPalette(this.editorColor(), false);
+  }
+
+  // 打开编辑器：已创建过则从现有种子色初始化，否则从默认绿开始
+  openCustomEditor(): void {
+    const base = this.customColor.length > 0 ? this.customColor : '#2E9E73';
+    this.setEditorColor(base);
+    this.showCustomEditor = true;
+  }
+
+  // 按种子色设置编辑器状态（饱和度/明度收窄到可保证对比度的区间）
+  setEditorColor(color: string): void {
+    const hsl = colorToHsl(color);
+    this.editorH = Math.round(hsl[0]);
+    this.editorS = Math.min(EDITOR_SAT_MAX, Math.max(EDITOR_SAT_MIN, hsl[1]));
+    this.editorL = Math.min(EDITOR_LIGHT_MAX, Math.max(EDITOR_LIGHT_MIN, hsl[2]));
+  }
+
+  // 保存并应用：更新种子色后切换到自定义主题
+  saveCustomTheme(): void {
+    const color = this.editorColor();
+    ThemeKit.setCustomTheme(color);
+    this.customColor = color;
+    this.themeId = THEME_ID_CUSTOM;
+    ThemeKit.setThemeId(THEME_ID_CUSTOM);
+    this.showCustomEditor = false;
   }
 
   build() {
-    Column() {
-      this.HeaderBar()
-      this.TabBar()
-      Scroll() {
-        Column({ space: SPACE_LARGE }) {
-          if (this.currentTab === 0) {
-            this.ThemeTab()
-          } else if (this.currentTab === 1) {
-            this.FontTab()
-          } else if (this.currentTab === 2) {
-            this.HomeTab()
-          } else {
-            this.GlowTab()
+    Stack() {
+      Column() {
+        this.HeaderBar()
+        this.TabBar()
+        Scroll() {
+          Column({ space: SPACE_LARGE }) {
+            if (this.currentTab === 0) {
+              this.ThemeTab()
+            } else if (this.currentTab === 1) {
+              this.FontTab()
+            } else if (this.currentTab === 2) {
+              this.HomeTab()
+            } else {
+              this.GlowTab()
+            }
           }
+          .width(BreakpointConstants.max_content_size.getValue(this.currentBreakpoint))
+          .padding({ left: PAGE_PADDING, right: PAGE_PADDING, top: SPACE_LARGE, bottom: SPACE_LARGE })
         }
-        .width(BreakpointConstants.max_content_size.getValue(this.currentBreakpoint))
-        .padding({ left: PAGE_PADDING, right: PAGE_PADDING, top: SPACE_LARGE, bottom: SPACE_LARGE })
+        .scrollBar(BarState.Off)
+        .align(Alignment.Top)
+        .layoutWeight(1)
+        .width('100%')
       }
-      .scrollBar(BarState.Off)
-      .align(Alignment.Top)
-      .layoutWeight(1)
       .width('100%')
+      .height('100%')
+      .backgroundColor(this.tk().background)
+
+      // 自定义主题编辑器浮层
+      if (this.showCustomEditor) {
+        this.CustomThemeEditorOverlay()
+      }
     }
     .width('100%')
     .height('100%')
@@ -315,6 +378,14 @@ struct Appearance {
           ForEach(APPEARANCE_THEME_OPTIONS, (option: AppearanceThemeOption) => {
             this.ThemeCard(option)
           }, (option: AppearanceThemeOption): string => 'appearance_theme_' + option.id)
+          // 已创建的自定义主题：以第 7 张卡片出现在网格中
+          if (this.customColor.length > 0) {
+            this.ThemeCard({
+              id: THEME_ID_CUSTOM,
+              name: $r('app.string.appearance_theme_custom'),
+              desc: this.customColor.toUpperCase()
+            })
+          }
         }
         .width('100%')
         this.CustomThemeEntry()
@@ -411,10 +482,19 @@ struct Appearance {
   @Builder CustomThemeEntry() {
     Row({ space: SPACE_MEDIUM }) {
       Column() {
-        Text('+')
-          .fontSize(this.fs(18))
-          .fontWeight(FontWeight.Medium)
-          .fontColor(this.tk().primary)
+        if (this.customColor.length > 0) {
+          // 已创建：显示当前种子色圆点
+          Column()
+            .width(16)
+            .height(16)
+            .borderRadius(8)
+            .backgroundColor(this.customColor)
+        } else {
+          Text('+')
+            .fontSize(this.fs(18))
+            .fontWeight(FontWeight.Medium)
+            .fontColor(this.tk().primary)
+        }
       }
       .width(36)
       .height(36)
@@ -427,20 +507,227 @@ struct Appearance {
           .fontSize(this.fs(13))
           .fontWeight(FontWeight.Medium)
           .fontColor(this.tk().textPrimary)
-        Text($r('app.string.appearance_theme_custom_desc'))
+        Text(this.customColor.length > 0
+          ? $r('app.string.appearance_theme_custom_edit_desc', this.customColor.toUpperCase())
+          : $r('app.string.appearance_theme_custom_desc'))
           .fontSize(this.fs(11))
           .fontColor(this.tk().textSecondary)
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
+      if (this.themeId === THEME_ID_CUSTOM) {
+        Text('✓')
+          .fontSize(this.fs(12))
+          .fontWeight(FontWeight.Bold)
+          .fontColor(this.tk().onPrimary)
+          .width(18)
+          .height(18)
+          .textAlign(TextAlign.Center)
+          .backgroundColor(this.tk().primary)
+          .borderRadius(9)
+      }
     }
     .width('100%')
     .padding({ top: SPACE_MEDIUM, bottom: SPACE_MEDIUM, left: SPACE_MEDIUM, right: SPACE_MEDIUM })
     .borderRadius(18)
-    .border({ width: 1.5, color: this.tk().outline, style: BorderStyle.Dashed })
+    .border({ width: 1.5, color: this.themeId === THEME_ID_CUSTOM ? this.tk().primary : this.tk().outline, style: BorderStyle.Dashed })
     .onClick(() => {
-      this.showCustomThemeToast();
+      this.openCustomEditor();
     })
+  }
+
+  // ===== 自定义主题编辑器浮层 =====
+
+  // 预设种子色圆点：当前色与预设一致时高亮描边
+  @Builder EditorSwatch(color: string) {
+    Column() {
+      Column()
+        .width(30)
+        .height(30)
+        .borderRadius(15)
+        .backgroundColor(color)
+        .border({
+          width: 3,
+          color: this.editorColor() === color ? this.tk().primary : Color.Transparent
+        })
+    }
+    .width('18%')
+    .padding({ top: SPACE_TINY, bottom: SPACE_TINY })
+    .justifyContent(FlexAlign.Center)
+    .onClick(() => {
+      this.setEditorColor(color);
+    })
+  }
+
+  // 实时迷你预览：与主题卡片预览同构，颜色随编辑器状态即时变化
+  @Builder EditorMiniPreview() {
+    Column({ space: 6 }) {
+      Row({ space: SPACE_SMALL }) {
+        Column()
+          .width(10)
+          .height(10)
+          .borderRadius(5)
+          .backgroundColor(this.editorPreview().primary)
+        Column()
+          .height(6)
+          .width(52)
+          .borderRadius(3)
+          .backgroundColor(this.editorPreview().primaryContainer)
+      }
+      .width('100%')
+      Column()
+        .height(5)
+        .width('100%')
+        .borderRadius(2.5)
+        .backgroundColor(this.editorPreview().surfaceVariant)
+      Column()
+        .height(5)
+        .width('60%')
+        .borderRadius(2.5)
+        .backgroundColor(this.editorPreview().surfaceVariant)
+      Row() {
+        Column()
+          .width(56)
+          .height(10)
+          .borderRadius(5)
+          .backgroundColor(this.editorPreview().primary)
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.End)
+    }
+    .width('100%')
+    .padding(SPACE_MEDIUM)
+    .backgroundColor(this.editorPreview().background)
+    .borderRadius(14)
+    .border({ width: 1, color: this.editorPreview().outline })
+  }
+
+  // 编辑器浮层：遮罩点击关闭，卡片内容超高时可滚动
+  @Builder CustomThemeEditorOverlay() {
+    Stack() {
+      Column()
+        .width('100%')
+        .height('100%')
+        .backgroundColor(this.tk().scrim)
+        .onClick(() => {
+          this.showCustomEditor = false;
+        })
+      Scroll() {
+        Column({ space: SPACE_MEDIUM }) {
+          Text($r('app.string.appearance_custom_editor_title'))
+            .fontSize(this.fs(16))
+            .fontWeight(FontWeight.Bold)
+            .fontColor(this.tk().textPrimary)
+
+          this.EditorMiniPreview()
+
+          Text($r('app.string.appearance_custom_preset'))
+            .fontSize(this.fs(12))
+            .fontColor(this.tk().textSecondary)
+          Flex({ wrap: FlexWrap.Wrap }) {
+            ForEach(CUSTOM_SWATCHES, (color: string) => {
+              this.EditorSwatch(color)
+            }, (color: string): string => 'editor_swatch_' + color)
+          }
+          .width('100%')
+
+          // 色相滑杆：拖动实时联动预览
+          Row({ space: SPACE_MEDIUM }) {
+            Text($r('app.string.appearance_custom_hue'))
+              .fontSize(this.fs(12))
+              .fontColor(this.tk().textSecondary)
+              .width(48)
+            Slider({ value: this.editorH, min: 0, max: 360, step: 1, style: SliderStyle.InSet })
+              .selectedColor(this.editorColor())
+              .trackColor(this.tk().surfaceVariant)
+              .blockColor(this.editorColor())
+              .layoutWeight(1)
+              .onChange((value: number) => {
+                this.editorH = value;
+              })
+          }
+          .width('100%')
+          .alignItems(VerticalAlign.Center)
+
+          // 饱和度滑杆
+          Row({ space: SPACE_MEDIUM }) {
+            Text($r('app.string.appearance_custom_saturation'))
+              .fontSize(this.fs(12))
+              .fontColor(this.tk().textSecondary)
+              .width(48)
+            Slider({ value: this.editorS, min: EDITOR_SAT_MIN, max: EDITOR_SAT_MAX, step: 0.01, style: SliderStyle.InSet })
+              .selectedColor(this.editorColor())
+              .trackColor(this.tk().surfaceVariant)
+              .blockColor(this.editorColor())
+              .layoutWeight(1)
+              .onChange((value: number) => {
+                this.editorS = value;
+              })
+          }
+          .width('100%')
+          .alignItems(VerticalAlign.Center)
+
+          // 明度滑杆
+          Row({ space: SPACE_MEDIUM }) {
+            Text($r('app.string.appearance_custom_lightness'))
+              .fontSize(this.fs(12))
+              .fontColor(this.tk().textSecondary)
+              .width(48)
+            Slider({ value: this.editorL, min: EDITOR_LIGHT_MIN, max: EDITOR_LIGHT_MAX, step: 0.01, style: SliderStyle.InSet })
+              .selectedColor(this.editorColor())
+              .trackColor(this.tk().surfaceVariant)
+              .blockColor(this.editorColor())
+              .layoutWeight(1)
+              .onChange((value: number) => {
+                this.editorL = value;
+              })
+          }
+          .width('100%')
+          .alignItems(VerticalAlign.Center)
+
+          // 操作按钮：取消 / 保存并应用
+          Row({ space: SPACE_MEDIUM }) {
+            Button($r('app.string.cancel'))
+              .layoutWeight(1)
+              .height(40)
+              .fontSize(this.fs(14))
+              .backgroundColor(this.tk().surfaceVariant)
+              .fontColor(this.tk().textPrimary)
+              .type(ButtonType.Normal)
+              .borderRadius(SPACE_SMALL)
+              .onClick(() => {
+                this.showCustomEditor = false;
+              })
+            Button($r('app.string.appearance_custom_apply'))
+              .layoutWeight(1)
+              .height(40)
+              .fontSize(this.fs(14))
+              .backgroundColor(this.editorColor())
+              .fontColor(Color.White)
+              .type(ButtonType.Normal)
+              .borderRadius(SPACE_SMALL)
+              .onClick(() => {
+                this.saveCustomTheme();
+              })
+          }
+          .width('100%')
+          .padding({ top: SPACE_SMALL })
+        }
+        .width('100%')
+        .padding(SPACE_LARGE)
+        .alignItems(HorizontalAlign.Start)
+      }
+      .scrollBar(BarState.Off)
+      .align(Alignment.Top)
+      .constraintSize({ maxHeight: '82%' })
+      .width('86%')
+      .backgroundColor(this.tk().surface)
+      .borderRadius(RADIUS_CARD)
+      .shadow({ radius: 24, color: this.tk().primaryShadow, offsetX: 0, offsetY: 8 })
+    }
+    .width('100%')
+    .height('100%')
+    .alignContent(Alignment.Center)
   }
 
   @Builder FontTab() {
