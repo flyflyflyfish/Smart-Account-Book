@@ -81,6 +81,17 @@ struct LedgerDetail {
     return ThemeKit.fontScaled(base, this.themeSeq);
   }
 
+  // 结余：收入 - 支出
+  balance(): number {
+    return this.income - this.expenses;
+  }
+
+  // 结余文案：正负带符号，样式对齐首页 BalanceBadge
+  balanceText(): string {
+    const balance = this.balance();
+    return (balance >= 0 ? '+' : '-') + '¥ ' + Math.abs(balance).toFixed(2);
+  }
+
   ledgerName(): string {
     return this.ledgerInfo ? this.ledgerInfo.name : '';
   }
@@ -418,17 +429,20 @@ struct LedgerDetail {
       }
       .width('100%')
 
-      Text('¥ ' + this.expenses.toFixed(2))
+      Text($r('app.string.ledger_balance_label'))
+        .fontSize(this.fs(12))
+        .fontColor(this.tk().textSecondary)
+      Text(this.balanceText())
         .fontSize(this.fs(34))
         .fontWeight(FontWeight.Bold)
-        .fontColor(this.tk().textPrimary)
+        .fontColor(this.balance() >= 0 ? this.tk().textPrimary : this.tk().danger)
       Row({ space: SPACE_MEDIUM }) {
         Row({ space: SPACE_TINY }) {
           Text($r('app.string.expenditure'))
             .fontSize(this.fs(12))
             .fontColor(this.tk().textSecondary)
             .opacity(0.7)
-          Text('¥ ' + this.expenses.toFixed(2))
+          Text('-¥ ' + this.expenses.toFixed(2))
             .fontSize(this.fs(13))
             .fontColor(this.tk().textPrimary)
         }.alignItems(VerticalAlign.Center)
@@ -437,9 +451,9 @@ struct LedgerDetail {
             .fontSize(this.fs(12))
             .fontColor(this.tk().textSecondary)
             .opacity(0.7)
-          Text('¥ ' + this.income.toFixed(2))
+          Text('+¥ ' + this.income.toFixed(2))
             .fontSize(this.fs(13))
-            .fontColor(this.tk().textPrimary)
+            .fontColor(this.tk().primary)
         }.alignItems(VerticalAlign.Center)
       }
       .width('100%')
