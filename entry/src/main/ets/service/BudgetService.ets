@@ -7,6 +7,7 @@ import AccountService from './account';
 import StatsService from './stats';
 import CloudSettingSync from './CloudSettingSync';
 import { Logger } from '../utils/Logger';
+import { clampAmount } from '../utils/AmountGuard';
 
 /**
  * 月度消费额度状态
@@ -30,7 +31,8 @@ class BudgetService {
 
   async loadLimit(): Promise<number> {
     const raw = Number(await PreferenceUtil.getPreferenceValue(CONSTANTS.PREF_BUDGET_LIMIT, 0));
-    return Number.isFinite(raw) && raw > 0 ? raw : 0;
+    // 历史版本可能存入超长数字（如 1000000000000000），读取时统一钳制，避免进度条与文案显示错乱
+    return clampAmount(Number.isFinite(raw) ? raw : 0);
   }
 
   /**

@@ -1617,6 +1617,10 @@
       "value": "请输入正确的金额"
     },
     {
+      "name": "amount_too_large",
+      "value": "金额过大，最高支持 ¥9,999,999.99"
+    },
+    {
       "name": "recurring_category_label",
       "value": "分类"
     },

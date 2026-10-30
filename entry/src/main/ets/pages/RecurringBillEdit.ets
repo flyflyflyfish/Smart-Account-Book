@@ -17,6 +17,7 @@ import {
   SPACE_XLARGE
 } from '../common/dimens';
 import { ThemeKit, ThemePalette } from '../common/theme/Theme';
+import { AMOUNT_MAX } from '../utils/AmountGuard';
 
 const AMOUNT_PATTERN: RegExp = /^\d+(\.\d{1,2})?$/;
 // 分类区最多展示的行数：超出部分在 Grid 内部滚动
@@ -146,6 +147,10 @@ struct RecurringBillEdit {
     const text = this.amountText.trim();
     if (!AMOUNT_PATTERN.test(text) || Number(text) <= 0) {
       Toast.error($r('app.string.recurring_amount_invalid'));
+      return;
+    }
+    if (Number(text) > AMOUNT_MAX) {
+      Toast.error($r('app.string.amount_too_large'));
       return;
     }
     if (this.selectedCategoryId < 0) {
@@ -312,6 +317,7 @@ struct RecurringBillEdit {
             this.SectionTitle($r('app.string.recurring_amount_label'))
             TextInput({ text: this.amountText, placeholder: $r('app.string.recurring_amount_placeholder') })
               .type(InputType.NUMBER_DECIMAL)
+              .maxLength(10)
               .fontSize(this.fs(14))
               .fontColor(this.tk().textPrimary)
               .height(44)

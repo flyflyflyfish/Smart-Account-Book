@@ -1037,6 +1037,10 @@
       "value": "Enter a valid amount"
     },
     {
+      "name": "amount_too_large",
+      "value": "Amount too large, max ¥9,999,999.99"
+    },
+    {
       "name": "recurring_category_label",
       "value": "Category"
     },

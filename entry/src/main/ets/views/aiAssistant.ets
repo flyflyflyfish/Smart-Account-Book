@@ -23,6 +23,7 @@ import { Toast } from '../components/ToastDialog';
 import { Logger } from '../utils/Logger';
 import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_TINY } from '../common/dimens';
 import { ThemeKit, ThemePalette } from '../common/theme/Theme';
+import { AMOUNT_MAX, clampAmount } from '../utils/AmountGuard';
 
 const AI_GREETING: string = '你好，我是你的记账助手，可以帮你记一笔，也能分析消费、生成小结。';
 
@@ -314,7 +315,7 @@ export default struct AiAssistant {
     return true;
   }
 
-  // 把解析结果转成草稿并展示
+  // 把解析结果转成草稿并展示：金额钳制到上限内，防止语音/AI 返回的异常大数破坏显示
   showBillDrafts(parsedList: ParsedVoiceBill[]): void {
     const drafts: BillDraft[] = [];
     for (const parsed of parsedList) {
@@ -322,9 +323,13 @@ export default struct AiAssistant {
       if (!category) {
         continue;
       }
+      const amount = clampAmount(parsed.amount);
+      if (amount <= 0) {
+        continue;
+      }
       const draft: BillDraft = {
-        amount: parsed.amount,
-        amountText: parsed.amount.toFixed(2),
+        amount: amount,
+        amountText: amount.toFixed(2),
         accountType: parsed.accountType,
         category: category,
         merchant: parsed.merchant,
@@ -422,6 +427,10 @@ export default struct AiAssistant {
       return;
     }
     const amount = parseFloat(this.editAmountText);
+    if (amount > AMOUNT_MAX) {
+      Toast.error($r('app.string.amount_too_large'));
+      return;
+    }
     const category = this.editCategory;
     if (!(amount > 0) || !category) {
       Toast.error($r('app.string.require_amount_type'));
@@ -726,6 +735,7 @@ export default struct AiAssistant {
           .fontColor(this.tk().textSecondary)
         TextInput({ text: this.editAmountText, placeholder: $r('app.string.amount_placeholder') })
           .type(InputType.NUMBER_DECIMAL)
+          .maxLength(10)
           .fontSize(this.fs(15))
           .fontColor(this.tk().textPrimary)
           .textAlign(TextAlign.End)
