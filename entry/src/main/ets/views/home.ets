@@ -353,13 +353,39 @@ export default struct Home {
         }
       })
       Blank()
-      Text(this.batchMode ? $r('app.string.cancel') : $r('app.string.batch_manage'))
-        .fontSize(this.fs(14))
-        .fontColor(this.tk().primary)
+      Row({ space: SPACE_MEDIUM }) {
+        Text(this.batchMode ? $r('app.string.cancel') : $r('app.string.batch_manage'))
+          .fontSize(this.fs(14))
+          .fontColor(this.tk().primary)
+          .onClick(() => {
+            this.toggleBatchMode();
+          })
+        // 右上角搜索入口：跳转全局账单搜索页（36vp 圆形热区，方便点击）
+        Row() {
+          Image($r('app.media.search'))
+            .width(20)
+            .height(20)
+            .objectFit(ImageFit.Contain)
+            .fillColor(this.tk().textPrimary)
+        }
+        .width(36)
+        .height(36)
+        .borderRadius(18)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .backgroundColor(this.tk().surfaceVariant)
         .onClick(() => {
-          this.toggleBatchMode();
+          this.openSearchPage();
         })
+      }.alignItems(VerticalAlign.Center)
     }.width('100%')
+  }
+
+  // 跳转全局账单搜索页
+  openSearchPage(): void {
+    router.pushUrl({ url: 'pages/BillSearch' }).catch((err: Error): void => {
+      Logger.error('跳转搜索页失败', err.message);
+    });
   }
 
   @Builder BatchOperateBar() {

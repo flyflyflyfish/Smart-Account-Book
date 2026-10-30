@@ -279,20 +279,14 @@ struct LedgerRecordEdit {
     return rows * 55 + (rows - 1) * 16;
   }
 
-  // 切换支出/收入页签：已选分类不在新收支侧时清空
+  // 切换支出/收入页签：已选分类 id 在两侧含义不同（如 0 在支出侧是餐食、收入侧是工资），一律清空
   switchTab(index: number): void {
     if (this.currentIndex === index) {
       return;
     }
     this.currentIndex = index;
     this.showKeyboard = false;
-    if (this.selectedCategoryId !== LEDGER_RECORD_NO_CATEGORY) {
-      const exists = this.categoryList().some((item: AccountTypeModel): boolean =>
-        item.id === this.selectedCategoryId);
-      if (!exists) {
-        this.selectedCategoryId = LEDGER_RECORD_NO_CATEGORY;
-      }
-    }
+    this.selectedCategoryId = LEDGER_RECORD_NO_CATEGORY;
   }
 
   resetForm(): void {
@@ -336,7 +330,7 @@ struct LedgerRecordEdit {
             this.showKeyboard = false;
           })
         }.width('100%')
-      }, (item: AccountTypeModel) => item.id.toString())
+      }, (item: AccountTypeModel) => this.currentIndex + '_' + item.id.toString())
     }
     .columnsTemplate('1fr 1fr 1fr 1fr')
     .rowsGap(16)

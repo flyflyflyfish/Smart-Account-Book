@@ -1842,7 +1842,11 @@
     },
     {
       "name": "ledger_card_sub",
-      "value": "%d笔 · 收入 ¥%s"
+      "value": "%d笔 · 支出 -¥%s · 收入 +¥%s"
+    },
+    {
+      "name": "ledger_balance_label",
+      "value": "结余"
     },
     {
       "name": "ledger_record_count",
@@ -1939,6 +1943,22 @@
     {
       "name": "ledger_custom_range",
       "value": "%s ~ %s，点击重选"
+    },
+    {
+      "name": "search_bills_title",
+      "value": "搜索账单"
+    },
+    {
+      "name": "search_placeholder",
+      "value": "搜索备注、商家或分类"
+    },
+    {
+      "name": "search_no_result",
+      "value": "没有找到相关账单"
+    },
+    {
+      "name": "search_result_summary",
+      "value": "共 %d 笔 · 支出 -¥%s · 收入 +¥%s"
     }
   ]
 }

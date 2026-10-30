@@ -67,6 +67,17 @@ export default struct LedgerView {
     return ThemeKit.fontScaled(base, this.themeSeq);
   }
 
+  // 账本结余：收入 - 支出
+  overviewBalance(overview: LedgerOverview): number {
+    return overview.income - overview.expenses;
+  }
+
+  // 结余文案：正负带符号，样式对齐首页 BalanceBadge
+  overviewBalanceText(overview: LedgerOverview): string {
+    const balance = this.overviewBalance(overview);
+    return (balance >= 0 ? '+' : '-') + '¥ ' + Math.abs(balance).toFixed(2);
+  }
+
   async queryOverviews(): Promise<void> {
     try {
       await DBUtil.ready;
@@ -214,11 +225,12 @@ export default struct LedgerView {
       }
       .width('100%')
 
-      Text('¥ ' + overview.expenses.toFixed(2))
+      Text(this.overviewBalanceText(overview))
         .fontSize(this.fs(22))
         .fontWeight(FontWeight.Bold)
-        .fontColor(this.tk().textPrimary)
-      Text($r('app.string.ledger_card_sub', overview.recordCount, overview.income.toFixed(2)))
+        .fontColor(this.overviewBalance(overview) >= 0 ? this.tk().textPrimary : this.tk().danger)
+      Text($r('app.string.ledger_card_sub', overview.recordCount,
+        overview.expenses.toFixed(2), overview.income.toFixed(2)))
         .fontSize(this.fs(11))
         .fontColor(this.tk().textSecondary)
     }
