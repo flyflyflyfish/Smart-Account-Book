@@ -38,6 +38,11 @@ export const FONT_SCALE_OPTIONS: number[] = [
   FONT_SCALE_SMALL, FONT_SCALE_DEFAULT, FONT_SCALE_LARGE, FONT_SCALE_XLARGE
 ];
 
+// 字号缩放合法性校验：非有限数、0/负数或超出合理倍率时回退默认，防止云同步脏值导致全部文字不可见
+export function sanitizeFontScale(value: number): number {
+  return Number.isFinite(value) && value > 0.5 && value <= 2 ? value : FONT_SCALE_DEFAULT;
+}
+
 // 光感（阴影浓度）档位：柔和 / 标准 / 浓郁
 export const GLOW_LEVEL_SOFT: string = 'soft';
 export const GLOW_LEVEL_STANDARD: string = 'standard';
@@ -399,7 +404,7 @@ class ThemeManager {
     }
     const savedScale = await PreferenceUtil.getPreferenceValue(PREF_FONT_SCALE, FONT_SCALE_DEFAULT);
     if (typeof savedScale === 'number') {
-      this.fontScale = savedScale;
+      this.fontScale = sanitizeFontScale(savedScale);
     }
     const savedGlow = await PreferenceUtil.getPreferenceValue(PREF_GLOW_LEVEL, GLOW_LEVEL_STANDARD);
     if (typeof savedGlow === 'string') {
@@ -468,7 +473,7 @@ class ThemeManager {
   }
 
   setFontScale(scale: number): void {
-    this.fontScale = scale;
+    this.fontScale = sanitizeFontScale(scale);
     this.persistQuietly(PREF_FONT_SCALE, scale);
     this.bump();
   }
@@ -508,7 +513,7 @@ class ThemeManager {
     }
     const savedScale = await PreferenceUtil.getPreferenceValue(PREF_FONT_SCALE, FONT_SCALE_DEFAULT);
     if (typeof savedScale === 'number') {
-      this.fontScale = savedScale;
+      this.fontScale = sanitizeFontScale(savedScale);
     }
     const savedGlow = await PreferenceUtil.getPreferenceValue(PREF_GLOW_LEVEL, GLOW_LEVEL_STANDARD);
     if (typeof savedGlow === 'string') {

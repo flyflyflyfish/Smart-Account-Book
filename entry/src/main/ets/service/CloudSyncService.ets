@@ -15,7 +15,7 @@ import CategoryStore from '../models/accountType/CategoryStore';
 import BillStore from '../common/BillStore';
 import PreferenceUtil from '../utils/PreferenceUtil';
 import MerchantLearningSync from './MerchantLearningSync';
-import { ThemeKit } from '../common/theme/Theme';
+import { ThemeKit, sanitizeFontScale, FONT_SCALE_DEFAULT } from '../common/theme/Theme';
 import * as CONSTANTS from '../common/constants';
 import { Logger } from '../utils/Logger';
 
@@ -204,8 +204,20 @@ class CloudSyncService {
         }
         continue;
       }
-      await PreferenceUtil.putPreferenceValue(row.setting_key,
-        deserializeSettingValue(kind, row.setting_value));
+      const value = deserializeSettingValue(kind, row.setting_value);
+      if (row.setting_key === CONSTANTS.PREF_FONT_SCALE && typeof value === 'number' &&
+        sanitizeFontScale(value) !== value) {
+        // 云端字号缩放为脏值（如 0，会把全部文字缩放为不可见）：本地回退默认并修复云端行
+        const safeScale = sanitizeFontScale(value);
+        await PreferenceUtil.putPreferenceValue(row.setting_key, safeScale);
+        const healTime = Date.now();
+        await CloudSettingSync.upsertSettingRow(row.setting_key, serializeSettingValue(safeScale), healTime);
+        meta[row.setting_key] = healTime;
+        themeTouched = true;
+        Logger.info('已修复云端脏字号缩放值');
+        continue;
+      }
+      await PreferenceUtil.putPreferenceValue(row.setting_key, value);
       if (this.isThemeKey(row.setting_key)) {
         themeTouched = true;
       }
@@ -250,6 +262,9 @@ class CloudSyncService {
   private defaultValueOf(def: SyncableSettingDef): preferences.ValueType {
     if (def.key === CONSTANTS.PREF_OCR_ENABLED) {
       return true;
+    }
+    if (def.key === CONSTANTS.PREF_FONT_SCALE) {
+      return FONT_SCALE_DEFAULT;
     }
     if (def.kind === 'boolean') {
       return false;
