@@ -34,6 +34,21 @@ export interface RangeSummary {
   income: number;
 }
 
+/**
+ * 卡片金额格式化：超大金额压缩为“万”单位，避免长数字在卡片窄列中被截断。
+ * 常规金额保留两位小数；十万级保留一位“万”，百万级取整“万”。
+ */
+export function formatWidgetAmount(value: number): string {
+  const abs = Math.abs(value);
+  if (abs >= 1000000) {
+    return (value / 10000).toFixed(0) + '万';
+  }
+  if (abs >= 100000) {
+    return (value / 10000).toFixed(1) + '万';
+  }
+  return value.toFixed(2);
+}
+
 /** 组装推送给卡片的全部数据：收支金额、宽窄标记与主题色值 */
 export function buildCardData(expenses: string, income: string, monthExpenses: string, monthIncome: string,
   palette: ThemePalette, isWide: boolean): Record<string, string> {
@@ -50,8 +65,12 @@ export function buildCardData(expenses: string, income: string, monthExpenses: s
     'onPrimary': palette.onPrimary,
     'primarySoft': palette.primarySoft,
     'divider': palette.outline,
+    'surfaceVariant': palette.surfaceVariant,
+    'danger': palette.danger,
     'accentBlue': palette.accentBlue,
     'accentBlueSoft': palette.accentBlueSoft,
+    'accentPurple': palette.accentPurple,
+    'accentPurpleSoft': palette.accentPurpleSoft,
     'accentOrange': palette.accentOrange,
     'accentOrangeSoft': palette.accentOrangeSoft
   };
@@ -155,8 +174,8 @@ export default class WidgetUpdater {
       const isWide = dim === formInfo.FormDimension.Dimension_2_4;
       Logger.info('推送卡片数据', formId, '今日支出', today.expenses, '今日收入', today.income,
         '本月支出', month.expenses, '本月收入', month.income);
-      const data = buildCardData(today.expenses.toFixed(2), today.income.toFixed(2),
-        month.expenses.toFixed(2), month.income.toFixed(2), palette, isWide);
+      const data = buildCardData(formatWidgetAmount(today.expenses), formatWidgetAmount(today.income),
+        formatWidgetAmount(month.expenses), formatWidgetAmount(month.income), palette, isWide);
       await formProvider.updateForm(formId, formBindingData.createFormBindingData(data));
     } catch (err) {
       Logger.error('卡片数据更新失败', (err as Error).message);
