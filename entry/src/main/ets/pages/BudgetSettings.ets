@@ -14,6 +14,7 @@ import {
   SPACE_XLARGE
 } from '../common/dimens';
 import { ThemeKit, ThemePalette } from '../common/theme/Theme';
+import { AMOUNT_MAX } from '../utils/AmountGuard';
 
 const AMOUNT_PATTERN: RegExp = /^\d+(\.\d{1,2})?$/;
 
@@ -58,7 +59,10 @@ struct BudgetSettings {
   effectiveLimit(): number {
     const text = this.amountText.trim();
     if (this.budgetOn && AMOUNT_PATTERN.test(text)) {
-      return Math.round(Number(text) * 100) / 100;
+      const value = Number(text);
+      if (Number.isFinite(value) && value > 0 && value <= AMOUNT_MAX) {
+        return Math.round(value * 100) / 100;
+      }
     }
     return this.savedLimit;
   }
@@ -99,6 +103,10 @@ struct BudgetSettings {
         const text = this.amountText.trim();
         if (!AMOUNT_PATTERN.test(text) || Number(text) <= 0) {
           Toast.error($r('app.string.budget_amount_invalid'));
+          return;
+        }
+        if (Number(text) > AMOUNT_MAX) {
+          Toast.error($r('app.string.amount_too_large'));
           return;
         }
         const amount = Math.round(Number(text) * 100) / 100;
@@ -155,6 +163,7 @@ struct BudgetSettings {
               this.SectionTitle($r('app.string.budget_amount_label'))
               TextInput({ text: this.amountText, placeholder: $r('app.string.budget_amount_placeholder') })
                 .type(InputType.NUMBER_DECIMAL)
+                .maxLength(10)
                 .fontSize(this.fs(14))
                 .fontColor(this.tk().textPrimary)
                 .height(44)

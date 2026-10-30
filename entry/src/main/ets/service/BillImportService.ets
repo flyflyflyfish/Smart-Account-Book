@@ -10,6 +10,7 @@ import { isDuplicateBill } from '../common/dedup';
 import CategoryRegistry from '../models/accountType/CategoryRegistry';
 import classifier from './recognition/classifier/CompositeClassifier';
 import { Logger } from '../utils/Logger';
+import { clampAmount } from '../utils/AmountGuard';
 
 /** 账单文件来源平台 */
 export enum BillSourceType {
@@ -153,14 +154,14 @@ function splitCsvLine(line: string): string[] {
   return fields;
 }
 
-/** 金额文本解析：去掉 ¥、千分位逗号与空白后转数值，非法返回 0 */
+/** 金额文本解析：去掉 ¥、千分位逗号与空白后转数值，非法返回 0，超上限压到统一上限 */
 function parseAmountText(text: string): number {
   const cleaned = text.replace('¥', '').replace(/,/g, '').trim();
   if (!cleaned) {
     return 0;
   }
   const value = parseFloat(cleaned);
-  return isNaN(value) ? 0 : value;
+  return isNaN(value) ? 0 : clampAmount(value);
 }
 
 /** 交易时间解析：兼容 "yyyy-MM-dd HH:mm:ss" 文本与 Excel 序列值 */
