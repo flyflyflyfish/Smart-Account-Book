@@ -34,6 +34,7 @@ import { LEDGER_RECORD_EXPENSE, LEDGER_RECORD_INCOME } from '../models/ledger/Le
 import BreakpointConstants from '../common/breakpoint';
 import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_TINY, SPACE_XLARGE } from '../common/dimens';
 import { ThemeKit, ThemePalette } from '../common/theme/Theme';
+import { AMOUNT_MAX, clampAmount } from '../utils/AmountGuard';
 
 // 识别流程步骤：选图 -> 识别中 -> 结果确认
 const STEP_PICK: number = 0;
@@ -626,14 +627,14 @@ struct RecognizeBill {
     });
   }
 
-  // 校验金额：大于 0 且最多两位小数
+  // 校验金额：大于 0 且最多两位小数，且不超统一上限
   validateAmount(): boolean {
     const value = this.amountText;
     if (!value) {
       return false;
     }
     const amount = parseFloat(value);
-    if (amount <= 0) {
+    if (amount <= 0 || amount > AMOUNT_MAX) {
       return false;
     }
     const regex = /^\d+(\.\d{1,2})?$/;
@@ -683,12 +684,19 @@ struct RecognizeBill {
     }
     // 入账：只处理勾选的（去重只影响是否入账，不影响训练标签）
     let imported = 0;
+    let overLimit = false;
     const toLedger = this.ledgerId.length > 0;
     for (const draft of this.drafts) {
       if (!draft.selected) {
         continue;
       }
-      const amount = parseFloat(draft.amountText);
+      const parsed = parseFloat(draft.amountText);
+      if (parsed > AMOUNT_MAX) {
+        // 超上限的异常金额（识别错误/手滑输入）不入账，避免统计与显示错乱
+        overLimit = true;
+        continue;
+      }
+      const amount = parsed;
       if (!(amount > 0) || !draft.selectType) {
         continue;
       }
@@ -725,6 +733,9 @@ struct RecognizeBill {
       Toast.error($r('app.string.require_amount_type'));
       return;
     }
+    if (overLimit) {
+      Toast.error($r('app.string.amount_too_large'));
+    }
     if (this.destroyed) {
       return;
     }
@@ -735,7 +746,7 @@ struct RecognizeBill {
       if (!draft.selected && !draft.duplicated) {
         continue;
       }
-      const amount = parseFloat(draft.amountText);
+      const amount = clampAmount(parseFloat(draft.amountText));
       if (!(amount > 0) || !draft.selectType) {
         continue;
       }
@@ -929,6 +940,7 @@ struct RecognizeBill {
             .fontColor(this.tk().textPrimary)
           TextInput({ text: this.amountText, placeholder: $r('app.string.amount_placeholder') })
             .type(InputType.NUMBER_DECIMAL)
+            .maxLength(10)
             .fontSize(this.fs(16))
             .fontColor(this.tk().textPrimary)
             .textAlign(TextAlign.End)
