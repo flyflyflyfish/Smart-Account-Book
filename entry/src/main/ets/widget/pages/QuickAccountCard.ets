@@ -4,8 +4,8 @@ let storage = new LocalStorage();
  * 快捷记账卡片：今日收支 + 三个图标快捷入口（记一笔 / 拍照 / AI）。
  * 颜色由 EntryFormAbility 按当前应用主题解析后随卡片数据推送，
  * 默认值仅为主题数据到达前的兜底（松雾绿浅色）。
- * 金额按字符串长度自适应字号，四位及以上数字自动缩小字号完整显示；
- * 超大金额由 WidgetUpdater 预格式化为“万”单位，避免溢出。
+ * 金额“万”单位拆分为独立小号文本，主数字按长度自适应字号并占满剩余宽度，
+ * 保证四位及以上数字与单位完整显示、末尾字符不被截断。
  */
 @Entry(storage)
 @Component
@@ -30,23 +30,35 @@ struct QuickAccountCard {
   // 大卡（2*4）宽布局：左今日右本月，由 EntryFormAbility 按卡片尺寸下发
   @LocalStorageProp('isWide') isWideFlag: string = '0';
 
-  // 金额前缀：无数据时显示占位符，避免出现“¥ --”
-  amountText(value: string): string {
-    return value === '--' ? '--' : '¥ ' + value;
+  // 金额数值部分：去掉“万”单位后的纯数字文本
+  amountNumber(text: string): string {
+    return text.endsWith('万') ? text.substring(0, text.length - 1) : text;
   }
 
-  // 金额字号按长度自适应：每多出约两位字符缩小一档，保证四位及以上数字完整显示
-  amountFontSize(text: string, base: number): number {
-    const len = text.length;
-    let size = base;
-    if (len > 9) {
-      size = base - 6;
-    } else if (len > 7) {
-      size = base - 4;
-    } else if (len > 5) {
-      size = base - 2;
+  // 金额单位部分：有“万”返回“万”，否则返回空串
+  amountUnit(text: string): string {
+    return text.endsWith('万') ? '万' : '';
+  }
+
+  // 金额主文本：无数据时显示占位符；withSymbol 控制是否带“¥”前缀（宽卡四列空间紧张省略）
+  amountMain(text: string, withSymbol: boolean): string {
+    const num = this.amountNumber(text);
+    if (num === '--') {
+      return '--';
     }
-    return Math.max(10, size);
+    return withSymbol ? '¥ ' + num : num;
+  }
+
+  // 金额字号按数字长度自适应：每多出字符降档，保证四位及以上数字完整显示
+  amountFontSize(text: string, base: number): number {
+    const len = this.amountNumber(text).length;
+    if (len > 8) {
+      return Math.max(10, base - 5);
+    }
+    if (len > 6) {
+      return Math.max(10, base - 4);
+    }
+    return base;
   }
 
   build() {
@@ -59,11 +71,21 @@ struct QuickAccountCard {
               .fontSize(10)
               .fontColor(this.textSecondary)
               .maxLines(1)
-            Text(this.amountText(this.expenses))
-              .fontSize(this.amountFontSize(this.expenses, 15))
-              .fontWeight(FontWeight.Bold)
-              .fontColor(this.dangerColor)
-              .maxLines(1)
+            Row({ space: 1 }) {
+              Text(this.amountMain(this.expenses, false))
+                .fontSize(this.amountFontSize(this.expenses, 15))
+                .fontWeight(FontWeight.Bold)
+                .fontColor(this.dangerColor)
+                .maxLines(1)
+                .layoutWeight(1)
+              Text(this.amountUnit(this.expenses))
+                .fontSize(11)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(this.dangerColor)
+                .maxLines(1)
+            }
+            .width('100%')
+            .alignItems(VerticalAlign.Bottom)
           }
           .alignItems(HorizontalAlign.Start)
           .layoutWeight(1)
@@ -73,18 +95,28 @@ struct QuickAccountCard {
             .strokeWidth(0.5)
             .color(this.dividerColor)
             .height(26)
-            .margin({ left: 6, right: 6 })
+            .margin({ left: 4, right: 4 })
 
           Column({ space: 2 }) {
             Text($r('app.string.today_income_label'))
               .fontSize(10)
               .fontColor(this.textSecondary)
               .maxLines(1)
-            Text(this.amountText(this.income))
-              .fontSize(this.amountFontSize(this.income, 15))
-              .fontWeight(FontWeight.Bold)
-              .fontColor(this.primaryColor)
-              .maxLines(1)
+            Row({ space: 1 }) {
+              Text(this.amountMain(this.income, false))
+                .fontSize(this.amountFontSize(this.income, 15))
+                .fontWeight(FontWeight.Bold)
+                .fontColor(this.primaryColor)
+                .maxLines(1)
+                .layoutWeight(1)
+              Text(this.amountUnit(this.income))
+                .fontSize(11)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(this.primaryColor)
+                .maxLines(1)
+            }
+            .width('100%')
+            .alignItems(VerticalAlign.Bottom)
           }
           .alignItems(HorizontalAlign.Start)
           .layoutWeight(1)
@@ -94,18 +126,28 @@ struct QuickAccountCard {
             .strokeWidth(0.5)
             .color(this.dividerColor)
             .height(26)
-            .margin({ left: 6, right: 6 })
+            .margin({ left: 4, right: 4 })
 
           Column({ space: 2 }) {
             Text($r('app.string.month_expense_label'))
               .fontSize(10)
               .fontColor(this.textSecondary)
               .maxLines(1)
-            Text(this.amountText(this.monthExpenses))
-              .fontSize(this.amountFontSize(this.monthExpenses, 15))
-              .fontWeight(FontWeight.Bold)
-              .fontColor(this.dangerColor)
-              .maxLines(1)
+            Row({ space: 1 }) {
+              Text(this.amountMain(this.monthExpenses, false))
+                .fontSize(this.amountFontSize(this.monthExpenses, 15))
+                .fontWeight(FontWeight.Bold)
+                .fontColor(this.dangerColor)
+                .maxLines(1)
+                .layoutWeight(1)
+              Text(this.amountUnit(this.monthExpenses))
+                .fontSize(11)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(this.dangerColor)
+                .maxLines(1)
+            }
+            .width('100%')
+            .alignItems(VerticalAlign.Bottom)
           }
           .alignItems(HorizontalAlign.Start)
           .layoutWeight(1)
@@ -115,24 +157,34 @@ struct QuickAccountCard {
             .strokeWidth(0.5)
             .color(this.dividerColor)
             .height(26)
-            .margin({ left: 6, right: 6 })
+            .margin({ left: 4, right: 4 })
 
           Column({ space: 2 }) {
             Text($r('app.string.month_income_label'))
               .fontSize(10)
               .fontColor(this.textSecondary)
               .maxLines(1)
-            Text(this.amountText(this.monthIncome))
-              .fontSize(this.amountFontSize(this.monthIncome, 15))
-              .fontWeight(FontWeight.Bold)
-              .fontColor(this.primaryColor)
-              .maxLines(1)
+            Row({ space: 1 }) {
+              Text(this.amountMain(this.monthIncome, false))
+                .fontSize(this.amountFontSize(this.monthIncome, 15))
+                .fontWeight(FontWeight.Bold)
+                .fontColor(this.primaryColor)
+                .maxLines(1)
+                .layoutWeight(1)
+              Text(this.amountUnit(this.monthIncome))
+                .fontSize(11)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(this.primaryColor)
+                .maxLines(1)
+            }
+            .width('100%')
+            .alignItems(VerticalAlign.Bottom)
           }
           .alignItems(HorizontalAlign.Start)
           .layoutWeight(1)
         }
         .width('100%')
-        .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+        .padding({ left: 10, right: 10, top: 10, bottom: 10 })
         .borderRadius(14)
         .backgroundColor(this.surfaceVariant)
       } else {
@@ -142,11 +194,21 @@ struct QuickAccountCard {
               .fontSize(10)
               .fontColor(this.textSecondary)
               .maxLines(1)
-            Text(this.amountText(this.expenses))
-              .fontSize(this.amountFontSize(this.expenses, 17))
-              .fontWeight(FontWeight.Bold)
-              .fontColor(this.dangerColor)
-              .maxLines(1)
+            Row({ space: 1 }) {
+              Text(this.amountMain(this.expenses, true))
+                .fontSize(this.amountFontSize(this.expenses, 17))
+                .fontWeight(FontWeight.Bold)
+                .fontColor(this.dangerColor)
+                .maxLines(1)
+                .layoutWeight(1)
+              Text(this.amountUnit(this.expenses))
+                .fontSize(11)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(this.dangerColor)
+                .maxLines(1)
+            }
+            .width('100%')
+            .alignItems(VerticalAlign.Bottom)
           }
           .alignItems(HorizontalAlign.Start)
           .layoutWeight(1)
@@ -163,11 +225,21 @@ struct QuickAccountCard {
               .fontSize(10)
               .fontColor(this.textSecondary)
               .maxLines(1)
-            Text(this.amountText(this.income))
-              .fontSize(this.amountFontSize(this.income, 17))
-              .fontWeight(FontWeight.Bold)
-              .fontColor(this.primaryColor)
-              .maxLines(1)
+            Row({ space: 1 }) {
+              Text(this.amountMain(this.income, true))
+                .fontSize(this.amountFontSize(this.income, 17))
+                .fontWeight(FontWeight.Bold)
+                .fontColor(this.primaryColor)
+                .maxLines(1)
+                .layoutWeight(1)
+              Text(this.amountUnit(this.income))
+                .fontSize(11)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(this.primaryColor)
+                .maxLines(1)
+            }
+            .width('100%')
+            .alignItems(VerticalAlign.Bottom)
           }
           .alignItems(HorizontalAlign.Start)
           .layoutWeight(1)
