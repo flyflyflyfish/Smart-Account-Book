@@ -68,6 +68,8 @@ export const PREF_COLOR_MODE = 'theme_color_mode';
 export const PREF_FONT_SCALE = 'theme_font_scale';
 export const PREF_GLOW_LEVEL = 'theme_glow_level';
 export const PREF_HOME_STAT_SCOPE = 'home_stat_scope';
+// 自定义主题种子色（#RRGGBB），据此派生整套自定义调色板
+export const PREF_CUSTOM_THEME_COLOR = 'custom_theme_color';
 
 // 底部第二页签样式：AI 助手 / 账本（默认 AI 助手）的 Preferences 键
 export const PREF_SECOND_TAB_STYLE = 'second_tab_style';
