@@ -5,14 +5,17 @@ import { Logger } from '../utils/Logger';
 import PreferenceUtil from '../utils/PreferenceUtil';
 import WidgetUpdater, { buildCardData } from '../common/widget/WidgetUpdater';
 import {
+  applyCustomThemeColor,
+  isValidHexColor,
   resolveThemePalette,
   ThemePalette,
+  THEME_ID_CUSTOM,
   THEME_ID_PINE,
   THEME_MODE_DARK,
   THEME_MODE_LIGHT,
   THEME_MODE_SYSTEM
 } from '../common/theme/Theme';
-import { PREF_THEME_ID, PREF_COLOR_MODE } from '../common/constants';
+import { PREF_THEME_ID, PREF_COLOR_MODE, PREF_CUSTOM_THEME_COLOR } from '../common/constants';
 
 const IDENTITY_KEY: string = 'ohos.extra.param.key.form_identity';
 
@@ -87,6 +90,13 @@ export default class EntryFormAbility extends FormExtensionAbility {
     const savedMode = await PreferenceUtil.getPreferenceValue(PREF_COLOR_MODE, THEME_MODE_SYSTEM);
     const id = typeof savedId === 'string' ? savedId : THEME_ID_PINE;
     const mode = typeof savedMode === 'string' ? savedMode : THEME_MODE_SYSTEM;
+    // 卡片进程不经过 ThemeManager，自定义主题需先读种子色构建运行时条目
+    if (id === THEME_ID_CUSTOM) {
+      const savedCustom = await PreferenceUtil.getPreferenceValue(PREF_CUSTOM_THEME_COLOR, '');
+      if (typeof savedCustom === 'string' && isValidHexColor(savedCustom)) {
+        applyCustomThemeColor(savedCustom);
+      }
+    }
     let dark = false;
     if (mode === THEME_MODE_DARK) {
       dark = true;
