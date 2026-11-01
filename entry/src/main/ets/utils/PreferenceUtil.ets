@@ -32,6 +32,28 @@ class PreferenceUtils {
     }
   }
 
+  // 跨进程场景（主应用 ↔ 卡片进程）各自持有独立的内存缓存实例，
+  // 对方进程写入并 flush 后，本进程的缓存实例不会自动更新，会一直读到旧值。
+  // 该方法先把实例从静态缓存容器中移除，再从磁盘重新加载，保证读到对方进程的最新数据。
+  async reloadPreference(context?: common.Context): Promise<void> {
+    const ctx = context ?? this.loadContext;
+    if (!ctx) {
+      return;
+    }
+    this.loadContext = ctx;
+    try {
+      await preferences.removePreferencesFromCache(ctx, CONSTANTS.H_STORE);
+    } catch (err) {
+      Logger.debug(`移除 Preference 缓存 [${CONSTANTS.H_STORE}] 失败`, err);
+    }
+    try {
+      this.pref = await preferences.getPreferences(ctx, CONSTANTS.H_STORE);
+      Logger.debug(`重载 Preference [${CONSTANTS.H_STORE}] 成功`);
+    } catch (err) {
+      Logger.debug(`重载 Preference [${CONSTANTS.H_STORE}] 失败`, err);
+    }
+  }
+
   // 确保已加载：启动时加载失败不是永久状态，首次读写时用保存的 context 重试
   private async ensureLoaded(): Promise<preferences.Preferences> {
     if (this.pref) {
