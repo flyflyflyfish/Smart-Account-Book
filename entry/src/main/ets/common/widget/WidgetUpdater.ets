@@ -6,8 +6,8 @@ import dayjs from 'dayjs';
 import { ACCOUNT_TABLE_NAME } from '../../data/schema';
 import { Logger } from '../../utils/Logger';
 import PreferenceUtil from '../../utils/PreferenceUtil';
-import { ThemePalette } from '../theme/Theme';
-import { FORM_DIM_PREFIX, PREF_FORM_IDS } from '../constants';
+import { withAlpha, ThemePalette } from '../theme/Theme';
+import { FORM_DIM_PREFIX, FORM_RANGE_PREFIX, PREF_FORM_IDS, WIDGET_RANGE_MONTH, WIDGET_RANGE_TODAY } from '../constants';
 
 const DB_FILENAME: string = 'account.db';
 
@@ -34,30 +34,29 @@ export interface RangeSummary {
   income: number;
 }
 
-/**
- * 卡片金额格式化：超大金额压缩为“万”单位，避免长数字在卡片窄列中被截断。
- * 常规金额保留两位小数；十万级保留一位“万”，百万级取整“万”。
- */
-export function formatWidgetAmount(value: number): string {
-  const abs = Math.abs(value);
-  if (abs >= 1000000) {
-    return (value / 10000).toFixed(0) + '万';
-  }
-  if (abs >= 100000) {
-    return (value / 10000).toFixed(1) + '万';
-  }
-  return value.toFixed(2);
-}
+// 各卡片的「+」菜单展开状态（进程内内存态，不持久化；进程重启后自动收起）
+const formMenuOpenStates = new Map<string, boolean>();
 
-/** 组装推送给卡片的全部数据：收支金额、宽窄标记与主题色值 */
-export function buildCardData(expenses: string, income: string, monthExpenses: string, monthIncome: string,
+/** 组装推送给卡片的全部数据：所选口径的收支金额、口径标记、菜单展开标记、宽窄标记与主题色值 */
+export function buildCardData(expenses: string, income: string, range: string, menuVisible: string,
   palette: ThemePalette, isWide: boolean): Record<string, string> {
+  // 三个快捷入口取主色锚定的图表色板前三色：同一色系、色相渐变、互不相同
+  const chart = palette.chart;
+  const addColor = chart.length > 0 ? chart[0] : palette.primary;
+  const cameraColor = chart.length > 1 ? chart[1] : addColor;
+  const aiColor = chart.length > 2 ? chart[2] : addColor;
+  const softAlpha = palette.isDark ? 0.22 : 0.16;
   return {
     'expenses': expenses,
     'income': income,
-    'monthExpenses': monthExpenses,
-    'monthIncome': monthIncome,
+    'range': range,
+    'menuVisible': menuVisible,
     'isWide': isWide ? '1' : '0',
+    'entryAdd': addColor,
+    'entryCamera': cameraColor,
+    'entryCameraSoft': withAlpha(cameraColor, softAlpha),
+    'entryAi': aiColor,
+    'entryAiSoft': withAlpha(aiColor, softAlpha),
     'bg': palette.background,
     'textPrimary': palette.textPrimary,
     'textSecondary': palette.textSecondary,
@@ -65,12 +64,8 @@ export function buildCardData(expenses: string, income: string, monthExpenses: s
     'onPrimary': palette.onPrimary,
     'primarySoft': palette.primarySoft,
     'divider': palette.outline,
-    'surfaceVariant': palette.surfaceVariant,
-    'danger': palette.danger,
     'accentBlue': palette.accentBlue,
     'accentBlueSoft': palette.accentBlueSoft,
-    'accentPurple': palette.accentPurple,
-    'accentPurpleSoft': palette.accentPurpleSoft,
     'accentOrange': palette.accentOrange,
     'accentOrangeSoft': palette.accentOrangeSoft
   };
@@ -114,7 +109,8 @@ export default class WidgetUpdater {
       return;
     }
     try {
-      await PreferenceUtil.loadPreference(context);
+      // 卡片进程写入前先重载：避免用旧缓存实例 flush 时把主进程新写入的数据回退
+      await PreferenceUtil.reloadPreference(context);
       await PreferenceUtil.putPreferenceValue(FORM_DIM_PREFIX + formId, dimension);
       const ids = await WidgetUpdater.readFormIds();
       if (ids.indexOf(formId) < 0) {
@@ -129,7 +125,7 @@ export default class WidgetUpdater {
   /** 卡片删除后从列表移除，避免主应用继续向不存在的卡片推送 */
   static async unregisterForm(context: common.Context, formId: string): Promise<void> {
     try {
-      await PreferenceUtil.loadPreference(context);
+      await PreferenceUtil.reloadPreference(context);
       const ids = await WidgetUpdater.readFormIds();
       const rest = ids.filter((id: string): boolean => id !== formId);
       if (rest.length !== ids.length) {
@@ -143,7 +139,8 @@ export default class WidgetUpdater {
   /** 主应用启动或账单变化时，向所有已添加卡片推送最新数据 */
   static async refreshAllForms(context: common.Context, palette: ThemePalette): Promise<void> {
     try {
-      await PreferenceUtil.loadPreference(context);
+      // 先从磁盘重载：卡片可能是本进程运行期间由卡片进程注册的，缓存实例里还没有其 formId
+      await PreferenceUtil.reloadPreference(context);
       const ids = await WidgetUpdater.readFormIds();
       for (const formId of ids) {
         await WidgetUpdater.refreshForm(context, formId, undefined, palette);
@@ -153,7 +150,24 @@ export default class WidgetUpdater {
     }
   }
 
-  /** 查询今日/本月收支并推送到指定卡片；dimension 缺省时从 Preference 恢复 */
+  /** 读取卡片已保存的统计口径，未设置时默认今日 */
+  static async readFormRange(formId: string): Promise<string> {
+    const saved = await PreferenceUtil.getPreferenceValue(FORM_RANGE_PREFIX + formId, WIDGET_RANGE_TODAY);
+    const range = typeof saved === 'string' ? saved : WIDGET_RANGE_TODAY;
+    return range === WIDGET_RANGE_MONTH ? WIDGET_RANGE_MONTH : WIDGET_RANGE_TODAY;
+  }
+
+  /** 切换小卡「+」菜单的展开/收起状态 */
+  static toggleFormMenu(formId: string): void {
+    const next = !formMenuOpenStates.get(formId);
+    if (next) {
+      formMenuOpenStates.set(formId, true);
+    } else {
+      formMenuOpenStates.delete(formId);
+    }
+  }
+
+  /** 查询卡片当前口径（今日/本月）的收支并推送到指定卡片；dimension 缺省时从 Preference 恢复 */
   static async refreshForm(context: common.Context, formId: string, dimension: number | undefined,
     palette: ThemePalette): Promise<void> {
     if (!formId) {
@@ -167,15 +181,17 @@ export default class WidgetUpdater {
           formInfo.FormDimension.Dimension_2_2);
         dim = typeof saved === 'number' ? saved : formInfo.FormDimension.Dimension_2_2;
       }
-      const today = await WidgetUpdater.queryRangeSummary(context,
-        dayjs().startOf('day').valueOf(), dayjs().endOf('day').valueOf());
-      const month = await WidgetUpdater.queryRangeSummary(context,
-        dayjs().startOf('month').valueOf(), dayjs().endOf('day').valueOf());
       const isWide = dim === formInfo.FormDimension.Dimension_2_4;
-      Logger.info('推送卡片数据', formId, '今日支出', today.expenses, '今日收入', today.income,
-        '本月支出', month.expenses, '本月收入', month.income);
-      const data = buildCardData(formatWidgetAmount(today.expenses), formatWidgetAmount(today.income),
-        formatWidgetAmount(month.expenses), formatWidgetAmount(month.income), palette, isWide);
+      // 小卡（2*2）固定展示今日收支，不使用口径切换；大卡（2*4）按已保存口径展示
+      const range = isWide ? await WidgetUpdater.readFormRange(formId) : WIDGET_RANGE_TODAY;
+      // 金额单位固定为元，不做万位缩写，保证 100001.00 这类金额完整显示
+      const summary = await WidgetUpdater.queryRangeSummary(context,
+        range === WIDGET_RANGE_MONTH ? dayjs().startOf('month').valueOf() : dayjs().startOf('day').valueOf(),
+        dayjs().endOf('day').valueOf());
+      const menuVisible = formMenuOpenStates.get(formId) === true ? '1' : '0';
+      Logger.info('推送卡片数据', formId, range, '支出', summary.expenses, '收入', summary.income);
+      const data = buildCardData(summary.expenses.toFixed(2), summary.income.toFixed(2),
+        range, menuVisible, palette, isWide);
       await formProvider.updateForm(formId, formBindingData.createFormBindingData(data));
     } catch (err) {
       Logger.error('卡片数据更新失败', (err as Error).message);

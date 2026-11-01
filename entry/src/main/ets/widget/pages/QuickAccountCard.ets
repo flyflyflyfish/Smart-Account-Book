@@ -1,19 +1,23 @@
 let storage = new LocalStorage();
 
 /**
- * 快捷记账卡片：今日收支 + 三个图标快捷入口（记一笔 / 拍照 / AI）。
+ * 快捷记账卡片。
+ * 大卡（2*4）：今日/本月口径切换 + 支出/收入两列 + 三个图标快捷入口。
+ * 小卡（2*2）：第一排今日支出、第二排今日收入，右上角「+」点击展开
+ * 手动添加 / 拍照识别 / AI助手三个入口，任选其一跳转对应页面。
+ * 金额单位固定为元，不做万位缩写；按金额长度自适应字号，保证 100001.00 这类金额完整显示。
  * 颜色由 EntryFormAbility 按当前应用主题解析后随卡片数据推送，
  * 默认值仅为主题数据到达前的兜底（松雾绿浅色）。
- * 金额“万”单位拆分为独立小号文本，主数字按长度自适应字号并占满剩余宽度，
- * 保证四位及以上数字与单位完整显示、末尾字符不被截断。
  */
 @Entry(storage)
 @Component
 struct QuickAccountCard {
   @LocalStorageProp('expenses') expenses: string = '--';
   @LocalStorageProp('income') income: string = '--';
-  @LocalStorageProp('monthExpenses') monthExpenses: string = '--';
-  @LocalStorageProp('monthIncome') monthIncome: string = '--';
+  // 当前统计口径：today 今日 / month 本月，由 EntryFormAbility 随卡片数据下发
+  @LocalStorageProp('range') range: string = 'today';
+  // 小卡「+」菜单展开标记：1 展开 / 0 收起
+  @LocalStorageProp('menuVisible') menuVisible: string = '0';
   @LocalStorageProp('bg') bgColor: string = '#F3F5F4';
   @LocalStorageProp('textPrimary') textPrimary: string = '#1D221F';
   @LocalStorageProp('textSecondary') textSecondary: string = '#5F6660';
@@ -21,328 +25,347 @@ struct QuickAccountCard {
   @LocalStorageProp('onPrimary') onPrimary: string = '#FFFFFF';
   @LocalStorageProp('primarySoft') primarySoft: string = '#292E9E73';
   @LocalStorageProp('divider') dividerColor: string = '#CBCDCC';
-  @LocalStorageProp('surfaceVariant') surfaceVariant: string = '#ECEEEA';
-  @LocalStorageProp('danger') dangerColor: string = '#C4534A';
-  @LocalStorageProp('accentBlue') accentBlue: string = '#3B82D6';
-  @LocalStorageProp('accentBlueSoft') accentBlueSoft: string = '#293B82D6';
-  @LocalStorageProp('accentPurple') accentPurple: string = '#9C70E4';
-  @LocalStorageProp('accentPurpleSoft') accentPurpleSoft: string = '#299C70E4';
-  // 大卡（2*4）宽布局：左今日右本月，由 EntryFormAbility 按卡片尺寸下发
+  // 三个快捷入口颜色：主色锚定的同色系渐变色（手动添加用实色主色，拍照/AI 用色相渐变色）
+  @LocalStorageProp('entryAdd') entryAdd: string = '#2E9E73';
+  @LocalStorageProp('entryCamera') entryCamera: string = '#2E8FA6';
+  @LocalStorageProp('entryCameraSoft') entryCameraSoft: string = '#292E8FA6';
+  @LocalStorageProp('entryAi') entryAi: string = '#6FA02E';
+  @LocalStorageProp('entryAiSoft') entryAiSoft: string = '#296FA02E';
+  // 大卡（2*4）宽布局标记，由 EntryFormAbility 按卡片尺寸下发
   @LocalStorageProp('isWide') isWideFlag: string = '0';
 
-  // 金额数值部分：去掉“万”单位后的纯数字文本
-  amountNumber(text: string): string {
-    return text.endsWith('万') ? text.substring(0, text.length - 1) : text;
+  /** 大卡金额字号随长度自适应：越长字号越小，确保长金额（如 100001.00）不被截断 */
+  amountFontSize(value: string): number {
+    const base = 16;
+    const len = value.length;
+    if (len <= 7) {
+      return base;
+    }
+    if (len <= 9) {
+      return base - 2;
+    }
+    if (len <= 11) {
+      return base - 4;
+    }
+    return base - 6;
   }
 
-  // 金额单位部分：有“万”返回“万”，否则返回空串
-  amountUnit(text: string): string {
-    return text.endsWith('万') ? '万' : '';
-  }
-
-  // 金额主文本：无数据时显示占位符；withSymbol 控制是否带“¥”前缀（宽卡四列空间紧张省略）
-  amountMain(text: string, withSymbol: boolean): string {
-    const num = this.amountNumber(text);
-    if (num === '--') {
-      return '--';
+  /** 小卡金额与标签同行排布，可用宽度更窄，字号自适应更积极 */
+  smallAmountFontSize(value: string): number {
+    const len = value.length;
+    if (len <= 7) {
+      return 16;
     }
-    return withSymbol ? '¥ ' + num : num;
-  }
-
-  // 金额字号按数字长度自适应：每多出字符降档，保证四位及以上数字完整显示
-  amountFontSize(text: string, base: number): number {
-    const len = this.amountNumber(text).length;
-    if (len > 8) {
-      return Math.max(10, base - 5);
+    if (len <= 9) {
+      return 14;
     }
-    if (len > 6) {
-      return Math.max(10, base - 4);
+    if (len <= 11) {
+      return 12;
     }
-    return base;
+    return 10;
   }
 
   build() {
-    Column() {
-      // 收支统计面板：柔色圆角卡片承载，配色为支出红、收入绿
-      if (this.isWideFlag === '1') {
+    if (this.isWideFlag === '1') {
+      Column() {
+        Row({ space: 6 }) {
+          Text($r('app.string.widget_range_today'))
+            .fontSize(11)
+            .fontColor(this.range === 'today' ? this.primaryColor : this.textSecondary)
+            .backgroundColor(this.range === 'today' ? this.primarySoft : Color.Transparent)
+            .borderRadius(9)
+            .padding({ left: 10, right: 10, top: 3, bottom: 3 })
+            .onClick(() => {
+              postCardAction(this, {
+                action: 'message',
+                params: { range: 'today' }
+              });
+            })
+
+          Text($r('app.string.widget_range_month'))
+            .fontSize(11)
+            .fontColor(this.range === 'month' ? this.primaryColor : this.textSecondary)
+            .backgroundColor(this.range === 'month' ? this.primarySoft : Color.Transparent)
+            .borderRadius(9)
+            .padding({ left: 10, right: 10, top: 3, bottom: 3 })
+            .onClick(() => {
+              postCardAction(this, {
+                action: 'message',
+                params: { range: 'month' }
+              });
+            })
+        }
+        .width('100%')
+
         Row() {
           Column({ space: 2 }) {
-            Text($r('app.string.today_expense_label'))
+            Text($r('app.string.widget_expense_label'))
               .fontSize(10)
               .fontColor(this.textSecondary)
+            Text(this.expenses)
+              .fontSize(this.amountFontSize(this.expenses))
+              .fontWeight(FontWeight.Bold)
+              .fontColor(this.textPrimary)
               .maxLines(1)
-            Row({ space: 1 }) {
-              Text(this.amountMain(this.expenses, false))
-                .fontSize(this.amountFontSize(this.expenses, 15))
-                .fontWeight(FontWeight.Bold)
-                .fontColor(this.dangerColor)
-                .maxLines(1)
-                .layoutWeight(1)
-              Text(this.amountUnit(this.expenses))
-                .fontSize(11)
-                .fontWeight(FontWeight.Bold)
-                .fontColor(this.dangerColor)
-                .maxLines(1)
-            }
-            .width('100%')
-            .alignItems(VerticalAlign.Bottom)
           }
           .alignItems(HorizontalAlign.Start)
           .layoutWeight(1)
 
-          Divider()
-            .vertical(true)
-            .strokeWidth(0.5)
-            .color(this.dividerColor)
-            .height(26)
-            .margin({ left: 4, right: 4 })
-
           Column({ space: 2 }) {
-            Text($r('app.string.today_income_label'))
+            Text($r('app.string.widget_income_label'))
               .fontSize(10)
               .fontColor(this.textSecondary)
+            Text(this.income)
+              .fontSize(this.amountFontSize(this.income))
+              .fontWeight(FontWeight.Bold)
+              .fontColor(this.primaryColor)
               .maxLines(1)
-            Row({ space: 1 }) {
-              Text(this.amountMain(this.income, false))
-                .fontSize(this.amountFontSize(this.income, 15))
-                .fontWeight(FontWeight.Bold)
-                .fontColor(this.primaryColor)
-                .maxLines(1)
-                .layoutWeight(1)
-              Text(this.amountUnit(this.income))
-                .fontSize(11)
-                .fontWeight(FontWeight.Bold)
-                .fontColor(this.primaryColor)
-                .maxLines(1)
-            }
-            .width('100%')
-            .alignItems(VerticalAlign.Bottom)
-          }
-          .alignItems(HorizontalAlign.Start)
-          .layoutWeight(1)
-
-          Divider()
-            .vertical(true)
-            .strokeWidth(0.5)
-            .color(this.dividerColor)
-            .height(26)
-            .margin({ left: 4, right: 4 })
-
-          Column({ space: 2 }) {
-            Text($r('app.string.month_expense_label'))
-              .fontSize(10)
-              .fontColor(this.textSecondary)
-              .maxLines(1)
-            Row({ space: 1 }) {
-              Text(this.amountMain(this.monthExpenses, false))
-                .fontSize(this.amountFontSize(this.monthExpenses, 15))
-                .fontWeight(FontWeight.Bold)
-                .fontColor(this.dangerColor)
-                .maxLines(1)
-                .layoutWeight(1)
-              Text(this.amountUnit(this.monthExpenses))
-                .fontSize(11)
-                .fontWeight(FontWeight.Bold)
-                .fontColor(this.dangerColor)
-                .maxLines(1)
-            }
-            .width('100%')
-            .alignItems(VerticalAlign.Bottom)
-          }
-          .alignItems(HorizontalAlign.Start)
-          .layoutWeight(1)
-
-          Divider()
-            .vertical(true)
-            .strokeWidth(0.5)
-            .color(this.dividerColor)
-            .height(26)
-            .margin({ left: 4, right: 4 })
-
-          Column({ space: 2 }) {
-            Text($r('app.string.month_income_label'))
-              .fontSize(10)
-              .fontColor(this.textSecondary)
-              .maxLines(1)
-            Row({ space: 1 }) {
-              Text(this.amountMain(this.monthIncome, false))
-                .fontSize(this.amountFontSize(this.monthIncome, 15))
-                .fontWeight(FontWeight.Bold)
-                .fontColor(this.primaryColor)
-                .maxLines(1)
-                .layoutWeight(1)
-              Text(this.amountUnit(this.monthIncome))
-                .fontSize(11)
-                .fontWeight(FontWeight.Bold)
-                .fontColor(this.primaryColor)
-                .maxLines(1)
-            }
-            .width('100%')
-            .alignItems(VerticalAlign.Bottom)
           }
           .alignItems(HorizontalAlign.Start)
           .layoutWeight(1)
         }
         .width('100%')
-        .padding({ left: 10, right: 10, top: 10, bottom: 10 })
-        .borderRadius(14)
-        .backgroundColor(this.surfaceVariant)
-      } else {
+        .margin({ top: 7 })
+
+        Divider()
+          .color(this.dividerColor)
+          .strokeWidth(0.5)
+          .margin({ top: 8, bottom: 8 })
+
         Row() {
-          Column({ space: 2 }) {
-            Text($r('app.string.today_expense_label'))
+          Column({ space: 4 }) {
+            Stack({ alignContent: Alignment.Center }) {
+              Circle()
+                .width(36)
+                .height(36)
+                .fill(this.entryAdd)
+              Image($r('app.media.add'))
+                .width(18)
+                .height(18)
+                .fillColor(this.onPrimary)
+            }
+            .width(36)
+            .height(36)
+            Text($r('app.string.add_menu_manual'))
               .fontSize(10)
               .fontColor(this.textSecondary)
               .maxLines(1)
-            Row({ space: 1 }) {
-              Text(this.amountMain(this.expenses, true))
-                .fontSize(this.amountFontSize(this.expenses, 17))
-                .fontWeight(FontWeight.Bold)
-                .fontColor(this.dangerColor)
-                .maxLines(1)
-                .layoutWeight(1)
-              Text(this.amountUnit(this.expenses))
-                .fontSize(11)
-                .fontWeight(FontWeight.Bold)
-                .fontColor(this.dangerColor)
-                .maxLines(1)
-            }
-            .width('100%')
-            .alignItems(VerticalAlign.Bottom)
           }
-          .alignItems(HorizontalAlign.Start)
           .layoutWeight(1)
+          .onClick(() => {
+            postCardAction(this, {
+              action: 'router',
+              abilityName: 'EntryAbility',
+              params: { targetPage: 'add' }
+            });
+          })
 
-          Divider()
-            .vertical(true)
-            .strokeWidth(0.5)
-            .color(this.dividerColor)
-            .height(26)
-            .margin({ left: 6, right: 6 })
-
-          Column({ space: 2 }) {
-            Text($r('app.string.today_income_label'))
+          Column({ space: 4 }) {
+            Stack({ alignContent: Alignment.Center }) {
+              Circle()
+                .width(36)
+                .height(36)
+                .fill(this.entryCameraSoft)
+              Image($r('app.media.camera'))
+                .width(18)
+                .height(18)
+                .fillColor(this.entryCamera)
+            }
+            .width(36)
+            .height(36)
+            Text($r('app.string.pick_from_camera'))
               .fontSize(10)
               .fontColor(this.textSecondary)
               .maxLines(1)
-            Row({ space: 1 }) {
-              Text(this.amountMain(this.income, true))
-                .fontSize(this.amountFontSize(this.income, 17))
-                .fontWeight(FontWeight.Bold)
-                .fontColor(this.primaryColor)
-                .maxLines(1)
-                .layoutWeight(1)
-              Text(this.amountUnit(this.income))
-                .fontSize(11)
-                .fontWeight(FontWeight.Bold)
-                .fontColor(this.primaryColor)
-                .maxLines(1)
-            }
-            .width('100%')
-            .alignItems(VerticalAlign.Bottom)
           }
-          .alignItems(HorizontalAlign.Start)
           .layoutWeight(1)
+          .onClick(() => {
+            postCardAction(this, {
+              action: 'router',
+              abilityName: 'EntryAbility',
+              params: { targetPage: 'recognize' }
+            });
+          })
+
+          Column({ space: 4 }) {
+            Stack({ alignContent: Alignment.Center }) {
+              Circle()
+                .width(36)
+                .height(36)
+                .fill(this.entryAiSoft)
+              Image($r('app.media.ai'))
+                .width(18)
+                .height(18)
+                .fillColor(this.entryAi)
+            }
+            .width(36)
+            .height(36)
+            Text($r('app.string.ai_assistant'))
+              .fontSize(10)
+              .fontColor(this.textSecondary)
+              .maxLines(1)
+          }
+          .layoutWeight(1)
+          .onClick(() => {
+            postCardAction(this, {
+              action: 'router',
+              abilityName: 'EntryAbility',
+              params: { targetPage: 'ai' }
+            });
+          })
         }
         .width('100%')
-        .padding({ left: 12, right: 12, top: 10, bottom: 10 })
-        .borderRadius(14)
-        .backgroundColor(this.surfaceVariant)
       }
+      .width('100%')
+      .height('100%')
+      .justifyContent(FlexAlign.Center)
+      .padding({ left: 14, right: 14, top: 10, bottom: 8 })
+      .backgroundColor(this.bgColor)
+    } else {
+      Stack({ alignContent: Alignment.TopEnd }) {
+        if (this.menuVisible === '1') {
+          // 「+」菜单展开：三个添加入口，任选其一跳转对应页面
+          Column({ space: 12 }) {
+            Row({ space: 8 }) {
+              Stack({ alignContent: Alignment.Center }) {
+                Circle()
+                  .width(28)
+                  .height(28)
+                  .fill(this.entryAdd)
+                Image($r('app.media.add'))
+                  .width(14)
+                  .height(14)
+                  .fillColor(this.onPrimary)
+              }
+              .width(28)
+              .height(28)
+              Text($r('app.string.add_menu_manual'))
+                .fontSize(12)
+                .fontColor(this.textPrimary)
+            }
+            .onClick(() => {
+              postCardAction(this, {
+                action: 'router',
+                abilityName: 'EntryAbility',
+                params: { targetPage: 'add' }
+              });
+            })
 
-      // 快捷入口：圆角方块图标 + 底部文字，主按钮实底、辅助按钮柔色
-      Row() {
-        Column({ space: 4 }) {
-          Stack({ alignContent: Alignment.Center }) {
-            Column()
-              .width(36)
-              .height(36)
-              .borderRadius(12)
-              .backgroundColor(this.primaryColor)
-            Image($r('app.media.add'))
-              .width(18)
-              .height(18)
-              .fillColor(this.onPrimary)
+            Row({ space: 8 }) {
+              Stack({ alignContent: Alignment.Center }) {
+                Circle()
+                  .width(28)
+                  .height(28)
+                  .fill(this.entryCameraSoft)
+                Image($r('app.media.camera'))
+                  .width(14)
+                  .height(14)
+                  .fillColor(this.entryCamera)
+              }
+              .width(28)
+              .height(28)
+              Text($r('app.string.pick_from_camera'))
+                .fontSize(12)
+                .fontColor(this.textPrimary)
+            }
+            .onClick(() => {
+              postCardAction(this, {
+                action: 'router',
+                abilityName: 'EntryAbility',
+                params: { targetPage: 'recognize' }
+              });
+            })
+
+            Row({ space: 8 }) {
+              Stack({ alignContent: Alignment.Center }) {
+                Circle()
+                  .width(28)
+                  .height(28)
+                  .fill(this.entryAiSoft)
+                Image($r('app.media.ai'))
+                  .width(14)
+                  .height(14)
+                  .fillColor(this.entryAi)
+              }
+              .width(28)
+              .height(28)
+              Text($r('app.string.ai_assistant'))
+                .fontSize(12)
+                .fontColor(this.textPrimary)
+            }
+            .onClick(() => {
+              postCardAction(this, {
+                action: 'router',
+                abilityName: 'EntryAbility',
+                params: { targetPage: 'ai' }
+              });
+            })
           }
-          .width(36)
-          .height(36)
-          Text($r('app.string.add_menu_manual'))
-            .fontSize(10)
-            .fontColor(this.textSecondary)
-            .maxLines(1)
+          .width('100%')
+          .height('100%')
+          .justifyContent(FlexAlign.Center)
+          .padding({ left: 16, right: 16, top: 34, bottom: 12 })
+        } else {
+          // 收起状态：第一排今日支出、第二排今日收入
+          Column({ space: 12 }) {
+            Row() {
+              Text($r('app.string.widget_today_expense_label'))
+                .fontSize(10)
+                .fontColor(this.textSecondary)
+              Text(this.expenses)
+                .layoutWeight(1)
+                .textAlign(TextAlign.End)
+                .fontSize(this.smallAmountFontSize(this.expenses))
+                .fontWeight(FontWeight.Bold)
+                .fontColor(this.textPrimary)
+                .maxLines(1)
+            }
+            .width('100%')
+
+            Row() {
+              Text($r('app.string.widget_today_income_label'))
+                .fontSize(10)
+                .fontColor(this.textSecondary)
+              Text(this.income)
+                .layoutWeight(1)
+                .textAlign(TextAlign.End)
+                .fontSize(this.smallAmountFontSize(this.income))
+                .fontWeight(FontWeight.Bold)
+                .fontColor(this.primaryColor)
+                .maxLines(1)
+            }
+            .width('100%')
+          }
+          .width('100%')
+          .height('100%')
+          .justifyContent(FlexAlign.Center)
         }
-        .layoutWeight(1)
+
+        // 右上角「+」：点击展开/收起菜单
+        Stack({ alignContent: Alignment.Center }) {
+          Circle()
+            .width(26)
+            .height(26)
+            .fill(this.primaryColor)
+          Image($r('app.media.add'))
+            .width(14)
+            .height(14)
+            .fillColor(this.onPrimary)
+        }
+        .width(26)
+        .height(26)
+        .margin({ top: 2, right: 2 })
         .onClick(() => {
           postCardAction(this, {
-            action: 'router',
-            abilityName: 'EntryAbility',
-            params: { targetPage: 'add' }
-          });
-        })
-
-        Column({ space: 4 }) {
-          Stack({ alignContent: Alignment.Center }) {
-            Column()
-              .width(36)
-              .height(36)
-              .borderRadius(12)
-              .backgroundColor(this.accentBlueSoft)
-            Image($r('app.media.camera'))
-              .width(18)
-              .height(18)
-              .fillColor(this.accentBlue)
-          }
-          .width(36)
-          .height(36)
-          Text($r('app.string.pick_from_camera'))
-            .fontSize(10)
-            .fontColor(this.textSecondary)
-            .maxLines(1)
-        }
-        .layoutWeight(1)
-        .onClick(() => {
-          postCardAction(this, {
-            action: 'router',
-            abilityName: 'EntryAbility',
-            params: { targetPage: 'recognize' }
-          });
-        })
-
-        Column({ space: 4 }) {
-          Stack({ alignContent: Alignment.Center }) {
-            Column()
-              .width(36)
-              .height(36)
-              .borderRadius(12)
-              .backgroundColor(this.accentPurpleSoft)
-            Image($r('app.media.ai'))
-              .width(18)
-              .height(18)
-              .fillColor(this.accentPurple)
-          }
-          .width(36)
-          .height(36)
-          Text($r('app.string.ai_assistant'))
-            .fontSize(10)
-            .fontColor(this.textSecondary)
-            .maxLines(1)
-        }
-        .layoutWeight(1)
-        .onClick(() => {
-          postCardAction(this, {
-            action: 'router',
-            abilityName: 'EntryAbility',
-            params: { targetPage: 'ai' }
+            action: 'message',
+            params: { menu: 'toggle' }
           });
         })
       }
       .width('100%')
-      .margin({ top: 12 })
+      .height('100%')
+      .padding({ left: 14, right: 14, top: 10, bottom: 10 })
+      .backgroundColor(this.bgColor)
     }
-    .width('100%')
-    .height('100%')
-    .justifyContent(FlexAlign.Center)
-    .padding({ left: 14, right: 14, top: 12, bottom: 10 })
-    .backgroundColor(this.bgColor)
   }
 }

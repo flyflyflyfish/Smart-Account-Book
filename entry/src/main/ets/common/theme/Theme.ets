@@ -11,7 +11,7 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import PreferenceUtil from '../../utils/PreferenceUtil';
 import { Logger } from '../../utils/Logger';
 import CloudSettingSync from '../../service/CloudSettingSync';
-import { PREF_THEME_ID, PREF_COLOR_MODE, PREF_FONT_SCALE, PREF_GLOW_LEVEL, PREF_HOME_STAT_SCOPE, PREF_CUSTOM_THEME_COLOR } from '../constants';
+import { PREF_THEME_ID, PREF_COLOR_MODE, PREF_FONT_SCALE, PREF_GLOW_LEVEL, PREF_HOME_STAT_SCOPE, PREF_CUSTOM_THEME_PRIMARY } from '../constants';
 
 // 主题 id
 export const THEME_ID_PINE: string = 'pine';
@@ -20,10 +20,10 @@ export const THEME_ID_SKY: string = 'sky';
 export const THEME_ID_VIOLET: string = 'violet';
 export const THEME_ID_NOTION: string = 'notion';
 export const THEME_ID_STONE: string = 'stone';
-// 用户自定义主题（种子色持久化，调色板运行时派生）
+// 自定义主题：仅保存一个主色，浅/深两套调色板由主色自动推导
 export const THEME_ID_CUSTOM: string = 'custom';
 export const THEME_ID_LIST: string[] = [
-  THEME_ID_PINE, THEME_ID_CLAUDE, THEME_ID_SKY, THEME_ID_VIOLET, THEME_ID_NOTION, THEME_ID_STONE, THEME_ID_CUSTOM
+  THEME_ID_PINE, THEME_ID_CLAUDE, THEME_ID_SKY, THEME_ID_VIOLET, THEME_ID_NOTION, THEME_ID_STONE
 ];
 
 // 深浅色模式
@@ -82,7 +82,7 @@ function mixColorHex(base: string, target: string, ratio: number): string {
   );
 }
 
-function withAlpha(hex: string, alpha: number): string {
+export function withAlpha(hex: string, alpha: number): string {
   const value = Math.round(alpha * 255);
   const text = value.toString(16);
   const alphaHex = text.length === 1 ? '0' + text : text;
@@ -118,7 +118,7 @@ interface ThemeSeed {
   isDark: boolean;
 }
 
-function hexToHsl(hex: string): number[] {
+export function hexToHsl(hex: string): number[] {
   const rgb = hexToRgb(hex);
   const r = rgb[0] / 255;
   const g = rgb[1] / 255;
@@ -143,7 +143,7 @@ function hexToHsl(hex: string): number[] {
   return [h, s, l];
 }
 
-function hslToHex(h: number, s: number, l: number): string {
+export function hslToHex(h: number, s: number, l: number): string {
   const c = (1 - Math.abs(2 * l - 1)) * s;
   const hp = (((h % 360) + 360) % 360) / 60;
   const x = c * (1 - Math.abs(hp % 2 - 1));
@@ -369,78 +369,43 @@ const THEME_ENTRIES: ThemeEntry[] = [
     { primary: '#C2C2CA', container: '#232328', bg: '#0A0A0B', surface: '#141416', isDark: true })
 ];
 
-// 合法种子色：#RRGGBB
-const HEX_COLOR_RE: RegExp = /^#[0-9A-Fa-f]{6}$/;
-
-/** 校验是否为合法种子色（#RRGGBB） */
-export function isValidHexColor(color: string): boolean {
-  return HEX_COLOR_RE.test(color);
+/** 指定主题 + 深浅色的调色板（卡片 FormAbility 等非组件进程使用） */
+export function resolveThemePalette(id: string, dark: boolean, customPrimary: string = ''): ThemePalette {
+  return resolvePalette(id, dark, customPrimary);
 }
 
-/** 运行时生效的自定义主题条目（由种子色派生，未设置时为 undefined） */
-let customThemeEntry: ThemeEntry | undefined = undefined;
+/** 校验形如 #RRGGBB 的 6 位十六进制颜色 */
+export function isHexColor(hex: string): boolean {
+  return /^#[0-9A-Fa-f]{6}$/.test(hex);
+}
 
 /**
- * 由种子色派生自定义主题浅/深两套种子：
- * 浅色：容器色向白提亮、背景染极淡主色；深色：主色提亮、容器/背景/表面按主色染暗调。
- * 派生比例对齐内置六套主题的配色关系，保证观感一致。
+ * 自定义主题调色板：由单个主色推导整套配色。
+ * 浅色套以白灰基底叠加主色氛围；深色套把主色提亮为暗场可读版本，
+ * 容器/背景混入低比例主色，保持与内置主题一致的层次关系。
  */
-export function buildCustomEntry(color: string): ThemeEntry {
-  return buildEntry(THEME_ID_CUSTOM,
-    {
-      primary: color,
-      container: mixColorHex(color, '#FFFFFF', 0.82),
-      bg: mixColorHex('#FAFBFA', color, 0.03),
-      surface: '',
-      isDark: false
-    },
-    {
-      primary: mixColorHex(color, '#FFFFFF', 0.33),
-      container: mixColorHex('#161616', color, 0.24),
-      bg: mixColorHex('#0E0F0F', color, 0.08),
-      surface: mixColorHex('#151615', color, 0.07),
-      isDark: true
-    });
+export function buildCustomPalette(primary: string, isDark: boolean): ThemePalette {
+  const hsl = hexToHsl(primary);
+  const seed: ThemeSeed = isDark ? {
+    primary: hslToHex(hsl[0], Math.max(0.3, hsl[1] * 0.75), Math.min(0.72, Math.max(0.6, hsl[2] + 0.18))),
+    container: mixColorHex('#1C1C1C', primary, 0.16),
+    bg: mixColorHex('#101010', primary, 0.06),
+    surface: mixColorHex('#181818', primary, 0.06),
+    isDark: true
+  } : {
+    primary: primary,
+    container: mixColorHex(primary, '#FFFFFF', 0.82),
+    bg: mixColorHex('#F4F4F3', primary, 0.05),
+    surface: '#FCFCFA',
+    isDark: false
+  };
+  return new ThemePalette(seed);
 }
 
-/** 设置/更新运行时自定义主题条目（应用启动与切换自定义主题时调用） */
-export function applyCustomThemeColor(color: string): void {
-  if (!isValidHexColor(color)) {
-    return;
-  }
-  customThemeEntry = buildCustomEntry(color);
-}
-
-/** 由任意种子色构建调色板（自定义主题编辑器实时预览用） */
-export function buildCustomPalette(color: string, dark: boolean): ThemePalette {
-  const entry = buildCustomEntry(color);
-  return dark ? entry.dark : entry.light;
-}
-
-/** HSL → 十六进制色（自定义主题编辑器用） */
-export function colorFromHsl(h: number, s: number, l: number): string {
-  return hslToHex(h, s, l);
-}
-
-/** 十六进制色 → HSL（自定义主题编辑器用） */
-export function colorToHsl(hex: string): number[] {
-  return hexToHsl(hex);
-}
-
-/** 指定主题 + 深浅色的调色板（卡片 FormAbility 等非组件进程使用） */
-export function resolveThemePalette(id: string, dark: boolean): ThemePalette {
-  return resolvePalette(id, dark);
-}
-
-/** 纯调色板解析（内部实现） */
-function resolvePalette(id: string, dark: boolean): ThemePalette {
-  if (id === THEME_ID_CUSTOM) {
-    if (customThemeEntry) {
-      return dark ? customThemeEntry.dark : customThemeEntry.light;
-    }
-    // 自定义主题尚未构建（如卡片进程未加载种子色）时回退默认主题
-    const fallback = THEME_ENTRIES[0];
-    return dark ? fallback.dark : fallback.light;
+/** 纯调色板解析（内部实现）；customPrimary 为主色 hex，仅对 custom 主题生效 */
+function resolvePalette(id: string, dark: boolean, customPrimary: string = ''): ThemePalette {
+  if (id === THEME_ID_CUSTOM && isHexColor(customPrimary)) {
+    return buildCustomPalette(customPrimary, dark);
   }
   const matched = THEME_ENTRIES.find((entry: ThemeEntry): boolean => entry.id === id);
   if (matched) {
@@ -457,8 +422,8 @@ class ThemeManager {
   private fontScale: number = FONT_SCALE_DEFAULT;
   private glowLevel: string = GLOW_LEVEL_STANDARD;
   private homeScope: string = HOME_SCOPE_MONTH;
-  // 自定义主题种子色（空串代表从未设置过）
-  private customColor: string = '';
+  // 自定义主题主色（hex，空串代表未设置）
+  private customPrimary: string = '';
   private seq: number = 0;
   private appContext: common.ApplicationContext | undefined = undefined;
 
@@ -484,11 +449,9 @@ class ThemeManager {
     if (typeof savedScope === 'string') {
       this.homeScope = savedScope;
     }
-    // 自定义主题种子色：合法则构建运行时条目
-    const savedCustom = await PreferenceUtil.getPreferenceValue(PREF_CUSTOM_THEME_COLOR, '');
-    if (typeof savedCustom === 'string' && isValidHexColor(savedCustom)) {
-      this.customColor = savedCustom;
-      applyCustomThemeColor(savedCustom);
+    const savedCustom = await PreferenceUtil.getPreferenceValue(PREF_CUSTOM_THEME_PRIMARY, '');
+    if (typeof savedCustom === 'string') {
+      this.customPrimary = savedCustom;
     }
     this.systemDark = this.readSystemDark(context);
     AppStorage.setOrCreate('themeSeq', 0);
@@ -520,7 +483,7 @@ class ThemeManager {
   /** seq 参数用于让组件在 build 中建立对 themeSeq 的状态依赖，实现主题切换细粒度刷新 */
   palette(seq: number = 0): ThemePalette {
     const dark = this.mode === THEME_MODE_DARK || (this.mode === THEME_MODE_SYSTEM && this.systemDark);
-    const resolved = resolvePalette(this.themeId, dark);
+    const resolved = resolvePalette(this.themeId, dark, this.customPrimary);
     // 光感档位实时套用到阴影色（缓存实例上原地更新，bump 后全局重读）
     resolved.primaryShadow = glowShadowColor(resolved.primary, resolved.isDark, this.glowLevel);
     return resolved;
@@ -539,22 +502,6 @@ class ThemeManager {
     this.themeId = id;
     this.persistQuietly(PREF_THEME_ID, id);
     this.bump();
-  }
-
-  /** 设置自定义主题种子色：派生运行时调色板并持久化（非法色静默忽略） */
-  setCustomTheme(color: string): void {
-    if (!isValidHexColor(color)) {
-      return;
-    }
-    this.customColor = color;
-    applyCustomThemeColor(color);
-    this.persistQuietly(PREF_CUSTOM_THEME_COLOR, color);
-    this.bump();
-  }
-
-  /** 当前自定义主题种子色（从未设置时为空串） */
-  currentCustomColor(): string {
-    return this.customColor;
   }
 
   setMode(mode: string): void {
@@ -580,6 +527,21 @@ class ThemeManager {
     this.homeScope = scope;
     this.persistQuietly(PREF_HOME_STAT_SCOPE, scope);
     this.bump();
+  }
+
+  /** 保存自定义主题主色（hex）；不触发配色即时变化，直到 setThemeId(THEME_ID_CUSTOM) */
+  setCustomPrimary(color: string): void {
+    this.customPrimary = color;
+    this.persistQuietly(PREF_CUSTOM_THEME_PRIMARY, color);
+    this.bump();
+  }
+
+  currentCustomPrimary(): string {
+    return this.customPrimary;
+  }
+
+  hasCustomPrimary(): boolean {
+    return isHexColor(this.customPrimary);
   }
 
   // 主题偏好写盘失败只记日志，不影响界面即时生效
@@ -615,10 +577,9 @@ class ThemeManager {
     if (typeof savedScope === 'string') {
       this.homeScope = savedScope;
     }
-    const savedCustom = await PreferenceUtil.getPreferenceValue(PREF_CUSTOM_THEME_COLOR, '');
-    if (typeof savedCustom === 'string' && isValidHexColor(savedCustom)) {
-      this.customColor = savedCustom;
-      applyCustomThemeColor(savedCustom);
+    const savedCustom = await PreferenceUtil.getPreferenceValue(PREF_CUSTOM_THEME_PRIMARY, '');
+    if (typeof savedCustom === 'string') {
+      this.customPrimary = savedCustom;
     }
     this.applyColorMode();
     this.bump();
@@ -664,12 +625,12 @@ class ThemeManager {
 
   /** 导出文档（HTML/PDF/Word）用调色板：固定取当前主题浅色套，保证打印可读性 */
   lightPalette(): ThemePalette {
-    return resolvePalette(this.themeId, false);
+    return resolvePalette(this.themeId, false, this.customPrimary);
   }
 
   /** 指定主题的浅色调色板，供主题选择卡片预览 */
   previewPalette(id: string): ThemePalette {
-    return resolvePalette(id, false);
+    return resolvePalette(id, false, this.customPrimary);
   }
 }
 
