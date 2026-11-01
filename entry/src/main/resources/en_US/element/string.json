@@ -1,4 +1,4 @@
-﻿{
+{
   "string": [
     {
       "name": "module_desc",
@@ -1257,6 +1257,14 @@
       "value": "Pure Black · Sharp"
     },
     {
+      "name": "theme_name_custom",
+      "value": "Custom"
+    },
+    {
+      "name": "theme_desc_custom",
+      "value": "Your own palette"
+    },
+    {
       "name": "appearance_theme_custom",
       "value": "Custom"
     },
@@ -1265,32 +1273,16 @@
       "value": "Build your own palette"
     },
     {
-      "name": "appearance_theme_custom_edit_desc",
-      "value": "Edit your palette · %s"
-    },
-    {
-      "name": "appearance_custom_editor_title",
-      "value": "Custom Theme"
-    },
-    {
-      "name": "appearance_custom_preset",
-      "value": "Preset colors"
-    },
-    {
-      "name": "appearance_custom_hue",
-      "value": "Hue"
-    },
-    {
-      "name": "appearance_custom_saturation",
-      "value": "Saturation"
-    },
-    {
-      "name": "appearance_custom_lightness",
-      "value": "Lightness"
+      "name": "appearance_custom_hex_label",
+      "value": "Color code"
     },
     {
       "name": "appearance_custom_apply",
       "value": "Save & Apply"
+    },
+    {
+      "name": "appearance_theme_custom_toast",
+      "value": "Custom themes are coming soon"
     },
     {
       "name": "appearance_font_section",

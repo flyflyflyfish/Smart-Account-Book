@@ -3,12 +3,23 @@
     products: [
       {
         name: 'default',
-        compatibleSdkVersion: '4.1.0(11)',
+        compatibleSdkVersion: '5.0.0(12)',
         runtimeOS: 'HarmonyOS',
         targetSdkVersion: '26.0.0',
+        buildOption: {
+          strictMode: {
+            useNormalizedOHMUrl: true,
+          },
+        },
       },
     ],
     signingConfigs: [],
+    capabilities: [
+      {
+        bundleName: 'com.flyfish.account_app',
+        config: [],
+      },
+    ],
   },
   modules: [
     {

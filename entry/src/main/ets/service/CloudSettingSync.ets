@@ -40,7 +40,7 @@ export const SYNCABLE_SETTINGS: SyncableSettingDef[] = [
   new SyncableSettingDef(CONSTANTS.PREF_FONT_SCALE, 'number'),
   new SyncableSettingDef(CONSTANTS.PREF_GLOW_LEVEL, 'string'),
   new SyncableSettingDef(CONSTANTS.PREF_HOME_STAT_SCOPE, 'string'),
-  new SyncableSettingDef(CONSTANTS.PREF_CUSTOM_THEME_COLOR, 'string')
+  new SyncableSettingDef(CONSTANTS.PREF_CUSTOM_THEME_PRIMARY, 'string')
 ];
 
 /** 查询设置键的值类型；不在同步清单内返回 undefined */

@@ -1,4 +1,4 @@
-﻿{
+{
   "string": [
     {
       "name": "module_desc",
@@ -981,6 +981,14 @@
       "value": "中性 · 低调内敛"
     },
     {
+      "name": "theme_name_custom",
+      "value": "自定义"
+    },
+    {
+      "name": "theme_desc_custom",
+      "value": "专属配色 · 由你定义"
+    },
+    {
       "name": "appearance_theme_custom",
       "value": "自定义"
     },
@@ -989,32 +997,16 @@
       "value": "打造你的专属配色"
     },
     {
-      "name": "appearance_theme_custom_edit_desc",
-      "value": "编辑专属配色 · %s"
-    },
-    {
-      "name": "appearance_custom_editor_title",
-      "value": "自定义主题"
-    },
-    {
-      "name": "appearance_custom_preset",
-      "value": "预设颜色"
-    },
-    {
-      "name": "appearance_custom_hue",
-      "value": "色相"
-    },
-    {
-      "name": "appearance_custom_saturation",
-      "value": "饱和度"
-    },
-    {
-      "name": "appearance_custom_lightness",
-      "value": "明度"
+      "name": "appearance_custom_hex_label",
+      "value": "颜色代码"
     },
     {
       "name": "appearance_custom_apply",
       "value": "保存并应用"
+    },
+    {
+      "name": "appearance_theme_custom_toast",
+      "value": "自定义主题即将支持，敬请期待"
     },
     {
       "name": "appearance_font_section",
@@ -1130,7 +1122,31 @@
     },
     {
       "name": "widget_desc",
-      "value": "今日收支与快速记账"
+      "value": "今日/本月收支与快速记账"
+    },
+    {
+      "name": "widget_range_today",
+      "value": "今日"
+    },
+    {
+      "name": "widget_range_month",
+      "value": "本月"
+    },
+    {
+      "name": "widget_expense_label",
+      "value": "支出(元)"
+    },
+    {
+      "name": "widget_income_label",
+      "value": "收入(元)"
+    },
+    {
+      "name": "widget_today_expense_label",
+      "value": "今日支出(元)"
+    },
+    {
+      "name": "widget_today_income_label",
+      "value": "今日收入(元)"
     },
     {
       "name": "today_expense_label",
