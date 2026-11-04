@@ -7,7 +7,8 @@ import { ACCOUNT_TABLE_NAME } from '../../data/schema';
 import { Logger } from '../../utils/Logger';
 import PreferenceUtil from '../../utils/PreferenceUtil';
 import { withAlpha, ThemePalette } from '../theme/Theme';
-import { FORM_DIM_PREFIX, FORM_RANGE_PREFIX, PREF_FORM_IDS, WIDGET_RANGE_MONTH, WIDGET_RANGE_TODAY } from '../constants';
+import { FORM_DIM_PREFIX, FORM_RANGE_PREFIX, PREF_FORM_IDS, PREF_SECOND_TAB_STYLE,
+  SECOND_TAB_STYLE_AI, SECOND_TAB_STYLE_LEDGER, WIDGET_RANGE_MONTH, WIDGET_RANGE_TODAY } from '../constants';
 
 const DB_FILENAME: string = 'account.db';
 
@@ -37,9 +38,9 @@ export interface RangeSummary {
 // 各卡片的「+」菜单展开状态（进程内内存态，不持久化；进程重启后自动收起）
 const formMenuOpenStates = new Map<string, boolean>();
 
-/** 组装推送给卡片的全部数据：所选口径的收支金额、口径标记、菜单展开标记、宽窄标记与主题色值 */
+/** 组装推送给卡片的全部数据：所选口径的收支金额、口径标记、菜单展开标记、宽窄标记、第三入口样式与主题色值 */
 export function buildCardData(expenses: string, income: string, range: string, menuVisible: string,
-  palette: ThemePalette, isWide: boolean): Record<string, string> {
+  palette: ThemePalette, isWide: boolean, thirdEntry: string): Record<string, string> {
   // 三个快捷入口取主色锚定的图表色板前三色：同一色系、色相渐变、互不相同
   const chart = palette.chart;
   const addColor = chart.length > 0 ? chart[0] : palette.primary;
@@ -52,6 +53,7 @@ export function buildCardData(expenses: string, income: string, range: string, m
     'range': range,
     'menuVisible': menuVisible,
     'isWide': isWide ? '1' : '0',
+    'thirdEntry': thirdEntry === SECOND_TAB_STYLE_LEDGER ? SECOND_TAB_STYLE_LEDGER : SECOND_TAB_STYLE_AI,
     'entryAdd': addColor,
     'entryCamera': cameraColor,
     'entryCameraSoft': withAlpha(cameraColor, softAlpha),
@@ -189,9 +191,12 @@ export default class WidgetUpdater {
         range === WIDGET_RANGE_MONTH ? dayjs().startOf('month').valueOf() : dayjs().startOf('day').valueOf(),
         dayjs().endOf('day').valueOf());
       const menuVisible = formMenuOpenStates.get(formId) === true ? '1' : '0';
+      // 第三入口跟随底部第二页签样式：AI 助手 / 账本
+      const savedTabStyle = await PreferenceUtil.getPreferenceValue(PREF_SECOND_TAB_STYLE, SECOND_TAB_STYLE_AI);
+      const thirdEntry = savedTabStyle === SECOND_TAB_STYLE_LEDGER ? SECOND_TAB_STYLE_LEDGER : SECOND_TAB_STYLE_AI;
       Logger.info('推送卡片数据', formId, range, '支出', summary.expenses, '收入', summary.income);
       const data = buildCardData(summary.expenses.toFixed(2), summary.income.toFixed(2),
-        range, menuVisible, palette, isWide);
+        range, menuVisible, palette, isWide, thirdEntry);
       await formProvider.updateForm(formId, formBindingData.createFormBindingData(data));
     } catch (err) {
       Logger.error('卡片数据更新失败', (err as Error).message);

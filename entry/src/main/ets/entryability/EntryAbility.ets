@@ -106,7 +106,8 @@ export default class EntryAbility extends UIAbility {
     CategoryStore.init(this.context).catch((err: Error): void => {
       hilog.error(0x0000, 'testTag', 'CategoryStore init failed: %{public}s', err.message);
     }).then((): void => {
-      if (this.selectPage === 'ai') {
+      if (this.selectPage === 'ai' || this.selectPage === 'ledger') {
+        // 第二页签（AI 助手 / 账本）位于 Tab 索引 1
         AppStorage.setOrCreate('quickTab', 1);
       }
       // 始终以 Index 为根页面，目标页用 router 压栈，保证返回键回到首页而非退出应用
@@ -137,8 +138,15 @@ export default class EntryAbility extends UIAbility {
       if (router.getState().path !== 'pages/RecognizeBill') {
         router.pushUrl({ url: 'pages/RecognizeBill' });
       }
-    } else if (this.selectPage === 'ai') {
+    } else if (this.selectPage === 'ai' || this.selectPage === 'ledger') {
+      // 第二页签（AI 助手 / 账本）位于 Tab 索引 1
       AppStorage.setOrCreate('quickTab', 1);
+      if (router.getState().path !== 'pages/Index') {
+        router.back({ url: 'pages/Index' });
+      }
+    } else if (this.selectPage === 'home') {
+      // 双击小组件进入首页：回到 Index 并停在首页页签
+      AppStorage.setOrCreate('quickTab', 0);
       if (router.getState().path !== 'pages/Index') {
         router.back({ url: 'pages/Index' });
       }
