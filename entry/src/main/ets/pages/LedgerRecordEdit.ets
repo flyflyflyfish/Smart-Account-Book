@@ -400,7 +400,7 @@ struct LedgerRecordEdit {
             this.TabHeader($r('app.string.income'), LEDGER_RECORD_INCOME)
           }.width('100%')
 
-          // 表单卡：金额 + 日期时间备注行（对齐 AccountForm）
+          // 表单卡：金额 + 日期时间行 + 备注行（对齐 AccountForm）
           Column() {
             Row() {
               Text($r('app.string.bill_amount'))
@@ -450,20 +450,26 @@ struct LedgerRecordEdit {
               }.onClick(() => {
                 this.showTimePicker();
               })
-              TextInput({ placeholder: $r('app.string.ledger_note_placeholder'), text: this.noteText })
-                .placeholderColor(this.tk().textSecondary)
-                .placeholderFont({ size: 12 })
-                .fontSize(this.fs(12))
-                .layoutWeight(1)
-                .backgroundColor(this.tk().surface)
-                .maxLength(30)
-                .onChange((val: string) => {
-                  this.noteText = val;
-                })
-                .onClick(() => {
-                  this.showKeyboard = false;
-                })
             }.height(40).padding({ left: 10 })
+
+            // 备注：独立整行（对齐 AccountForm 加大样式，点击区域与字号一致）
+            TextInput({ placeholder: $r('app.string.ledger_note_placeholder'), text: this.noteText })
+              .placeholderColor(this.tk().textSecondary)
+              .placeholderFont({ size: this.fs(14) })
+              .fontSize(this.fs(14))
+              .fontColor(this.tk().textPrimary)
+              .width('100%')
+              .height(46)
+              .padding({ left: 12, right: 12 })
+              .backgroundColor(this.tk().surface)
+              .borderRadius(SPACE_SMALL)
+              .maxLength(50)
+              .onChange((val: string) => {
+                this.noteText = val;
+              })
+              .onClick(() => {
+                this.showKeyboard = false;
+              })
 
             // 同步记入主账单开关：关闭时只进账本，不进首页统计（仅新增模式）
             if (!this.isEditingRecord()) {
