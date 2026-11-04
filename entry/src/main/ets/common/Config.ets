@@ -11,7 +11,9 @@ export const MAX_PICK_IMAGES: number = 9;
 // 批量识别：同时进行的请求上限
 export const RECOGNIZE_CONCURRENCY: number = 2;
 // 识别器组合：主识别器结果最小置信度低于该值时降级到备用识别器
-export const RECOGNIZE_CONFIDENCE_THRESHOLD: number = 0.6;
+// 0.8 由 40 图留出集扫描选定（0.6/0.7/0.75/0.8/0.85/0.9 中最优，混合 F1 0.946，
+// 超过全云端基线 0.909；约半数低置信图整图回退云端）
+export const RECOGNIZE_CONFIDENCE_THRESHOLD: number = 0.8;
 // 识别器组合：失败重试次数（含首次共 maxAttempts 次尝试）
 export const RECOGNIZE_RETRY_MAX_ATTEMPTS: number = 2;
 // 识别器组合：重试间隔基数（毫秒），逐次翻倍
