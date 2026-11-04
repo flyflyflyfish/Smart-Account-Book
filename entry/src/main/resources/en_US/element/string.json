@@ -1587,6 +1587,38 @@
     {
       "name": "search_result_summary",
       "value": "Total %d records · Expenses -¥%s · Income +¥%s"
+    },
+    {
+      "name": "ai_assistant",
+      "value": "AI Assistant"
+    },
+    {
+      "name": "ai_greeting",
+      "value": "Hi, I'm your bookkeeping assistant. I can record bills and analyze your spending."
+    },
+    {
+      "name": "ai_input_hint",
+      "value": "e.g. Breakfast 15 yuan"
+    },
+    {
+      "name": "ai_send",
+      "value": "Send"
+    },
+    {
+      "name": "ai_thinking",
+      "value": "Thinking..."
+    },
+    {
+      "name": "ai_config_missing",
+      "value": "No cloud model configured. Bill commands work offline; AI chat requires a model."
+    },
+    {
+      "name": "ai_local_only_hint",
+      "value": "Couldn't parse a bill. Try phrases like \"Breakfast 15 yuan\". Without a cloud model only bill commands are supported; configure one to chat freely."
+    },
+    {
+      "name": "ai_configure_model",
+      "value": "Configure"
     }
   ]
 }
