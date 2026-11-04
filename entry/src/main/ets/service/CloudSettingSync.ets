@@ -22,7 +22,7 @@ export class SyncableSettingDef {
 /**
  * 参与端云同步的全部设置键。
  * 不同步的本地状态：多服务商 API 配置（含明文 API key，仅存本机）、
- * 训练采集开关（明确仅存本机）、小组件卡片列表（设备相关）、
+ * 小组件卡片列表（设备相关）、
  * 预算当月提醒标记（设备本地去重状态）、旧版单服务商三键（已被多服务商配置取代）
  */
 export const SYNCABLE_SETTINGS: SyncableSettingDef[] = [
