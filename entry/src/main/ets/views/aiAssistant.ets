@@ -630,6 +630,10 @@ export default struct AiAssistant {
       return;
     }
     if (this.configMissing) {
+      // 未配置云端：本地解析失败时给出明确提示，而不是静默无响应
+      this.chatList.push({ role: 'assistant', content: this.resolveName($r('app.string.ai_local_only_hint')) });
+      this.chatList = this.chatList.slice();
+      this.scrollToBottom();
       return;
     }
     this.loading = true;
