@@ -301,6 +301,10 @@
       "value": "一键入账"
     },
     {
+      "name": "importing_tip",
+      "value": "正在入账…"
+    },
+    {
       "name": "duplicated_tip",
       "value": "疑似重复"
     },
