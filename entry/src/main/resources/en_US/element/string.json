@@ -309,6 +309,10 @@
       "value": "Import"
     },
     {
+      "name": "importing_tip",
+      "value": "Importing…"
+    },
+    {
       "name": "duplicated_tip",
       "value": "Possible duplicate"
     },
