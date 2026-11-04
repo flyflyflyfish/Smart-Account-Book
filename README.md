@@ -23,7 +23,6 @@
 - AI 助手：对话式记账与消费分析，支持语音输入
 - 识别流水线：金额归一化 → 重复检测（疑似重复提示）→ 分类（学习分类器 + 规则分类器）→ 校验
 - 商家→分类学习记忆：同商家下次优先命中上次确认的分类
-- 训练数据采集：识别过程可并行采集端侧样本（仅存本机，不上传）
 
 ### 数据与同步
 
@@ -37,8 +36,8 @@
 
 ### 个性化
 
-- 外观：6 套主题配色（松绿 / 暖橘 / 清爽蓝 / 雅紫 / 极简灰 / 曜石灰）、深浅色模式、字体大小、光感调节
-- 桌面小部件：今日收支与快速记账
+- 外观：7 套主题配色（松绿 / 暖橘 / 清爽蓝 / 雅紫 / 极简灰 / 曜石灰 + 自定义主题）、深浅色模式、字体大小、光感调节
+- 桌面小部件：2×2 / 2×4 双布局，今日收支、本月口径与快捷记账入口，跟随主题配色
 
 ## 技术栈
 
@@ -66,6 +65,43 @@
 3. 云数据库控制台创建存储区与对象类型，字段需与 `AppScope/resources/rawfile/schema.json` 一致（`user_setting` / `account` / `bill_tombstone`）。
 4. 在 AGC 控制台修改云数据库结构后，注意同步更新本地 `schema.json` 的 `schemaVersion` 为控制台显示的版本号，否则会报"object type is not found"。
 
+## 测试
+
+单元测试位于 `entry/src/ohosTest/ets/test/`，覆盖识别流水线各步骤（归一化、分类、去重、校验）、分类器、云端结果解析、识别器装饰器与统计服务，共 10 个测试文件。
+
+在 DevEco Studio 中：连接设备或启动模拟器 → 右键 `entry/src/ohosTest` → **Run 'entry ohosTest'**。
+
+资源一致性检查（无需设备，CI 亦会执行）：
+
+```bash
+node scripts/check_strings.mjs
+```
+
+校验资源 JSON 语法，保证 zh_CN / en_US 不含无效 key，并检查代码中引用的 `$r('app.string.*')` 均有定义。
+
+## 持续集成
+
+GitHub Actions 工作流（`.github/workflows/ci.yml`）在 push / PR 时自动执行资源一致性检查，配合 DevEco Studio 的 ArkTS 静态检查（`codelinter` / 编译期检查）保证内部质量。
+
+## 分支策略
+
+| 分支        | 用途                                           |
+| ----------- | ---------------------------------------------- |
+| `main`     | 开发主线，包含训练数据采集等开发期工具功能     |
+| `release`  | 发行分支，剥离开发期工具，面向最终用户（推荐体验） |
+| `feat/*`   | 功能开发分支，完成后合回 `main`                |
+
+发行流程：`main` 功能稳定后挑选用户可见特性入 `release`，打 tag 发布。
+
+## 文档
+
+- [用户手册](./docs/用户手册.md)：功能使用说明
+- [设计与重构报告](./docs/设计与重构报告.md)：重构前后系统对比、UML、设计模式与量化增益
+- [量化实验报告](./docs/量化实验报告.md)：识别模型实验数据、指标与环境参数
+- [工作量分配与 KPI](./docs/工作量分配与KPI.md)：团队分工与 git 度量证据
+- [安全设计](./docs/安全设计.md)：隐私与信息安全设计说明
+- [贡献指南](./CONTRIBUTING.md)：提交规范、代码风格、协作流程
+
 ## 目录结构
 
 ```
@@ -85,7 +121,11 @@ account_app_harmonyos
 │   │   │   └── recognition/            # 识别流水线、分类器、端侧模型、装饰器
 │   │   ├── utils/                      # 工具类（DB、Preferences、Logger 等）
 │   │   └── common/                     # 常量、主题、断点配置
+│   ├── ohosTest/                       # 单元测试（识别流水线、分类器、解析、统计）
 │   └── resources/                      # 资源文件
+├── scripts/check_strings.mjs           # 三语言资源一致性检查（CI 执行）
+├── .github/workflows/ci.yml            # GitHub Actions 持续集成
+├── docs/                               # 用户手册、设计报告、实验报告、KPI、安全设计
 ├── NOTICE                              # 来源与修改声明
 ├── THIRD_PARTY.md                      # 第三方依赖许可
 ├── LICENSE                             # Apache License 2.0
