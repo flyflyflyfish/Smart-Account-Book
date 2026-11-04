@@ -349,6 +349,7 @@ export default struct AccountForm {
             .fontColor(this.tk().textPrimary)
             .width('100%')
             .height(46)
+            .maxLength(50)
             .padding({ left: 12, right: 12 })
             .backgroundColor(this.tk().surface)
             .borderRadius(SPACE_SMALL)
