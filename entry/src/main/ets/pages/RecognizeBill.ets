@@ -1048,12 +1048,22 @@ struct RecognizeBill {
           .fontWeight(FontWeight.Medium)
           .fontColor(this.tk().textPrimary)
           .layoutWeight(1)
-        // 入账中：OCR 串行队列 + 逐条写库耗时数秒，文案切“正在入账…”并禁用，防止误以为卡死
-        Button(this.importing ? $r('app.string.importing_tip') : $r('app.string.import_selected'))
+        // 入账中：OCR 串行队列 + 逐条写库耗时数秒，按钮内联转圈防止误以为卡死
+        Button({ type: ButtonType.Normal, stateEffect: true }) {
+          Row({ space: SPACE_TINY }) {
+            if (this.importing) {
+              LoadingProgress()
+                .width(16)
+                .height(16)
+                .color(this.tk().surface)
+            }
+            Text(this.importing ? $r('app.string.importing_tip') : $r('app.string.import_selected'))
+              .fontSize(this.fs(15))
+              .fontColor(this.tk().surface)
+          }
+        }
           .height(40)
-          .fontSize(this.fs(15))
           .backgroundColor(this.tk().primary)
-          .fontColor(this.tk().surface)
           .type(ButtonType.Normal)
           .borderRadius(SPACE_SMALL)
           .enabled(!this.importing)
