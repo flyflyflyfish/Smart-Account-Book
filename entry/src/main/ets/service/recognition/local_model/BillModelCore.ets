@@ -7,8 +7,13 @@
  *   - 归一化统一用 nfkcLite（全角 ASCII 区 U+FF01~U+FF5E -> 半角、￥ -> ¥），
  *     不依赖 String.normalize，保证两端逐块一致；
  *   - 字符统计一律按 Unicode 码点遍历（for-of），避免 JS UTF-16 与 Python 码点的长度差异；
- *   - 置信度口径：amount 块的 amount 类概率；有商户块则与 merchant 类概率取平均；
- *     无商户块 *0.8；金额来自回退文本（无 amount 预测块）再 *0.5。
+ *   - 金额抽取：千分位粘连点归一（8.000.00 -> 8000.00）、拒绝前导零（008 类单号）
+ *     与 0 元金额、前缀标签加权（实付/合计类 +2，优惠/余额类 -3）；
+ *   - 组内标签词筛：实付/实收(2) > 合计/金额(1) > 无标签(0)，优惠/余额(-1) 丢弃；
+ *   - 商家四级回退：组内 merchant 预测块（阅读序最近）-> 组内标签词块（去标签词取剩余）
+ *     -> 组内 CJK 最多块 -> 跨组 merchant 预测块（阅读序距离 + 4.0*复用次数）；
+ *   - 置信度口径：金额块 amount 类概率；有组内商家块则与 merchant 类概率取平均；
+ *     无商家块或跨组商家 *0.8；金额来自回退文本（组内解析不出金额候选）再 *0.5。
  */
 
 // ---------------- 数据模型 ----------------
@@ -84,10 +89,12 @@ interface BillYmd {
   d: number;
 }
 
-// 组时间解析结果：ms + 命中的块下标（-1 表示回退 nowMs）
-interface BillTimeResolve {
-  ms: number;
-  hitIdx: number;
+// 金额候选：块下标 + 抽取结果 + 是否来自回退文本
+interface BillAmtCandidate {
+  idx: number;
+  value: number;
+  sign: string;
+  fromFallback: boolean;
 }
 
 // 配对特征输入：块位置 + 块特征里的 digitRatio(feats[1])、textLen(feats[0])
@@ -148,6 +155,31 @@ const NUM_SEQ_RE = /[0-9]+(?:\.[0-9]{1,4})?/g;
 const NUM_IN_TEXT_RE = /[+\-][¥￥]?\s*[0-9][0-9,，]*(?:\.[0-9]{1,2})?|[¥￥]\s*[+\-]?[0-9][0-9,，]*(?:\.[0-9]{1,2})?|[0-9][0-9,，]*(?:\.[0-9]{1,2})/g;
 const STRIP_AMOUNT_RE = /[¥￥,，+\-\s]/g;
 const STRONG_AMOUNT_RE = /[+\-]\s*[¥￥]?\s*[0-9]+\.[0-9]{1,2}/;
+// 千分位粘连点：OCR 把千分位逗号读成点，形如 X.YYY.ZZ（ZZ 恰两位且后无数字）时第一个点是千分位（8.000.00 / 15.142.17）
+const GLUED_DOT_RE = /\.(?=[0-9]{3}\.[0-9]{2}(?![0-9]))/g;
+// 数字紧邻前缀的标签词（含结尾冒号）：实付/合计类 +2，优惠/余额类 -3，用于同块多数字时选对金额
+const PRE_PAY_LABEL_RE = /(实际支付|实付款|实收|实付|合计|总计|小计|金额|支付|付款|收款|支出|收入|转账|红包)[:：]?$/;
+const PRE_ANTI_LABEL_RE = /(优惠|折扣|立减|满减|券|补贴|余额|剩余|积分|手续费|运费|税费)[:：]?$/;
+const LEADING_ZERO_RE = /^0[0-9]/;
+// 金额候选块的标签分级（组内筛选用）
+const AMT_LABEL_PAY_RE = /实付|实收|实际支付/;
+const AMT_LABEL_SUM_RE = /合计|总计|小计|金额/;
+const AMT_LABEL_ANTI_RE = /优惠|折扣|立减|满减|券|补贴|余额|剩余|积分|手续费/;
+// 商家标签词（组内标签词块回退用）
+const MER_LABEL_WORD_RE = /(收款方|付款方|收款人|付款人|对方|商户|店名|卖家|商品名)/g;
+// v4 追加特征的正则（关键词桶 / 千分位 / 粘连小数 / 元后缀）
+const KW_SHIFU_RE = /实付|实收|实际支付|实付款/;
+const KW_YOUHUI_RE = /优惠|折扣|立减|满减|券|补贴/;
+const KW_HEJI_RE = /合计|总计|小计/;
+const KW_YUE_RE = /余额|剩余|可用/;
+const KW_ROLE_RE = /收款方|收款人|付款方|付款人|对方/;
+const KW_SHANGHU_RE = /商户|店名|卖家|商品名称?/;
+const KW_DINGDAN_RE = /订单|单号|交易号|流水/;
+const KW_GONGZHONG_RE = /公众号|生活号|服务号|小程序/;
+const KW_QIANBAO_RE = /支付宝|微信|Alipay|WeChat|Wallet|零钱/;
+const THOUSANDS_SEP_RE = /[0-9],[0-9]{3}/;
+const GLUED_AMOUNT_RE = /[0-9]\.[0-9]{2,3}\.[0-9]/;
+const YUAN_SUFFIX_RE = /元$/;
 
 // ---------------- 时间抽取正则（与训练侧逐字一致；输入为 nfkcLite 后保留空格的文本） ----------------
 
@@ -272,13 +304,14 @@ export function readingOrder(blocks: BillModelBlock[]): number[] {
 
 // ---------------- 特征 ----------------
 
-// 块特征（23 维，顺序与训练侧 BLOCK_FEATURES 完全一致）
+// 块特征（37 维，顺序与训练侧 BLOCK_FEATURES 完全一致；v4 起在后 23 维基础上追加 14 维）
 export function blockFeatures(block: BillModelBlock, medH: number, orderPos: number): number[] {
   const sq = squeezeText(block.text);
   const cpLen = codePointLen(sq);
   const n = Math.max(1, cpLen);
   let digit = 0;
   let cjk = 0;
+  let colon = 0;
   for (const ch of sq) {
     const cp = ch.codePointAt(0) ?? 0;
     if (cp >= 0x30 && cp <= 0x39) {
@@ -286,6 +319,9 @@ export function blockFeatures(block: BillModelBlock, medH: number, orderPos: num
     }
     if (cp >= 0x4e00 && cp <= 0x9fff) {
       cjk++;
+    }
+    if (ch === ':' || ch === '：') {
+      colon++;
     }
   }
   const nums = sq.match(NUM_SEQ_RE);
@@ -316,6 +352,21 @@ export function blockFeatures(block: BillModelBlock, medH: number, orderPos: num
     Math.min(cjk, 20) / 20.0,
     (cpLen > 0 && PURE_NUM_RE.test(sq) && !TIME_RE.test(sq) && !DATE_RE.test(sq)) ? 1.0 : 0.0,
     sq.includes('+') ? 1.0 : 0.0,
+    // v4 追加（append-only，顺序与训练侧 block_features 完全一致）
+    KW_SHIFU_RE.test(sq) ? 1.0 : 0.0,
+    KW_YOUHUI_RE.test(sq) ? 1.0 : 0.0,
+    KW_HEJI_RE.test(sq) ? 1.0 : 0.0,
+    KW_YUE_RE.test(sq) ? 1.0 : 0.0,
+    KW_ROLE_RE.test(sq) ? 1.0 : 0.0,
+    KW_SHANGHU_RE.test(sq) ? 1.0 : 0.0,
+    KW_DINGDAN_RE.test(sq) ? 1.0 : 0.0,
+    KW_GONGZHONG_RE.test(sq) ? 1.0 : 0.0,
+    KW_QIANBAO_RE.test(sq) ? 1.0 : 0.0,
+    THOUSANDS_SEP_RE.test(sq) ? 1.0 : 0.0,
+    GLUED_AMOUNT_RE.test(sq) ? 1.0 : 0.0,
+    Math.min(digit, 12) / 12.0,
+    Math.min(colon, 3) / 3.0,
+    YUAN_SUFFIX_RE.test(sq) ? 1.0 : 0.0,
   ];
 }
 
@@ -436,34 +487,79 @@ export function dtPredictLabel(root: BillDtNode, feats: number[]): string {
 
 // ---------------- 金额抽取 ----------------
 
-// 从文本抽取金额：取"带符号/带¥/带小数"加权得分最高的匹配；返回 null 表示无金额
+// 从文本抽取金额：千分位粘连点先归一，拒绝前导零（008 类单号片段）与 0 元金额，
+// 再按"带符号/带¥/带小数 + 前缀标签加成（实付/合计类 +2，优惠/余额类 -3）"取最高分；返回 null 表示无金额
 export function extractAmount(text: string): BillAmountMatch | null {
-  const sq = squeezeText(text);
-  const matches = sq.match(NUM_IN_TEXT_RE);
-  if (matches === null) {
-    return null;
-  }
+  const sq = squeezeText(text).replace(GLUED_DOT_RE, '');
   let found = false;
   let bestScore = 0;
   let bestValue = 0;
   let bestSign = '';
-  for (const raw of matches) {
+  NUM_IN_TEXT_RE.lastIndex = 0;
+  let m: RegExpExecArray | null = NUM_IN_TEXT_RE.exec(sq);
+  while (m !== null) {
+    const raw = m[0];
     const cleaned = raw.replace(STRIP_AMOUNT_RE, '');
     const val = parseFloat(cleaned);
-    const hasSign = raw.charAt(0) === '+' || raw.charAt(0) === '-';
-    const hasYuan = raw.includes('¥') || raw.includes('￥');
-    const score = (hasSign ? 2 : 0) + (hasYuan ? 1 : 0) + (raw.includes('.') ? 1 : 0);
-    if (!found || score > bestScore) {
-      found = true;
-      bestScore = score;
-      bestValue = val;
-      bestSign = hasSign ? raw.charAt(0) : '';
+    if (!LEADING_ZERO_RE.test(cleaned) && !isNaN(val) && val !== 0) {
+      const hasSign = raw.charAt(0) === '+' || raw.charAt(0) === '-';
+      const hasYuan = raw.includes('¥') || raw.includes('￥');
+      let score = (hasSign ? 2 : 0) + (hasYuan ? 1 : 0) + (raw.includes('.') ? 1 : 0);
+      const prefix = sq.substring(0, m.index);
+      if (PRE_PAY_LABEL_RE.test(prefix)) {
+        score += 2;
+      }
+      if (PRE_ANTI_LABEL_RE.test(prefix)) {
+        score -= 3;
+      }
+      if (!found || score > bestScore) {
+        found = true;
+        bestScore = score;
+        bestValue = val;
+        bestSign = hasSign ? raw.charAt(0) : '';
+      }
     }
+    m = NUM_IN_TEXT_RE.exec(sq);
   }
   if (!found) {
     return null;
   }
   return { value: bestValue, sign: bestSign };
+}
+
+// 金额候选块的标签分级：2=实付/实收，-1=优惠/余额（不作为金额候选），1=合计/金额，0=无标签
+export function amountLabelClass(text: string): number {
+  const sq = squeezeText(text);
+  if (AMT_LABEL_PAY_RE.test(sq)) {
+    return 2;
+  }
+  if (AMT_LABEL_ANTI_RE.test(sq)) {
+    return -1;
+  }
+  if (AMT_LABEL_SUM_RE.test(sq)) {
+    return 1;
+  }
+  return 0;
+}
+
+// 取最后一个商家标签词之后的文本作商家名（跳过紧随的冒号）；无标签词或其后为空返回空串
+export function stripMerLabel(text: string): string {
+  const sq = squeezeText(text);
+  let lastEnd = -1;
+  MER_LABEL_WORD_RE.lastIndex = 0;
+  let m: RegExpExecArray | null = MER_LABEL_WORD_RE.exec(sq);
+  while (m !== null) {
+    lastEnd = m.index + m[0].length;
+    m = MER_LABEL_WORD_RE.exec(sq);
+  }
+  if (lastEnd < 0) {
+    return '';
+  }
+  let rest = sq.substring(lastEnd);
+  while (rest.startsWith(':')) {
+    rest = rest.substring(1);
+  }
+  return rest;
 }
 
 // ---------------- 时间抽取（与训练侧逐位一致） ----------------
@@ -683,7 +779,7 @@ export function extractPayTime(text: string, nowMs: number): BillPayTime | null 
 
 // ---------------- 主流程 ----------------
 
-// 块分类 -> 去 noise -> 相邻块分组 -> 合并启发式 -> 抽取金额/商户/置信度/时间
+// 块分类 -> 去 noise -> 相邻块分组 -> 合并启发式 -> 金额块独立成候选 -> 抽取金额/商户/置信度/时间
 // nowMs：相对日期（今天/昨天/星期X）与无时间回退的基准时间戳（毫秒）
 export function predictBillTransactions(model: BillModel, blocks: BillModelBlock[], nowMs: number): BillTxnPrediction[] {
   // 过滤空文本块（与训练侧 load_dataset 一致）
@@ -767,10 +863,10 @@ export function predictBillTransactions(model: BillModel, blocks: BillModelBlock
     }
     merged.push(g);
   }
-  // 每组抽取交易
-  // ---- 时间解析（只对产出交易的组做；全局去重，阅读序先到先得）----
-  // 候选顺序：组内块（time 预测优先，再其他非 amount 的时间/日期命中块，允许纯时刻）
-  //   -> 组跨度内的洞（noise 块，必须带日期）-> 外圈逐距离（同距先上后下，必须带日期）
+  // 每组抽取：amount 预测块各自独立成候选（多笔交易被并进同组时不再丢笔）
+  // ---- 时间解析（每个金额候选独立做；全图共享，不设已用集合）----
+  // 组内候选：阅读序距金额块最近的非 amount 块（同距取先出现的），可不带日期；
+  // 组外外圈：从金额块位置向两侧扩展 1..8（同距先上后下），必须带日期。
   const opos: number[] = [];
   for (let i = 0; i < valid.length; i++) {
     opos.push(0);
@@ -778,87 +874,53 @@ export function predictBillTransactions(model: BillModel, blocks: BillModelBlock
   for (let k = 0; k < order.length; k++) {
     opos[order[k]] = k;
   }
-  const usedTimeBlocks = new Set<number>();
   const isTimeText = (i: number): boolean => {
     const sq = squeezeText(valid[i].text);
     return TIME_RE.test(sq) || DATE_RE.test(sq);
   };
-  const tryExtractTime = (i: number, needDate: boolean): BillPayTime | null => {
-    if (usedTimeBlocks.has(i)) {
-      return null;
-    }
-    const r = extractPayTime(valid[i].text, nowMs);
-    if (r === null) {
-      return null;
-    }
-    if (needDate && !r.dated) {
-      return null;
-    }
-    return r;
-  };
-  const resolveGroupTime = (g: number[]): BillTimeResolve | null => {
-    if (g.length === 0) {
-      return null;
-    }
-    const inGroup = g.slice().sort((a: number, b: number): number => opos[a] - opos[b]);
-    const cands: number[] = [];
-    for (const i of inGroup) {
-      if (labels[i] === 'time') {
-        cands.push(i);
+  const resolveCandidateTime = (gset: Set<number>, gSorted: number[], amtIdx: number): number | null => {
+    const p = opos[amtIdx];
+    // 组内候选：距金额块最近的非 amount 块
+    const inCands: number[] = [];
+    for (const j of gSorted) {
+      if (j !== amtIdx && labels[j] !== 'amount') {
+        inCands.push(j);
       }
     }
-    for (const i of inGroup) {
-      if (labels[i] !== 'time' && labels[i] !== 'amount' && isTimeText(i)) {
-        cands.push(i);
+    inCands.sort((a: number, b: number): number => {
+      const da = Math.abs(opos[a] - p);
+      const db = Math.abs(opos[b] - p);
+      if (da !== db) {
+        return da - db;
       }
-    }
-    for (const i of cands) {
-      const r = tryExtractTime(i, false);
-      if (r !== null) {
-        return { ms: r.ms, hitIdx: i };
-      }
-    }
-    let lo = opos[g[0]];
-    let hi = opos[g[0]];
-    for (const i of g) {
-      if (opos[i] < lo) {
-        lo = opos[i];
-      }
-      if (opos[i] > hi) {
-        hi = opos[i];
-      }
-    }
-    const gset = new Set<number>(g);
-    // 组内洞：跨度内不属于本组的块（noise），需带日期
-    for (let p = lo; p <= hi; p++) {
-      const j = order[p];
-      if (gset.has(j) || labels[j] === 'amount') {
+      return opos[a] - opos[b];
+    });
+    for (const j of inCands) {
+      if (labels[j] !== 'time' && !isTimeText(j)) {
         continue;
       }
-      if (isTimeText(j)) {
-        const r = tryExtractTime(j, true);
-        if (r !== null) {
-          return { ms: r.ms, hitIdx: j };
-        }
+      const r = extractPayTime(valid[j].text, nowMs);
+      if (r !== null) {
+        return r.ms;
       }
     }
-    // 外圈：按距离扩展，同距先上后下，需带日期
+    // 组外外圈：必须带日期
     for (let dist = 1; dist <= 8; dist++) {
       const ring: number[] = [];
-      if (lo - dist >= 0) {
-        ring.push(order[lo - dist]);
+      if (p - dist >= 0) {
+        ring.push(order[p - dist]);
       }
-      if (hi + dist < order.length) {
-        ring.push(order[hi + dist]);
+      if (p + dist < order.length) {
+        ring.push(order[p + dist]);
       }
       for (const j of ring) {
-        if (labels[j] === 'amount') {
+        if (gset.has(j) || labels[j] === 'amount') {
           continue;
         }
         if (labels[j] === 'time' || isTimeText(j)) {
-          const r = tryExtractTime(j, true);
-          if (r !== null) {
-            return { ms: r.ms, hitIdx: j };
+          const r = extractPayTime(valid[j].text, nowMs);
+          if (r !== null && r.dated) {
+            return r.ms;
           }
         }
       }
@@ -866,90 +928,167 @@ export function predictBillTransactions(model: BillModel, blocks: BillModelBlock
     return null;
   };
   const out: BillTxnPrediction[] = [];
+  // merchant 预测块的被分配计数（跨组回退按 4.0*次数加惩罚）
+  const merUses = new Map<number, number>();
+  const merPredAll: number[] = [];
+  for (const j of order) {
+    if (labels[j] === 'merchant') {
+      merPredAll.push(j);
+    }
+  }
   for (const g of merged) {
-    let amtVal: number | null = null;
-    let sign = '';
-    let merText: string | null = null;
-    let amtIdx = -1;
-    let merIdx = -1;
-    let hasAmountPred = false;
-    for (const i of g) {
+    const gSorted = g.slice().sort((a: number, b: number): number => opos[a] - opos[b]);
+    const gset = new Set<number>(gSorted);
+    const amtPreds: number[] = [];
+    for (const i of gSorted) {
       if (labels[i] === 'amount') {
-        hasAmountPred = true;
-        if (amtVal === null) {
-          const m = extractAmount(valid[i].text);
-          amtVal = m === null ? null : m.value;
-          sign = m === null ? '' : m.sign;
-          amtIdx = i;
-        }
-      }
-      if (labels[i] === 'merchant' && merText === null) {
-        merText = valid[i].text;
-        merIdx = i;
+        amtPreds.push(i);
       }
     }
-    // 回退：组内无 amount 预测块时，找含 ¥ / 带符号小数的强金额文本
-    let amountFromFallback = false;
-    if (amtVal === null) {
-      for (const i of g) {
+    // 组内标签词筛：优惠/余额(-1) 丢弃，保留组内最高级别（实付/实收 2 > 合计/金额 1 > 无标签 0）
+    const classes: number[] = [];
+    for (const i of amtPreds) {
+      classes.push(amountLabelClass(valid[i].text));
+    }
+    let kept: number[] = [];
+    for (let k = 0; k < amtPreds.length; k++) {
+      if (classes[k] >= 0) {
+        kept.push(amtPreds[k]);
+      }
+    }
+    if (kept.length > 0) {
+      let top = 0;
+      for (const c of classes) {
+        if (c > top) {
+          top = c;
+        }
+      }
+      const keptTop: number[] = [];
+      for (let k = 0; k < amtPreds.length; k++) {
+        if (classes[k] === top) {
+          keptTop.push(amtPreds[k]);
+        }
+      }
+      kept = keptTop;
+    }
+    const cands: BillAmtCandidate[] = [];
+    for (const i of kept) {
+      const m = extractAmount(valid[i].text);
+      if (m !== null) {
+        cands.push({ idx: i, value: m.value, sign: m.sign, fromFallback: false });
+      }
+    }
+    if (cands.length === 0) {
+      // 回退：组内解析不出金额候选时用强金额文本（¥ 或 带符号小数），需有商户才出账
+      for (const i of gSorted) {
         const sq = squeezeText(valid[i].text);
         if (sq.includes('¥') || sq.includes('￥') || STRONG_AMOUNT_RE.test(sq)) {
           const m = extractAmount(valid[i].text);
           if (m !== null) {
-            amtVal = m.value;
-            sign = m.sign;
-            amtIdx = i;
-            amountFromFallback = true;
+            cands.push({ idx: i, value: m.value, sign: m.sign, fromFallback: true });
             break;
           }
         }
       }
     }
-    // 商户回退：组内非金额/时间/分类块中取 CJK 最多的（并列取最前）
-    if (merText === null) {
-      const cands: number[] = [];
-      for (const i of g) {
-        if (labels[i] !== 'amount' && labels[i] !== 'time' && labels[i] !== 'category') {
-          cands.push(i);
-        }
-      }
-      if (cands.length > 0) {
-        let bestI = cands[0];
-        let bestCjk = cjkCount(valid[bestI].text);
-        for (let k = 1; k < cands.length; k++) {
-          const c = cjkCount(valid[cands[k]].text);
-          if (c > bestCjk) {
-            bestCjk = c;
-            bestI = cands[k];
+    for (const cand of cands) {
+      const amtIdx = cand.idx;
+      // ---- 商家四级回退 ----
+      let merIdx = -1;
+      let merText: string | null = null;
+      let merCrossGroup = false;
+      // L1：组内 merchant 预测块，阅读序最近
+      let bestD = -1;
+      for (const j of gSorted) {
+        if (labels[j] === 'merchant') {
+          const d = Math.abs(opos[j] - opos[amtIdx]);
+          if (bestD < 0 || d < bestD) {
+            bestD = d;
+            merIdx = j;
           }
         }
-        merIdx = bestI;
-        merText = valid[merIdx].text;
       }
-    }
-    // 出账条件：抽到金额，且（有 amount 预测块 或 有商户文本）
-    if (amtVal !== null && (hasAmountPred || merText !== null)) {
-      let conf = amtIdx >= 0 && amtIdx < probsArr.length ? probsArr[amtIdx][amtK] : 0;
-      if (merText !== null && merIdx >= 0) {
+      if (merIdx >= 0) {
+        merText = valid[merIdx].text;
+        merUses.set(merIdx, (merUses.get(merIdx) ?? 0) + 1);
+      }
+      if (merIdx < 0) {
+        // L2：组内标签词块，去标签词取剩余文本
+        bestD = -1;
+        for (const j of gSorted) {
+          if (labels[j] === 'amount') {
+            continue;
+          }
+          const rest = stripMerLabel(valid[j].text);
+          if (rest.length > 0) {
+            const d = Math.abs(opos[j] - opos[amtIdx]);
+            if (bestD < 0 || d < bestD) {
+              bestD = d;
+              merIdx = j;
+            }
+          }
+        }
+        if (merIdx >= 0) {
+          merText = stripMerLabel(valid[merIdx].text);
+        }
+      }
+      if (merIdx < 0) {
+        // L3：组内 CJK 最多的非 amount/time/category 块
+        let bestC = -1;
+        for (const j of gSorted) {
+          if (labels[j] === 'amount' || labels[j] === 'time' || labels[j] === 'category') {
+            continue;
+          }
+          const c = cjkCount(valid[j].text);
+          if (c > bestC) {
+            bestC = c;
+            merIdx = j;
+          }
+        }
+        if (merIdx >= 0) {
+          merText = valid[merIdx].text;
+        }
+      }
+      if (merIdx < 0) {
+        // L4：跨组 merchant 预测块，距离 + 4.0*复用次数
+        bestD = -1;
+        for (const j of merPredAll) {
+          const d = Math.abs(opos[j] - opos[amtIdx]) + 4.0 * (merUses.get(j) ?? 0);
+          if (bestD < 0 || d < bestD) {
+            bestD = d;
+            merIdx = j;
+          }
+        }
+        if (merIdx >= 0) {
+          merText = valid[merIdx].text;
+          merUses.set(merIdx, (merUses.get(merIdx) ?? 0) + 1);
+          merCrossGroup = true; // 跨组商家是猜测，不给置信度加成
+        }
+      }
+      // 回退金额需有商户才出账；amount 预测候选无商户也出账
+      if (cand.fromFallback && merText === null) {
+        continue;
+      }
+      let conf = probsArr[amtIdx][amtK];
+      if (merIdx >= 0 && !merCrossGroup) {
         conf = (conf + probsArr[merIdx][merK]) / 2.0;
       } else {
         conf *= 0.8;
       }
-      if (amountFromFallback) {
+      if (cand.fromFallback) {
         conf *= 0.5;
       }
-      // 时间解析：仅对产出交易的组做（组内候选 + 洞 + 外圈，全局去重）
-      const resolved = resolveGroupTime(g);
-      let payMs = nowMs;
-      if (resolved !== null) {
-        usedTimeBlocks.add(resolved.hitIdx);
-        payMs = resolved.ms;
-      }
-      const amountAbs = Math.abs(amtVal);
+      // 时间：每候选独立解析（组内可不带日期，组外外圈必须带日期），失败回退 nowMs
+      const resolvedMs = resolveCandidateTime(gset, gSorted, amtIdx);
+      const payMs = resolvedMs === null ? nowMs : resolvedMs;
+      const amountAbs = Math.abs(cand.value);
       const merchant = (merText ?? '').trim();
-      const dup = out.some((o: BillTxnPrediction): boolean => o.amount === amountAbs && o.merchant === merchant);
+      // 跨组去重用「金额+商家+时间」三元组：同额同商家的多笔交易很常见（P0 修复，
+      // 真值里 41 笔同额多笔），时间不同即视为不同交易，不再互相吞掉
+      const dup = out.some((o: BillTxnPrediction): boolean =>
+        o.amount === amountAbs && o.merchant === merchant && o.payTime === payMs);
       if (!dup) {
-        out.push({ amount: amountAbs, merchant: merchant, isIncome: sign === '+', confidence: conf, payTime: payMs });
+        out.push({ amount: amountAbs, merchant: merchant, isIncome: cand.sign === '+', confidence: conf, payTime: payMs });
       }
     }
   }
