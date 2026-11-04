@@ -1072,7 +1072,7 @@ export default struct AiAssistant {
           .height(40)
           .fontSize(this.fs(14))
           .fontColor(this.tk().onPrimary)
-          .backgroundColor(this.configMissing || this.loading ? this.tk().outline : this.tk().primary)
+          .backgroundColor(this.inputText.trim().length === 0 || this.loading ? this.tk().outline : this.tk().primary)
           .type(ButtonType.Normal)
           .borderRadius(20)
           .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM })
