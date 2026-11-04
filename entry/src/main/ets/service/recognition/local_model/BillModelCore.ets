@@ -12,6 +12,10 @@
  *   - 组内标签词筛：实付/实收(2) > 合计/金额(1) > 无标签(0)，优惠/余额(-1) 丢弃；
  *   - 商家四级回退：组内 merchant 预测块（阅读序最近）-> 组内标签词块（去标签词取剩余）
  *     -> 组内 CJK 最多块 -> 跨组 merchant 预测块（阅读序距离 + 4.0*复用次数）；
+ *   - 行对齐商家覆盖（rowmer，列表页）：现行商家块与金额块不同行时，用与金额块
+ *     行对齐的商家样候选覆盖；仅列式布局（>=4 金额预测块 x 中心同列 ±0.07）或
+ *     候选强商家（P_mer>=0.35）时启用，候选须过文本门（cjk>=4 或 拉丁>=5 或
+ *     P_mer>=0.35）且不含大写金额词（壹贰叁…/圆整/元整/人民币）；
  *   - 置信度口径：金额块 amount 类概率；有组内商家块则与 merchant 类概率取平均；
  *     无商家块或跨组商家 *0.8；金额来自回退文本（组内解析不出金额候选）再 *0.5。
  */
@@ -151,6 +155,8 @@ const DATE_RE = /[0-9]{1,4}\s*[年/.\-]\s*[0-9]{1,2}\s*[月/.\-]?\s*[0-9]{0,2}\s
 const DECIMAL_RE = /[0-9]+\.[0-9]{1,2}/;
 const SIGN_RE = /[+\-]\s*[¥￥]?\s*[0-9]|[0-9][0-9,，.]*\s*元?\s*[+\-]$/;
 const PURE_NUM_RE = /^[+\-¥￥0-9.,，:：/年月日时分秒%]+$/;
+// 大写金额词（行对齐商家候选排除：壹佰肆拾伍圆整 等）
+const MONEY_WORD_RE = /[壹贰叁肆伍陆柒捌玖佰仟]{2,}|圆整|元整|人民币/;
 const NUM_SEQ_RE = /[0-9]+(?:\.[0-9]{1,4})?/g;
 const NUM_IN_TEXT_RE = /[+\-][¥￥]?\s*[0-9][0-9,，]*(?:\.[0-9]{1,2})?|[¥￥]\s*[+\-]?[0-9][0-9,，]*(?:\.[0-9]{1,2})?|[0-9][0-9,，]*(?:\.[0-9]{1,2})/g;
 const STRIP_AMOUNT_RE = /[¥￥,，+\-\s]/g;
@@ -265,6 +271,18 @@ function cjkCount(text: string): number {
   for (const ch of text) {
     const cp = ch.codePointAt(0) ?? 0;
     if (cp >= 0x4e00 && cp <= 0x9fff) {
+      n++;
+    }
+  }
+  return n;
+}
+
+// 拉丁字母数（按码点，等价 Python re.findall(r"[A-Za-z]", t) 的计数）
+function latinCount(text: string): number {
+  let n = 0;
+  for (const ch of text) {
+    const cp = ch.codePointAt(0) ?? 0;
+    if ((cp >= 0x41 && cp <= 0x5a) || (cp >= 0x61 && cp <= 0x7a)) {
       n++;
     }
   }
@@ -927,6 +945,56 @@ export function predictBillTransactions(model: BillModel, blocks: BillModelBlock
     }
     return null;
   };
+  // ---- 行对齐商家覆盖工具（rowmer，列表页布局）----
+  // 同一行判定：垂直重叠 >= 0.4*min(h) 或中心距 <= 0.5*medH
+  const rowAligned = (a: number, m: number): boolean => {
+    const ha = valid[a].bottom - valid[a].top;
+    const hm = valid[m].bottom - valid[m].top;
+    const ov = Math.min(valid[a].bottom, valid[m].bottom) - Math.max(valid[a].top, valid[m].top);
+    if (ov >= 0.4 * Math.max(1e-6, Math.min(ha, hm))) {
+      return true;
+    }
+    const cya = (valid[a].top + valid[a].bottom) / 2.0;
+    const cym = (valid[m].top + valid[m].bottom) / 2.0;
+    return Math.abs(cya - cym) <= 0.5 * medH;
+  };
+  const merchantLike = (i: number): boolean => {
+    const t = valid[i].text;
+    if (labels[i] === 'amount' || labels[i] === 'time' || isTimeText(i)) {
+      return false;
+    }
+    if (MONEY_WORD_RE.test(t)) {
+      return false;
+    }
+    const sq = squeezeText(t);
+    if (sq.length === 0 || PURE_NUM_RE.test(sq)) {
+      return false;
+    }
+    return cjkCount(t) >= 2 || latinCount(t) >= 3;
+  };
+  // 列式布局：>=4 个金额预测块的 x 中心聚在同一列（列表页才启用行对齐覆盖）
+  const amtPredCx: number[] = [];
+  for (const i of order) {
+    if (labels[i] === 'amount') {
+      amtPredCx.push((valid[i].left + valid[i].right) / 2.0);
+    }
+  }
+  amtPredCx.sort((a: number, b: number): number => a - b);
+  let amountColumnar = false;
+  if (amtPredCx.length >= 4) {
+    for (let k = 0; k < amtPredCx.length; k++) {
+      let cnt = 0;
+      for (const c of amtPredCx) {
+        if (Math.abs(c - amtPredCx[k]) <= 0.07) {
+          cnt++;
+        }
+      }
+      if (cnt >= 4) {
+        amountColumnar = true;
+        break;
+      }
+    }
+  }
   const out: BillTxnPrediction[] = [];
   // merchant 预测块的被分配计数（跨组回退按 4.0*次数加惩罚）
   const merUses = new Map<number, number>();
@@ -1063,6 +1131,35 @@ export function predictBillTransactions(model: BillModel, blocks: BillModelBlock
           merText = valid[merIdx].text;
           merUses.set(merIdx, (merUses.get(merIdx) ?? 0) + 1);
           merCrossGroup = true; // 跨组商家是猜测，不给置信度加成
+        }
+      }
+      // ---- 行对齐商家覆盖（rowmer）----
+      if (merIdx < 0 || !rowAligned(amtIdx, merIdx)) {
+        let bestS = -1;
+        let bestJ = -1;
+        for (const j of order) {
+          if (j === amtIdx || !rowAligned(amtIdx, j) || !merchantLike(j)) {
+            continue;
+          }
+          const tj = valid[j].text;
+          const cjk = cjkCount(tj);
+          // 文本门：cjk>=4 或 拉丁>=5 或 P_mer>=0.35（拦大写金额/类目词/短标识）
+          if (cjk < 4 && latinCount(tj) < 5 && probsArr[j][merK] < 0.35) {
+            continue;
+          }
+          const s = probsArr[j][merK] + 0.03 * Math.min(cjk, 12);
+          if (bestJ < 0 || s > bestS) {
+            bestS = s;
+            bestJ = j;
+          }
+        }
+        // 布局门：列式列表页，或候选本身是强商家（P_mer>=0.35）
+        if (bestJ >= 0 && (amountColumnar || probsArr[bestJ][merK] >= 0.35)) {
+          if (merText === null || squeezeText(valid[bestJ].text) !== squeezeText(merText)) {
+            merIdx = bestJ;
+            merText = valid[bestJ].text;
+            merCrossGroup = !gset.has(bestJ);
+          }
         }
       }
       // 回退金额需有商户才出账；amount 预测候选无商户也出账
