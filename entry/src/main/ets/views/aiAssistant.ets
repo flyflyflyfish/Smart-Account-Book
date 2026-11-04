@@ -43,14 +43,11 @@ const AI_SUGGESTIONS: AiSuggestion[] = [
   { label: '月度小结', prompt: '给我生成一份本月的消费小结' }
 ];
 
-// 是否带有记账意图：包含常见记账动词/场景词即认为用户在记账
-function hasBookingIntent(text: string): boolean {
-  const keywords: string[] = [
-    '记', '花', '买', '付', '消费', '支出', '收入', '赚', '收到',
-    '转账', '充值', '缴费', '打车', '外卖', '红包', '工资', '房租'
-  ];
-  for (const keyword of keywords) {
-    if (text.indexOf(keyword) >= 0) {
+// 是否像疑问句：含常见疑问词/问号时交给云端 AI，避免“预算3000元够吗”这类提问被误记一笔
+function looksLikeQuestion(text: string): boolean {
+  const markers: string[] = ['吗', '呢', '？', '?', '多少', '怎么', '如何', '为什么', '还是', '值不值', '贵不贵'];
+  for (const marker of markers) {
+    if (text.indexOf(marker) >= 0) {
       return true;
     }
   }
@@ -301,10 +298,11 @@ export default struct AiAssistant {
   }
 
   // 本地解析（支持一句话多笔），成功则弹确认卡片。
-  // 加记账动词门控：像“预算3000元够吗”这类含金额但只是提问的句子，
-  // 不应误触发本地记账，交由云端 AI 判断意图
+  // 只要有明确金额（带元/块单位）就尝试本地入账——用户用词千变万化（零食/包子/玩…），
+  // 不再依赖关键词表；入账前有确认卡片兜底，可改可取消。
+  // 疑问句（“预算3000元够吗”这类）交给云端 AI 判断意图，不误记一笔
   tryParseAsBills(text: string): boolean {
-    if (!hasBookingIntent(text)) {
+    if (looksLikeQuestion(text)) {
       return false;
     }
     const parsedList = VoiceBillParser.parseMultiple(text);

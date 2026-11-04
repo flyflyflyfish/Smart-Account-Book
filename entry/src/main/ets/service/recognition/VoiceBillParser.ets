@@ -38,7 +38,12 @@ export class VoiceBillParser {
     { keyword: '医院', categoryName: '医疗' },
     { keyword: '话费', categoryName: '通讯' },
     { keyword: '书', categoryName: '学习' },
-    { keyword: '购物', categoryName: '购物' }
+    { keyword: '零食', categoryName: '零食烟酒' },
+    { keyword: '包子', categoryName: '早午晚餐' },
+    { keyword: '馒头', categoryName: '早午晚餐' },
+    { keyword: '游戏', categoryName: '娱乐' },
+    { keyword: '购物', categoryName: '购物' },
+    { keyword: '玩', categoryName: '娱乐' }
   ];
 
   private static readonly INCOME_RULES: KeywordRule[] = [
