@@ -890,7 +890,11 @@
     },
     {
       "name": "ai_config_missing",
-      "value": "尚未配置模型，请先在设置中填写云端大模型"
+      "value": "未配置云端大模型：记账语句可正常识别，AI 对话需先配置模型"
+    },
+    {
+      "name": "ai_local_only_hint",
+      "value": "没有识别出账单，可以试试「早餐 15 元」这类说法。未配置云端大模型时仅支持记账语句识别，配置后可自由对话。"
     },
     {
       "name": "ai_configure_model",
