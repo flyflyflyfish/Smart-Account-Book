@@ -33,6 +33,41 @@ struct QuickAccountCard {
   @LocalStorageProp('entryAiSoft') entryAiSoft: string = '#296FA02E';
   // 大卡（2*4）宽布局标记，由 EntryFormAbility 按卡片尺寸下发
   @LocalStorageProp('isWide') isWideFlag: string = '0';
+  // 第三入口样式：ai AI助手 / ledger 账本，跟随外观-首页统计的底部第二页签设置下发
+  @LocalStorageProp('thirdEntry') thirdEntry: string = 'ai';
+  // 账本入口配色（取主题蓝点缀色）
+  @LocalStorageProp('accentBlue') accentBlue: string = '#3D94F0';
+  @LocalStorageProp('accentBlueSoft') accentBlueSoft: string = '#293D94F0';
+
+  // 双击检测：记录上一次点击时间戳，400ms 内连点两次非按钮区域进入应用首页
+  private lastTapTime: number = 0;
+  // 按钮 onClick 先于根容器 onClick 执行（点击事件冒泡），按钮先打标记，根容器据此跳过本次点击
+  private buttonTap: boolean = false;
+
+  /** 按钮 onClick 首行调用：标记本次点击来自按钮，根容器不做双击检测 */
+  markButtonTap(): void {
+    this.buttonTap = true;
+  }
+
+  /** 卡片主体点击：双击非按钮区域拉起应用首页 */
+  onCardClick(): void {
+    if (this.buttonTap) {
+      this.buttonTap = false;
+      this.lastTapTime = 0;
+      return;
+    }
+    const now = Date.now();
+    if (this.lastTapTime > 0 && now - this.lastTapTime <= 400) {
+      this.lastTapTime = 0;
+      postCardAction(this, {
+        action: 'router',
+        abilityName: 'EntryAbility',
+        params: { targetPage: 'home' }
+      });
+    } else {
+      this.lastTapTime = now;
+    }
+  }
 
   /** 大卡金额字号随长度自适应：越长字号越小，确保长金额（如 100001.00）不被截断 */
   amountFontSize(value: string): number {
@@ -76,6 +111,7 @@ struct QuickAccountCard {
             .borderRadius(9)
             .padding({ left: 10, right: 10, top: 3, bottom: 3 })
             .onClick(() => {
+              this.markButtonTap();
               postCardAction(this, {
                 action: 'message',
                 params: { range: 'today' }
@@ -89,6 +125,7 @@ struct QuickAccountCard {
             .borderRadius(9)
             .padding({ left: 10, right: 10, top: 3, bottom: 3 })
             .onClick(() => {
+              this.markButtonTap();
               postCardAction(this, {
                 action: 'message',
                 params: { range: 'month' }
@@ -153,6 +190,7 @@ struct QuickAccountCard {
           }
           .layoutWeight(1)
           .onClick(() => {
+            this.markButtonTap();
             postCardAction(this, {
               action: 'router',
               abilityName: 'EntryAbility',
@@ -180,6 +218,7 @@ struct QuickAccountCard {
           }
           .layoutWeight(1)
           .onClick(() => {
+            this.markButtonTap();
             postCardAction(this, {
               action: 'router',
               abilityName: 'EntryAbility',
@@ -187,32 +226,65 @@ struct QuickAccountCard {
             });
           })
 
-          Column({ space: 4 }) {
-            Stack({ alignContent: Alignment.Center }) {
-              Circle()
-                .width(36)
-                .height(36)
-                .fill(this.entryAiSoft)
-              Image($r('app.media.ai'))
-                .width(18)
-                .height(18)
-                .fillColor(this.entryAi)
+          if (this.thirdEntry === 'ledger') {
+            // 第三入口为账本：跟随底部第二页签设置
+            Column({ space: 4 }) {
+              Stack({ alignContent: Alignment.Center }) {
+                Circle()
+                  .width(36)
+                  .height(36)
+                  .fill(this.accentBlueSoft)
+                Image($r('app.media.ledger'))
+                  .width(18)
+                  .height(18)
+                  .fillColor(this.accentBlue)
+              }
+              .width(36)
+              .height(36)
+              Text($r('app.string.ledger'))
+                .fontSize(10)
+                .fontColor(this.textSecondary)
+                .maxLines(1)
             }
-            .width(36)
-            .height(36)
-            Text($r('app.string.ai_assistant'))
-              .fontSize(10)
-              .fontColor(this.textSecondary)
-              .maxLines(1)
+            .layoutWeight(1)
+            .onClick(() => {
+              this.markButtonTap();
+              postCardAction(this, {
+                action: 'router',
+                abilityName: 'EntryAbility',
+                params: { targetPage: 'ledger' }
+              });
+            })
+          } else {
+            // 第三入口为 AI 助手
+            Column({ space: 4 }) {
+              Stack({ alignContent: Alignment.Center }) {
+                Circle()
+                  .width(36)
+                  .height(36)
+                  .fill(this.entryAiSoft)
+                Image($r('app.media.ai'))
+                  .width(18)
+                  .height(18)
+                  .fillColor(this.entryAi)
+              }
+              .width(36)
+              .height(36)
+              Text($r('app.string.ai_assistant'))
+                .fontSize(10)
+                .fontColor(this.textSecondary)
+                .maxLines(1)
+            }
+            .layoutWeight(1)
+            .onClick(() => {
+              this.markButtonTap();
+              postCardAction(this, {
+                action: 'router',
+                abilityName: 'EntryAbility',
+                params: { targetPage: 'ai' }
+              });
+            })
           }
-          .layoutWeight(1)
-          .onClick(() => {
-            postCardAction(this, {
-              action: 'router',
-              abilityName: 'EntryAbility',
-              params: { targetPage: 'ai' }
-            });
-          })
         }
         .width('100%')
       }
@@ -221,6 +293,9 @@ struct QuickAccountCard {
       .justifyContent(FlexAlign.Center)
       .padding({ left: 14, right: 14, top: 10, bottom: 8 })
       .backgroundColor(this.bgColor)
+      .onClick(() => {
+        this.onCardClick();
+      })
     } else {
       Stack({ alignContent: Alignment.TopEnd }) {
         if (this.menuVisible === '1') {
@@ -244,6 +319,7 @@ struct QuickAccountCard {
                 .fontColor(this.textPrimary)
             }
             .onClick(() => {
+              this.markButtonTap();
               postCardAction(this, {
                 action: 'router',
                 abilityName: 'EntryAbility',
@@ -269,6 +345,7 @@ struct QuickAccountCard {
                 .fontColor(this.textPrimary)
             }
             .onClick(() => {
+              this.markButtonTap();
               postCardAction(this, {
                 action: 'router',
                 abilityName: 'EntryAbility',
@@ -276,30 +353,61 @@ struct QuickAccountCard {
               });
             })
 
-            Row({ space: 8 }) {
-              Stack({ alignContent: Alignment.Center }) {
-                Circle()
-                  .width(28)
-                  .height(28)
-                  .fill(this.entryAiSoft)
-                Image($r('app.media.ai'))
-                  .width(14)
-                  .height(14)
-                  .fillColor(this.entryAi)
+            if (this.thirdEntry === 'ledger') {
+              // 第三入口为账本：跟随底部第二页签设置
+              Row({ space: 8 }) {
+                Stack({ alignContent: Alignment.Center }) {
+                  Circle()
+                    .width(28)
+                    .height(28)
+                    .fill(this.accentBlueSoft)
+                  Image($r('app.media.ledger'))
+                    .width(14)
+                    .height(14)
+                    .fillColor(this.accentBlue)
+                }
+                .width(28)
+                .height(28)
+                Text($r('app.string.ledger'))
+                  .fontSize(12)
+                  .fontColor(this.textPrimary)
               }
-              .width(28)
-              .height(28)
-              Text($r('app.string.ai_assistant'))
-                .fontSize(12)
-                .fontColor(this.textPrimary)
+              .onClick(() => {
+                this.markButtonTap();
+                postCardAction(this, {
+                  action: 'router',
+                  abilityName: 'EntryAbility',
+                  params: { targetPage: 'ledger' }
+                });
+              })
+            } else {
+              // 第三入口为 AI 助手
+              Row({ space: 8 }) {
+                Stack({ alignContent: Alignment.Center }) {
+                  Circle()
+                    .width(28)
+                    .height(28)
+                    .fill(this.entryAiSoft)
+                  Image($r('app.media.ai'))
+                    .width(14)
+                    .height(14)
+                    .fillColor(this.entryAi)
+                }
+                .width(28)
+                .height(28)
+                Text($r('app.string.ai_assistant'))
+                  .fontSize(12)
+                  .fontColor(this.textPrimary)
+              }
+              .onClick(() => {
+                this.markButtonTap();
+                postCardAction(this, {
+                  action: 'router',
+                  abilityName: 'EntryAbility',
+                  params: { targetPage: 'ai' }
+                });
+              })
             }
-            .onClick(() => {
-              postCardAction(this, {
-                action: 'router',
-                abilityName: 'EntryAbility',
-                params: { targetPage: 'ai' }
-              });
-            })
           }
           .width('100%')
           .height('100%')
@@ -356,6 +464,7 @@ struct QuickAccountCard {
         .height(26)
         .margin({ top: 2, right: 2 })
         .onClick(() => {
+          this.markButtonTap();
           postCardAction(this, {
             action: 'message',
             params: { menu: 'toggle' }
@@ -366,6 +475,9 @@ struct QuickAccountCard {
       .height('100%')
       .padding({ left: 14, right: 14, top: 10, bottom: 10 })
       .backgroundColor(this.bgColor)
+      .onClick(() => {
+        this.onCardClick();
+      })
     }
   }
 }
