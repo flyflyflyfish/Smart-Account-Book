@@ -12,7 +12,8 @@ import {
   THEME_MODE_LIGHT,
   THEME_MODE_SYSTEM
 } from '../common/theme/Theme';
-import { PREF_THEME_ID, PREF_COLOR_MODE, PREF_CUSTOM_THEME_PRIMARY, FORM_RANGE_PREFIX, WIDGET_RANGE_MONTH, WIDGET_RANGE_TODAY } from '../common/constants';
+import { PREF_THEME_ID, PREF_COLOR_MODE, PREF_CUSTOM_THEME_PRIMARY, FORM_RANGE_PREFIX, SECOND_TAB_STYLE_AI,
+  WIDGET_RANGE_MONTH, WIDGET_RANGE_TODAY } from '../common/constants';
 
 const IDENTITY_KEY: string = 'ohos.extra.param.key.form_identity';
 
@@ -37,8 +38,9 @@ export default class EntryFormAbility extends FormExtensionAbility {
     const dimension = this.readDimension(want);
     WidgetUpdater.registerForm(this.context, formId, dimension);
     this.refreshCard(formId, dimension);
+    // 初始数据用默认值占位，refreshCard 随后按磁盘偏好推送真实数据（含第三入口样式）
     const data = buildCardData('--', '--', WIDGET_RANGE_TODAY, '0',
-      resolveThemePalette(THEME_ID_PINE, false), this.isWideDimension(dimension));
+      resolveThemePalette(THEME_ID_PINE, false), this.isWideDimension(dimension), SECOND_TAB_STYLE_AI);
     return formBindingData.createFormBindingData(data);
   }
 

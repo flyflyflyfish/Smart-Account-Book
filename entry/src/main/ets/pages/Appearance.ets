@@ -182,6 +182,8 @@ struct Appearance {
   selectSecondTab(style: string): void {
     this.secondTab = style;
     SecondTabStore.set(style);
+    // 第三入口跟随第二页签样式，切换后立即把新样式推送到桌面小组件
+    this.syncWidgetTheme();
   }
 
   tk(): ThemePalette {
