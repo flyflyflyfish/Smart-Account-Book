@@ -588,7 +588,7 @@ struct RecognizeBill {
     return regex.test(value);
   }
 
-  // 一键入账：入账只处理勾选项；训练标签则采集图上所有真实交易（含判重复的）
+  // 一键入账：只处理勾选项
   async onImportSelected(): Promise<void> {
     // 防重入：双击“入账”会把同一批草稿写两遍
     if (this.importing) {
@@ -1048,7 +1048,7 @@ struct RecognizeBill {
           .fontWeight(FontWeight.Medium)
           .fontColor(this.tk().textPrimary)
           .layoutWeight(1)
-        // 入账中：等待训练样本采集（OCR串行队列）+ 逐条写库耗时数秒，文案切“正在入账…”并禁用，防止误以为卡死
+        // 入账中：OCR 串行队列 + 逐条写库耗时数秒，文案切“正在入账…”并禁用，防止误以为卡死
         Button(this.importing ? $r('app.string.importing_tip') : $r('app.string.import_selected'))
           .height(40)
           .fontSize(this.fs(15))
