@@ -18,5 +18,3 @@ export const RECOGNIZE_RETRY_MAX_ATTEMPTS: number = 2;
 export const RECOGNIZE_RETRY_BASE_DELAY_MS: number = 500;
 // 识别器组合：按图片内容哈希的结果缓存上限（条）
 export const RECOGNIZE_CACHE_SIZE: number = 20;
-// 入账前等待训练样本采集协程的最长时间（毫秒）：超时放弃等待继续入账，防止入账按钮被 OCR 队列积压卡死
-export const IMPORT_SAMPLE_WAIT_MS: number = 15000;
