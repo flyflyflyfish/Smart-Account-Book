@@ -14,7 +14,7 @@ import {
   SPACE_XLARGE
 } from '../common/dimens';
 import { ThemeKit, ThemePalette } from '../common/theme/Theme';
-import { AMOUNT_MAX } from '../utils/AmountGuard';
+import { AMOUNT_MAX, clampAmount } from '../utils/AmountGuard';
 
 const AMOUNT_PATTERN: RegExp = /^\d+(\.\d{1,2})?$/;
 
@@ -55,16 +55,23 @@ struct BudgetSettings {
     }
   }
 
-  // 预览时优先使用当前输入的合法额度，未输入或非法时回退到已保存额度
+  // 预览时优先使用当前输入的合法额度（超上限按上限 9999999.99 预览），
+  // 未输入或非法时回退到已保存额度，保证输入与下方预览始终一致
   effectiveLimit(): number {
     const text = this.amountText.trim();
     if (this.budgetOn && AMOUNT_PATTERN.test(text)) {
       const value = Number(text);
-      if (Number.isFinite(value) && value > 0 && value <= AMOUNT_MAX) {
-        return Math.round(value * 100) / 100;
+      if (Number.isFinite(value) && value > 0) {
+        return clampAmount(value);
       }
     }
     return this.savedLimit;
+  }
+
+  // 输入超过金额上限时展示内联提示，避免用户误以为已按输入值生效
+  isOverMax(): boolean {
+    const text = this.amountText.trim();
+    return AMOUNT_PATTERN.test(text) && Number(text) > AMOUNT_MAX;
   }
 
   isOver(): boolean {
@@ -171,6 +178,13 @@ struct BudgetSettings {
                 .onChange((value: string) => {
                   this.amountText = value;
                 })
+
+              if (this.isOverMax()) {
+                Text($r('app.string.amount_too_large'))
+                  .width('100%')
+                  .fontSize(this.fs(12))
+                  .fontColor(this.tk().danger)
+              }
 
               Divider().color(this.tk().surfaceVariant)
 
