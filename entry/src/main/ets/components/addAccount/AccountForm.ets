@@ -339,21 +339,27 @@ export default struct AccountForm {
             }.onClick(() => {
               this.showTimePicker();
             })
-            TextInput({ placeholder: $r('app.string.description_placeholder'), text: this.description })
-              .placeholderColor(this.tk().textSecondary)
-              .placeholderFont({ size: 12 })
-              .fontSize(this.fs(12))
-              .layoutWeight(1)
-              .backgroundColor(this.tk().surface)
-              .onChange((val: string) => {
-                this.description = val;
-              })
-              .onClick(() => {
-                this.showKeyboard = false;
-              })
           }.height(40).padding({ left: 10 })
           Divider().color(this.tk().surfaceVariant)
-            .margin({ top: 4 })
+            .margin({ top: 4, bottom: 12 })
+          TextInput({ placeholder: $r('app.string.description_placeholder'), text: this.description })
+            .placeholderColor(this.tk().textSecondary)
+            .placeholderFont({ size: this.fs(14) })
+            .fontSize(this.fs(14))
+            .fontColor(this.tk().textPrimary)
+            .width('100%')
+            .height(46)
+            .padding({ left: 12, right: 12 })
+            .backgroundColor(this.tk().surface)
+            .borderRadius(SPACE_SMALL)
+            .onChange((val: string) => {
+              this.description = val;
+            })
+            .onClick(() => {
+              this.showKeyboard = false;
+            })
+          Divider().color(this.tk().surfaceVariant)
+            .margin({ top: 12 })
         }.width('100%')
         .padding(SPACE_LARGE)
         .backgroundColor(this.tk().surface)
