@@ -1,8 +1,8 @@
-# 记账助手（HarmonyOS ArkTS）
+# 智能记账助手（HarmonyOS ArkTS）
 
 一款使用鸿蒙 ArkTS + ArkUI（Stage 模型）开发的个人记账应用：本地关系型数据库（RDB）存储，可选华为账号登录实现端云同步；支持图片/语音/AI 对话多种记账方式。
 
-> 本项目基于开源项目 [account_app_harmonyos](https://github.com/banggx)（作者 banggx）二次开发，原始代码遵循 Apache License 2.0。来源与修改说明详见 [NOTICE](./NOTICE)。
+> 本项目基于开源项目 [account_app_harmonyos](https://github.com/banggx/account_app_harmonyos)（作者 banggx）二次开发，原始代码遵循 Apache License 2.0。来源与修改说明详见 [NOTICE](./NOTICE)。
 
 ## 功能特性
 
