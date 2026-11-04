@@ -1614,7 +1614,7 @@
     },
     {
       "name": "ai_local_only_hint",
-      "value": "Couldn't parse a bill. Try phrases like \"Breakfast 15 yuan\". Without a cloud model only bill commands are supported; configure one to chat freely."
+      "value": "Couldn't parse a bill. Try amount phrases like \"Breakfast 15 yuan\" or \"Taxi 20 kuai\". Without a cloud model only bill commands are supported; configure one to chat freely."
     },
     {
       "name": "ai_configure_model",
