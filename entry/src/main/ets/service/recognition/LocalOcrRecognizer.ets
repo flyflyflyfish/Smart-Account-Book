@@ -39,7 +39,7 @@ export class LocalOcrRecognizer implements Recognizer {
     return this.parse(raw.result.value);
   }
 
-  // 阶段1：返回带相对坐标的文本块 + 图片尺寸，供训练数据采集使用
+  // 阶段1：返回带相对坐标的文本块 + 图片尺寸，供端侧账单模型消费
   async recognizeBlocks(imageUri: string): Promise<OcrVisionResult> {
     const raw = await this.runOcr(imageUri);
     return this.toVisionResult(raw);
@@ -47,7 +47,7 @@ export class LocalOcrRecognizer implements Recognizer {
 
   // OCR 核心：init -> 解码 -> recognizeText，返回 {宽,高,原始结果}，统一负责 release。
   // 外层包看门狗：底层静默卡死时按超时抛错，当前任务可见失败、ocrQueue 继续消化
-  // 后续任务（其他图片、重试、训练样本采集），而不是整个识别流程永久挂起。
+  // 后续任务（其他图片、重试），而不是整个识别流程永久挂起。
   // 注：超时后底层任务可能仍在后台持引擎，后续任务的 init/release 与其交错属降级路径，
   // 相比整条队列永久死锁是更小的代价
   private runOcr(imageUri: string): Promise<OcrRaw> {
