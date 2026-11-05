@@ -19,6 +19,8 @@ export const PREF_OCR_ENABLED = 'ocr_enabled';
 export const PREF_CLOUD_ENABLED = 'cloud_enabled';
 // 用户是否同意将图片上传至云端识别服务
 export const PREF_CLOUD_CONSENT = 'cloud_consent';
+// 训练数据采集开关（默认关闭，仅存本机，不上传）
+export const PREF_TRAIN_COLLECT_ENABLED = 'train_collect_enabled';
 
 // 自定义分类配置（JSON：新增的自定义分类 + 被隐藏的默认分类 id）的 Preferences 键
 export const PREF_CATEGORY_CONFIG = 'category_config';
