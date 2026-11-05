@@ -1190,7 +1190,7 @@
     },
     {
       "name": "import_supported_desc",
-      "value": "支持导入微信支付与支付宝导出的账单文件"
+      "value": "支持导入微信支付、支付宝导出的账单文件与本应用导出的 CSV"
     },
     {
       "name": "import_format_alipay",
@@ -1199,6 +1199,10 @@
     {
       "name": "import_format_wechat",
       "value": "微信 CSV / XLSX"
+    },
+    {
+      "name": "import_format_app",
+      "value": "本应用 CSV"
     },
     {
       "name": "import_privacy_tip",
@@ -1327,6 +1331,18 @@
     {
       "name": "export_format_pdf_desc",
       "value": "生成 PDF 文件"
+    },
+    {
+      "name": "export_format_csv",
+      "value": "CSV 表格"
+    },
+    {
+      "name": "export_format_csv_desc",
+      "value": "保存为 .csv，可重新导入本应用"
+    },
+    {
+      "name": "export_csv_hint",
+      "value": "CSV 包含全部账单明细，不受内容选项影响，可在「导入账单」中重新导入"
     },
     {
       "name": "export_summary_label",
@@ -1775,78 +1791,6 @@
     {
       "name": "recurring_add_now_failed",
       "value": "记入失败，请重试"
-    },
-    {
-      "name": "train_section_title",
-      "value": "训练数据采集"
-    },
-    {
-      "name": "train_collect_label",
-      "value": "采集训练数据"
-    },
-    {
-      "name": "train_collect_hint",
-      "value": "开启后，图片识别时会并行运行端侧 OCR，仅在本机保存图片宽高、OCR 文本块与多模态识别结果，用于训练本地识别模型；不上传、不保存图片本身。"
-    },
-    {
-      "name": "train_collected_count",
-      "value": "已采集 %d 条"
-    },
-    {
-      "name": "train_export_do",
-      "value": "导出数据"
-    },
-    {
-      "name": "train_export_empty",
-      "value": "暂无训练数据可导出"
-    },
-    {
-      "name": "train_export_success",
-      "value": "已导出 %d 条训练数据"
-    },
-    {
-      "name": "ocr_supported",
-      "value": "端侧 OCR：支持"
-    },
-    {
-      "name": "ocr_test_do",
-      "value": "测试识别"
-    },
-    {
-      "name": "ocr_testing",
-      "value": "测试中..."
-    },
-    {
-      "name": "ocr_test_success",
-      "value": "识别到 %d 行文本"
-    },
-    {
-      "name": "ocr_test_detail",
-      "value": "识别内容（文本 + 相对坐标）"
-    },
-    {
-      "name": "train_list_title",
-      "value": "已采集样本（点「删除」移除废数据）"
-    },
-    {
-      "name": "train_delete_success",
-      "value": "已删除该样本"
-    },
-    {
-      "name": "train_clear_all",
-      "value": "清空全部"
-    },
-    {
-      "name": "train_clear_confirm_title",
-      "value": "清空训练样本"
-    },
-    {
-      "name": "train_clear_confirm_msg",
-      "value": "确定清空全部已采集样本吗？此操作不可恢复"
-    },
-    {
-      "name": "train_clear_success",
-      "value": "已清空训练样本"
     },
     {
       "name": "add_manual",

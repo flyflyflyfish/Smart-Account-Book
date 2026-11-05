@@ -1,6 +1,8 @@
 import preferences from '@ohos.data.preferences';
 import { RdbAccountRepository } from '../data/RdbAccountRepository';
 import CloudAccountRepository from '../data/CloudAccountRepository';
+import LedgerRepository from '../data/LedgerRepository';
+import CloudLedgerRepository from '../data/CloudLedgerRepository';
 import CloudSettingSync, {
   SYNCABLE_SETTINGS,
   SyncableSettingDef,
@@ -11,8 +13,12 @@ import CloudSettingSync, {
 import AccountPO from '../models/account/accountPO';
 import { AccountCloud } from '../models/cloud/AccountCloud';
 import { SettingCloud } from '../models/cloud/SettingCloud';
+import { LedgerCloud } from '../models/cloud/LedgerCloud';
+import { LedgerRecordCloud } from '../models/cloud/LedgerRecordCloud';
+import { Ledger, LedgerRecord } from '../models/ledger/Ledger';
 import CategoryStore from '../models/accountType/CategoryStore';
 import BillStore from '../common/BillStore';
+import LedgerStore from '../common/LedgerStore';
 import PreferenceUtil from '../utils/PreferenceUtil';
 import MerchantLearningSync from './MerchantLearningSync';
 import { ThemeKit, sanitizeFontScale, FONT_SCALE_DEFAULT } from '../common/theme/Theme';
@@ -30,6 +36,7 @@ class CloudSyncService {
   private syncing: boolean = false;
   private lastSyncAt: number = 0;
   private localRepo: RdbAccountRepository = new RdbAccountRepository();
+  private ledgerRepo: LedgerRepository = new LedgerRepository();
 
   /**
    * 全量同步入口：重复触发时防重入，force=false 时按最小间隔节流
@@ -49,7 +56,10 @@ class CloudSyncService {
       const uid = CloudSettingSync.getUid();
       // 先同步设置/分类，再同步账单：账单恢复时分类已就绪，分类名能正确反查
       await this.syncSettings();
-      await this.syncBills(uid);
+      // 墓碑先于数据合并：账单与账本共用一份已合并的墓碑集
+      const tombstones = await this.mergeTombstones();
+      await this.syncBills(uid, tombstones);
+      await this.syncLedgers(uid, tombstones);
       this.lastSyncAt = Date.now();
       Logger.debug('端云全量同步完成');
     } catch (err) {
@@ -60,10 +70,10 @@ class CloudSyncService {
   }
 
   /**
-   * 账单与删除墓碑的合并同步
+   * 合并云端与本地的删除墓碑：双向补齐，返回合并后的墓碑 id 集。
+   * 账单/账本/账本记录共用（账本与记录的墓碑 id 带 LEDGER 前缀区分类型）
    */
-  private async syncBills(uid: string): Promise<void> {
-    // 1. 合并云端与本地的删除墓碑：双向补齐
+  private async mergeTombstones(): Promise<Set<string>> {
     const cloudTombstones = await CloudSettingSync.queryTombstones();
     const localTombstones = await CloudSettingSync.loadLocalTombstones();
     const tombstones = new Set<string>();
@@ -89,8 +99,14 @@ class CloudSyncService {
     if (localTombChanged) {
       await CloudSettingSync.saveLocalTombstones(localTombstones);
     }
+    return tombstones;
+  }
 
-    // 2. 拉取云端账单与本地全量账单，按主键合并：create_time 新者胜
+  /**
+   * 账单与删除墓碑的合并同步
+   */
+  private async syncBills(uid: string, tombstones: Set<string>): Promise<void> {
+    // 1. 拉取云端账单与本地全量账单，按主键合并：create_time 新者胜
     const cloudBills = await CloudAccountRepository.queryAll(uid);
     const localBills = await this.localRepo.queryAll();
     const cloudMap = new Map<string, AccountCloud>();
@@ -147,6 +163,129 @@ class CloudSyncService {
 
     if (localChanged) {
       BillStore.notifyChanged();
+    }
+  }
+
+  /**
+   * 账本与账本记录的合并同步：按主键合并，updated_at 新者胜；
+   * 墓碑中的账本/记录不落地不复活，云端残留行兜底删除
+   */
+  private async syncLedgers(uid: string, tombstones: Set<string>): Promise<void> {
+    // 按前缀拆分墓碑：账本墓碑与记录墓碑分别比对
+    const ledgerTombstones = new Set<string>();
+    const recordTombstones = new Set<string>();
+    for (const id of tombstones) {
+      if (id.startsWith(CONSTANTS.LEDGER_TOMBSTONE_PREFIX)) {
+        ledgerTombstones.add(id.substring(CONSTANTS.LEDGER_TOMBSTONE_PREFIX.length));
+      } else if (id.startsWith(CONSTANTS.LEDGER_RECORD_TOMBSTONE_PREFIX)) {
+        recordTombstones.add(id.substring(CONSTANTS.LEDGER_RECORD_TOMBSTONE_PREFIX.length));
+      }
+    }
+
+    const cloudLedgers = await CloudLedgerRepository.queryLedgers(uid);
+    const cloudRecords = await CloudLedgerRepository.queryRecords(uid);
+    const localLedgers = await this.ledgerRepo.queryLedgers();
+    const localRecords = await this.ledgerRepo.queryAllRecords();
+
+    const cloudLedgerMap = new Map<string, LedgerCloud>();
+    for (const item of cloudLedgers) {
+      cloudLedgerMap.set(item.id, item);
+    }
+    const localLedgerMap = new Map<string, Ledger>();
+    for (const item of localLedgers) {
+      localLedgerMap.set(item.id, item);
+    }
+    const cloudRecordMap = new Map<string, LedgerRecordCloud>();
+    for (const item of cloudRecords) {
+      cloudRecordMap.set(item.id, item);
+    }
+    const localRecordMap = new Map<string, LedgerRecord>();
+    for (const item of localRecords) {
+      localRecordMap.set(item.id, item);
+    }
+
+    let localChanged = false;
+
+    // 1. 云端 → 本地：账本按 updated_at 新者胜落地
+    for (const cloud of cloudLedgers) {
+      if (ledgerTombstones.has(cloud.id)) {
+        continue;
+      }
+      const local = localLedgerMap.get(cloud.id);
+      if (!local || cloud.update_time > local.updatedAt) {
+        await this.ledgerRepo.upsertLedger(CloudLedgerRepository.toLocalLedger(cloud));
+        localChanged = true;
+      }
+    }
+
+    // 2. 云端 → 本地：账本记录按 updated_at 新者胜落地；
+    //    所属账本已删（在墓碑中）的记录不落地，避免恢复出孤儿记录
+    for (const cloud of cloudRecords) {
+      if (recordTombstones.has(cloud.id) || ledgerTombstones.has(cloud.ledger_id)) {
+        continue;
+      }
+      const local = localRecordMap.get(cloud.id);
+      if (!local || cloud.update_time > local.updatedAt) {
+        await this.ledgerRepo.upsertRecord(CloudLedgerRepository.toLocalRecord(cloud));
+        localChanged = true;
+      }
+    }
+
+    // 3. 本地 → 云端：云端缺失或本地更新的补推
+    const toUpsertLedgers: Ledger[] = [];
+    for (const local of localLedgers) {
+      if (ledgerTombstones.has(local.id)) {
+        continue;
+      }
+      const cloud = cloudLedgerMap.get(local.id);
+      if (!cloud || local.updatedAt > cloud.update_time) {
+        toUpsertLedgers.push(local);
+      }
+    }
+    if (toUpsertLedgers.length > 0) {
+      await CloudLedgerRepository.upsertLedgers(toUpsertLedgers, uid);
+    }
+    const toUpsertRecords: LedgerRecord[] = [];
+    for (const local of localRecords) {
+      if (recordTombstones.has(local.id)) {
+        continue;
+      }
+      const cloud = cloudRecordMap.get(local.id);
+      if (!cloud || local.updatedAt > cloud.update_time) {
+        toUpsertRecords.push(local);
+      }
+    }
+    if (toUpsertRecords.length > 0) {
+      await CloudLedgerRepository.upsertRecords(toUpsertRecords, uid);
+    }
+
+    // 4. 墓碑兜底：云端残留的已删账本/记录再删一次（其他设备同步期间可能推回）
+    for (const cloud of cloudLedgers) {
+      if (ledgerTombstones.has(cloud.id)) {
+        await CloudLedgerRepository.deleteLedgerById(cloud.id);
+      }
+    }
+    for (const cloud of cloudRecords) {
+      if (recordTombstones.has(cloud.id) || ledgerTombstones.has(cloud.ledger_id)) {
+        await CloudLedgerRepository.deleteRecordById(cloud.id);
+      }
+    }
+    // 本地残留的已删账本/记录删除
+    for (const id of ledgerTombstones) {
+      if (localLedgerMap.has(id)) {
+        await this.ledgerRepo.localDeleteLedger(id);
+        localChanged = true;
+      }
+    }
+    for (const id of recordTombstones) {
+      if (localRecordMap.has(id)) {
+        await this.ledgerRepo.localDeleteRecord(id);
+        localChanged = true;
+      }
+    }
+
+    if (localChanged) {
+      LedgerStore.notifyChanged();
     }
   }
 
