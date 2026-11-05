@@ -230,17 +230,6 @@ struct ModelSettings {
     }
   }
 
-  async onSave(): Promise<void> {
-    try {
-      await CloudLlmConfigStore.saveOcrEnabled(this.ocrEnabled);
-      await CloudLlmConfigStore.saveCloudEnabled(this.cloudEnabled);
-      Toast.success($r('app.string.settings_saved'));
-    } catch (error) {
-      Logger.error('保存设置失败', (error as Error).message);
-      Toast.error($r('app.string.save_failed'));
-    }
-  }
-
   // 端侧识别开关：切换即持久化，退出重进不丢
   async onToggleOcr(value: boolean): Promise<void> {
     this.ocrEnabled = value;
@@ -487,7 +476,7 @@ struct ModelSettings {
                   }
                   .width('100%')
                   .padding({ top: 8, bottom: 8 })
-                }, (item: SavedProviderConfig) => item.id)
+                }, (item: SavedProviderConfig) => `${item.id}_${item.model}_${item.apiKey.length}`)
                 Button($r('app.string.provider_clear_all'))
                   .width('100%')
                   .height(32)
@@ -530,11 +519,10 @@ struct ModelSettings {
                   .width('100%')
                   .height(44)
                   .fontSize(this.fs(16))
-                  .backgroundColor(this.tk().surface)
-                  .fontColor(this.tk().primary)
+                  .backgroundColor(this.tk().primary)
+                  .fontColor(this.tk().surface)
                   .type(ButtonType.Normal)
                   .borderRadius(SPACE_SMALL)
-                  .border({ width: 1, color: this.tk().primary })
                   .onClick(() => {
                     this.onTestConnection();
                   })
@@ -553,18 +541,6 @@ struct ModelSettings {
             .borderRadius(RADIUS_CARD)
             .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
           }
-
-          Button($r('app.string.save'))
-            .width('100%')
-            .height(44)
-            .fontSize(this.fs(16))
-            .backgroundColor(this.tk().primary)
-            .fontColor(this.tk().surface)
-            .type(ButtonType.Normal)
-            .borderRadius(SPACE_SMALL)
-            .onClick(() => {
-              this.onSave();
-            })
         }
         .width(BreakpointConstants.max_content_size.getValue(this.currentBreakpoint))
         .padding({ left: SPACE_XLARGE, right: SPACE_XLARGE, top: SPACE_MEDIUM })

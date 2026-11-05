@@ -92,5 +92,10 @@ export const PREF_CLOUD_TOMBSTONES = 'cloud_bill_tombstones';
 // 本地墓碑记录上限，超过后淘汰最早记录
 export const CLOUD_TOMBSTONE_MAX: number = 500;
 
+// 账本/账本记录删除墓碑 id 前缀：与账单墓碑共用 bill_tombstone 表与本地墓碑列表，
+// 同步时按前缀区分类型，账单同步循环不会误匹配带前缀的 id
+export const LEDGER_TOMBSTONE_PREFIX: string = 'ledger:';
+export const LEDGER_RECORD_TOMBSTONE_PREFIX: string = 'ledger_record:';
+
 // 端云全量同步的最小间隔（毫秒）：回前台等高频触发时按此节流
 export const CLOUD_SYNC_MIN_INTERVAL_MS: number = 10 * 60 * 1000;

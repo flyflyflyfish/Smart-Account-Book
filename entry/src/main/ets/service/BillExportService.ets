@@ -796,6 +796,40 @@ td.headcell { padding:5pt 8pt; font-size:9pt; color:#666666; }
     return this.zipStored(entries);
   }
 
+  // ==================== CSV 导出（可回导） ====================
+
+  // CSV 单元格转义：含逗号/引号/换行时用双引号包裹，内部引号翻倍转义
+  private csvCell(text: string): string {
+    if (text.indexOf(',') >= 0 || text.indexOf('"') >= 0 || text.indexOf('\n') >= 0) {
+      return '"' + text.replace(/"/g, '""') + '"';
+    }
+    return text;
+  }
+
+  /**
+   * 生成可被本应用「导入账单」重新导入的 CSV 文本（含表头，\r\n 换行）。
+   * 表头与 BillImportService 的列映射契约一致，方向为 收入/支出，
+   * 状态用「已入账」避开退款/失败/关闭/充值过滤词。
+   */
+  buildCsv(records: AccountPO[]): string {
+    const lines: string[] = ['账单来源,交易时间,交易分类,交易对方,商品,收/支,金额(元),交易状态'];
+    this.flatRecords(records).forEach((record: AccountPO) => {
+      const direction = record.accountType === AccountType.EXPENSES ? '支出' : '收入';
+      const cells: string[] = [
+        '记账助手',
+        dayjs(this.recordTime(record)).format('YYYY-MM-DD HH:mm:ss'),
+        this.csvCell(this.categoryName(record.type, record.accountType)),
+        this.csvCell(record.merchant),
+        this.csvCell(record.description),
+        direction,
+        record.amount.toFixed(2),
+        '已入账'
+      ];
+      lines.push(cells.join(','));
+    });
+    return lines.join('\r\n');
+  }
+
   // ==================== ZIP（stored，无压缩）====================
 
   private crc32(data: Uint8Array): number {
