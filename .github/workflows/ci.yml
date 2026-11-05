@@ -17,3 +17,18 @@ jobs:
           node-version: 20
       - name: 运行资源一致性检查
         run: node scripts/check_strings.mjs
+
+  format:
+    name: 格式检查（仅本次改动的文件）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 检查本次改动文件的格式
+        env:
+          BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}...HEAD', github.base_ref) || format('{0}...HEAD', github.event.before) }}
+        run: node scripts/check_format.mjs --base "$BASE_REF"
