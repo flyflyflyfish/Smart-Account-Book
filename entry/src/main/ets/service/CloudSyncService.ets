@@ -316,6 +316,8 @@ class CloudSyncService {
    * 设置与分类配置的合并同步
    */
   private async syncSettings(): Promise<void> {
+    // 先排空在途推送链：快照 meta 前等推送的时间戳落盘，避免后面整体回写时覆盖
+    await CloudSettingSync.drainChain();
     const cloudRows = await CloudSettingSync.querySettings();
     const cloudMap = new Map<string, SettingCloud>();
     for (const row of cloudRows) {
@@ -412,7 +414,8 @@ class CloudSyncService {
       await CloudSettingSync.upsertSettingRow(def.key, serializeSettingValue(rawValue), now);
       meta[def.key] = now;
     }
-    await CloudSettingSync.saveMeta(meta);
+    // 逐 key 取较大值合并落盘，不用旧快照整体覆盖：同步期间并发的设置推送时间戳不丢
+    await CloudSettingSync.mergeMeta(meta);
   }
 
   private isThemeKey(key: string): boolean {
