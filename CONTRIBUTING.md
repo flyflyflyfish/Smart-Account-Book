@@ -45,7 +45,7 @@
 2. **资源检查**：新增/修改 `$r('app.string.*')` 引用后运行 `node scripts/check_strings.mjs`，保证引用有定义且 zh_CN / en_US 无无效 key。
 3. **构建**：`devecocli build`（或 IDE 构建）通过后才可提交。
 4. **测试**：触及识别流水线、分类、去重、解析等逻辑时，运行 `entry/src/ohosTest` 单元测试。
-5. **格式**：遵循 `.editorconfig`（2 空格缩进、UTF-8、LF），提交前消除冗余空格与未使用导入。
+5. **格式**：遵循 `.editorconfig`（2 空格缩进、UTF-8、LF），提交前消除冗余空格与未使用导入。可运行 `node scripts/check_format.mjs` 检查已暂存的文件（检查行尾空格、CRLF、文件末尾换行、Tab 缩进），或安装 pre-commit 钩子在每次提交前自动检查：`pip install pre-commit && pre-commit install`。CI 会对每次 push / PR 改动的文件执行同样的格式检查，历史遗留文件不受影响。
 
 ## 代码风格
 
