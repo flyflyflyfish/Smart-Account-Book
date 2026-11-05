@@ -2,6 +2,7 @@ import dayjs from 'dayjs';
 import { notificationManager } from '@kit.NotificationKit';
 import common from '@ohos.app.ability.common';
 import PreferenceUtil from '../utils/PreferenceUtil';
+import DBUtil from '../utils/DBUtil';
 import * as CONSTANTS from '../common/constants';
 import AccountService from './account';
 import StatsService from './stats';
@@ -39,6 +40,8 @@ class BudgetService {
    * 汇总本月支出并计算额度使用状态
    */
   async loadStatus(): Promise<BudgetStatus> {
+    // 首页 aboutToAppear 即调用，与数据库初始化并行：等就绪再查，避免 rdbStore 未初始化报错
+    await DBUtil.ready;
     const enabled = await this.loadEnabled();
     const limit = await this.loadLimit();
     const records = await AccountService.getAccountByMonth(dayjs().valueOf());
