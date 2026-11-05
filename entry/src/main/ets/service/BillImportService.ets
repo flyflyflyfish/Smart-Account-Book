@@ -16,6 +16,8 @@ import { clampAmount } from '../utils/AmountGuard';
 export enum BillSourceType {
   ALIPAY,
   WECHAT,
+  /** 本应用导出的 CSV */
+  APP_EXPORT,
 }
 
 /** 单笔待导入账单：解析结果的可变载体，页面勾选后入库 */
@@ -290,8 +292,14 @@ class BillImportService {
     return result;
   }
 
-  /** 按表头特征判断来源平台：含「商品说明/交易分类」为支付宝，含「金额(元)/当前状态」为微信 */
+  /** 按表头特征判断来源平台：含「账单来源」为本应用导出，含「商品说明/交易分类」为支付宝，含「金额(元)/当前状态」为微信 */
   private detectSourceFromHeader(header: string[]): BillSourceType {
+    for (const cell of header) {
+      const trimmed = cell.trim();
+      if (trimmed === '账单来源') {
+        return BillSourceType.APP_EXPORT;
+      }
+    }
     for (const cell of header) {
       const trimmed = cell.trim();
       if (trimmed === '商品说明' || trimmed === '交易分类' || trimmed === '收/付款方式') {
@@ -305,7 +313,13 @@ class BillImportService {
   }
 
   private sourceTypeLabel(sourceType: BillSourceType): string {
-    return sourceType === BillSourceType.ALIPAY ? '支付宝' : '微信支付';
+    if (sourceType === BillSourceType.ALIPAY) {
+      return '支付宝';
+    }
+    if (sourceType === BillSourceType.APP_EXPORT) {
+      return '记账助手';
+    }
+    return '微信支付';
   }
 
   /** 一行字段 → 待导入账单；收支方向不符 / 状态无效 / 金额时间非法时返回 null */

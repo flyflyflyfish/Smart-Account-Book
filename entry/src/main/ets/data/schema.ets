@@ -7,9 +7,9 @@ export const LEDGER_TABLE_NAME: string = 'ledger';
 export const LEDGER_RECORD_TABLE_NAME: string = 'ledger_record';
 
 /**
- * 当前数据库版本号：老库 version 为 0，升级后置为 6
+ * 当前数据库版本号：老库 version 为 0，升级后置为 7
  */
-export const DB_VERSION: number = 6;
+export const DB_VERSION: number = 7;
 
 /**
  * 账单表建表语句（新装用户直接包含全部列，主键为 UUID 文本，便于端云同步）
@@ -47,7 +47,8 @@ export const LEDGER_CREATE_TABLE_SQL: string = `
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     color_key TEXT DEFAULT 'green',
-    created_at INTEGER NOT NULL
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL DEFAULT 0
   )`;
 
 /**
@@ -64,6 +65,7 @@ export const LEDGER_RECORD_CREATE_TABLE_SQL: string = `
     note TEXT DEFAULT '',
     time INTEGER NOT NULL,
     created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL DEFAULT 0,
     category INTEGER DEFAULT -1,
     bill_id TEXT DEFAULT ''
   )`;
@@ -151,6 +153,17 @@ export const MIGRATE_5_TO_6_SQLS: string[] = [
 ];
 
 /**
+ * version 6 → 7：账本与账本记录补端云同步用的 updated_at 列，
+ * 历史行以 created_at 回填，作为合并比较的基准时间
+ */
+export const MIGRATE_6_TO_7_SQLS: string[] = [
+  `ALTER TABLE ledger ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0`,
+  `UPDATE ledger SET updated_at = created_at WHERE updated_at = 0`,
+  `ALTER TABLE ledger_record ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0`,
+  `UPDATE ledger_record SET updated_at = created_at WHERE updated_at = 0`
+];
+
+/**
  * 按版本号升序组织的全部迁移步骤，供 DBUtil 逐级执行
  */
 export const MIGRATION_STEPS: MigrationStep[] = [
@@ -158,5 +171,6 @@ export const MIGRATION_STEPS: MigrationStep[] = [
   { toVersion: 3, sqls: MIGRATE_2_TO_3_SQLS },
   { toVersion: 4, sqls: MIGRATE_3_TO_4_SQLS },
   { toVersion: 5, sqls: MIGRATE_4_TO_5_SQLS },
-  { toVersion: 6, sqls: MIGRATE_5_TO_6_SQLS }
+  { toVersion: 6, sqls: MIGRATE_5_TO_6_SQLS },
+  { toVersion: 7, sqls: MIGRATE_6_TO_7_SQLS }
 ];

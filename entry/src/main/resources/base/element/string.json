@@ -1190,7 +1190,7 @@
     },
     {
       "name": "import_supported_desc",
-      "value": "支持导入微信支付与支付宝导出的账单文件"
+      "value": "支持导入微信支付、支付宝导出的账单文件与本应用导出的 CSV"
     },
     {
       "name": "import_format_alipay",
@@ -1199,6 +1199,10 @@
     {
       "name": "import_format_wechat",
       "value": "微信 CSV / XLSX"
+    },
+    {
+      "name": "import_format_app",
+      "value": "本应用 CSV"
     },
     {
       "name": "import_privacy_tip",
@@ -1327,6 +1331,18 @@
     {
       "name": "export_format_pdf_desc",
       "value": "生成 PDF 文件"
+    },
+    {
+      "name": "export_format_csv",
+      "value": "CSV 表格"
+    },
+    {
+      "name": "export_format_csv_desc",
+      "value": "保存为 .csv，可重新导入本应用"
+    },
+    {
+      "name": "export_csv_hint",
+      "value": "CSV 包含全部账单明细，不受内容选项影响，可在「导入账单」中重新导入"
     },
     {
       "name": "export_summary_label",
