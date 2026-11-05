@@ -139,6 +139,42 @@ class CloudSettingSyncService {
     }
   }
 
+  /** 全量同步快照 meta 前调用：等在途推送完成，避免快照读到旧 meta 后整体回写覆盖 */
+  async drainChain(): Promise<void> {
+    await this.chain;
+  }
+
+  /**
+   * 原子合并 meta：逐 key 取较大值落盘。
+   * 在推送链上执行，与 pushSettingText 的 updateMeta 读改写互斥，
+   * 修复全量同步持旧快照整体 saveMeta 覆盖并发推送时间戳的丢失更新问题
+   */
+  async mergeMeta(overrides: Record<string, number>): Promise<void> {
+    const task = this.chain.then((): Promise<void> => this.mergeMetaInternal(overrides));
+    this.chain = task;
+    await task;
+  }
+
+  private async mergeMetaInternal(overrides: Record<string, number>): Promise<void> {
+    try {
+      const meta = await this.loadMeta();
+      const keys = Object.keys(overrides);
+      let changed = false;
+      for (const key of keys) {
+        const incoming = overrides[key];
+        if (incoming > (meta[key] ?? 0)) {
+          meta[key] = incoming;
+          changed = true;
+        }
+      }
+      if (changed) {
+        await this.saveMeta(meta);
+      }
+    } catch (err) {
+      Logger.error('合并端云同步时间戳失败', (err as Error).message);
+    }
+  }
+
   /** 全量同步专用：按指定时间上传一行设置（合并结果/本地新值），不更新 meta（由调用方维护） */
   async upsertSettingRow(key: string, text: string, updateTime: number): Promise<void> {
     const zone = this.zone;
