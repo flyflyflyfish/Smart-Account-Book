@@ -449,7 +449,7 @@ struct ExportBill {
           .onClick(() => {
             this.applyPreset(item);
           })
-      })
+      }, (item: PresetOption): string => item.key)
     }.width('100%')
   }
 
