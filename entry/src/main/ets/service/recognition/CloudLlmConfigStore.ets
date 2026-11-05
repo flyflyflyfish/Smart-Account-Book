@@ -107,6 +107,16 @@ class CloudLlmConfigStore {
     await PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_CLOUD_CONSENT, agreed);
     CloudSettingSync.pushSetting(CONSTANTS.PREF_CLOUD_CONSENT, agreed);
   }
+
+  // 训练数据采集开关：默认关闭，仅存本机，不上传
+  async loadTrainCollectEnabled(): Promise<boolean> {
+    const value = await PreferenceUtil.getPreferenceValue(CONSTANTS.PREF_TRAIN_COLLECT_ENABLED, false);
+    return value === true;
+  }
+
+  async saveTrainCollectEnabled(enabled: boolean): Promise<void> {
+    await PreferenceUtil.putPreferenceValue(CONSTANTS.PREF_TRAIN_COLLECT_ENABLED, enabled);
+  }
 }
 
 export default new CloudLlmConfigStore();
