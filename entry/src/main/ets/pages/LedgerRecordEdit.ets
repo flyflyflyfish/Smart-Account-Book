@@ -349,7 +349,7 @@ struct LedgerRecordEdit {
         .strokeWidth(2)
         .color(this.tk().textPrimary)
         .opacity(this.currentIndex === index ? 1 : 0)
-    }.width('100%')
+    }.layoutWeight(1)
     .onClick(() => {
       this.switchTab(index);
     })
