@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import util from '@ohos.util';
 import { webview } from '@kit.ArkWeb';
 import { picker, fileIo as fs, fileUri } from '@kit.CoreFileKit';
 import { systemShare } from '@kit.ShareKit';
@@ -14,9 +15,10 @@ import { Logger } from '../utils/Logger';
 import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_TINY } from '../common/dimens';
 import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
-// 导出格式：0 Word 文档，1 PDF 文档
+// 导出格式：0 Word 文档，1 PDF 文档，2 CSV 表格（可回导）
 const FORMAT_WORD: number = 0;
 const FORMAT_PDF: number = 1;
+const FORMAT_CSV: number = 2;
 
 interface PresetOption {
   key: string;
@@ -321,10 +323,73 @@ struct ExportBill {
     });
   }
 
-  // 分享：按所选格式分享（Word 为 .docx，PDF 经 createPdf 生成后分享）
+  // CSV 导出：生成 .csv（带 UTF-8 BOM，Excel 可直接打开），可回本应用导入
+  async exportCsv(): Promise<void> {
+    if (this.records.length === 0) {
+      Toast.error($r('app.string.export_empty'));
+      return;
+    }
+    try {
+      const saveOptions = new picker.DocumentSaveOptions();
+      saveOptions.newFileNames = [this.fileName('csv')];
+      saveOptions.fileSuffixChoices = ['CSV 表格|.csv'];
+      const documentPicker = new picker.DocumentViewPicker(getContext(this));
+      const uris = await documentPicker.save(saveOptions);
+      if (!uris || uris.length === 0) {
+        return;
+      }
+      this.writeBytesSync(uris[0], this.csvBytes(), fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);
+      Toast.success($r('app.string.export_saved'));
+    } catch (err) {
+      Logger.error('导出 CSV 账单失败', (err as Error).message);
+      Toast.error($r('app.string.export_failed'));
+    }
+  }
+
+  // CSV 文本编码为带 UTF-8 BOM 的字节，避免 Excel 打开中文乱码
+  private csvBytes(): Uint8Array {
+    const encoder = new util.TextEncoder();
+    const body = encoder.encode(BillExportService.buildCsv(this.records));
+    const bytes = new Uint8Array(body.length + 3);
+    bytes[0] = 0xEF;
+    bytes[1] = 0xBB;
+    bytes[2] = 0xBF;
+    bytes.set(body, 3);
+    return bytes;
+  }
+
+  // 分享 CSV：写入缓存后经系统分享
+  private async shareCsv(): Promise<void> {
+    const name = this.fileName('csv');
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    const path = `${context.cacheDir}/${name}`;
+    this.writeBytesSync(path, this.csvBytes(), fs.OpenMode.READ_WRITE | fs.OpenMode.CREATE | fs.OpenMode.TRUNC);
+    const utdTypeId = utd.getUniformDataTypeByFilenameExtension('.csv', utd.UniformDataType.TEXT);
+    const shareData = new systemShare.SharedData({
+      utd: utdTypeId,
+      uri: fileUri.getUriFromPath(path),
+      title: name
+    });
+    const controller = new systemShare.ShareController(shareData);
+    await controller.show(context, {
+      previewMode: systemShare.SharePreviewMode.DETAIL,
+      selectionMode: systemShare.SelectionMode.SINGLE
+    });
+  }
+
+  // 分享：按所选格式分享（Word 为 .docx，CSV 为 .csv，PDF 经 createPdf 生成后分享）
   async shareBill(): Promise<void> {
     if (this.records.length === 0) {
       Toast.error($r('app.string.export_empty'));
+      return;
+    }
+    if (this.formatIndex === FORMAT_CSV) {
+      try {
+        await this.shareCsv();
+      } catch (err) {
+        Logger.error('分享账单失败', (err as Error).message);
+        Toast.error($r('app.string.export_share_failed'));
+      }
       return;
     }
     if (!this.hasContent()) {
@@ -361,6 +426,8 @@ struct ExportBill {
   onExport(): void {
     if (this.formatIndex === FORMAT_PDF) {
       this.exportPdf();
+    } else if (this.formatIndex === FORMAT_CSV) {
+      this.exportCsv();
     } else {
       this.exportWord();
     }
@@ -533,6 +600,8 @@ struct ExportBill {
               $r('app.string.export_format_word_desc'))
             this.FormatOption(FORMAT_PDF, $r('app.media.ai'), $r('app.string.export_format_pdf'),
               $r('app.string.export_format_pdf_desc'))
+            this.FormatOption(FORMAT_CSV, $r('app.media.stats'), $r('app.string.export_format_csv'),
+              $r('app.string.export_format_csv_desc'))
           }
           .width('100%')
           .padding(SPACE_LARGE)
@@ -540,9 +609,10 @@ struct ExportBill {
           .borderRadius(RADIUS_CARD)
           .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
 
-          // 导出内容
-          Column({ space: SPACE_MEDIUM }) {
-            this.SectionCard($r('app.string.export_content_label'))
+          // 导出内容（CSV 为纯数据表格，不受内容选项影响）
+          if (this.formatIndex !== FORMAT_CSV) {
+            Column({ space: SPACE_MEDIUM }) {
+              this.SectionCard($r('app.string.export_content_label'))
             this.OptionRow($r('app.string.export_opt_summary'), $r('app.string.export_opt_summary_desc'),
               this.optSummary, (v: boolean) => {
                 this.optSummary = v;
@@ -567,6 +637,7 @@ struct ExportBill {
           .backgroundColor(this.tk().surface)
           .borderRadius(RADIUS_CARD)
           .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
+          }
 
           // 汇总预览
           Column({ space: SPACE_MEDIUM }) {
@@ -620,6 +691,12 @@ struct ExportBill {
 
           if (this.formatIndex === FORMAT_PDF) {
             Text($r('app.string.export_pdf_hint'))
+              .fontSize(this.fs(12))
+              .fontColor(this.tk().textSecondary)
+              .width('100%')
+          }
+          if (this.formatIndex === FORMAT_CSV) {
+            Text($r('app.string.export_csv_hint'))
               .fontSize(this.fs(12))
               .fontColor(this.tk().textSecondary)
               .width('100%')

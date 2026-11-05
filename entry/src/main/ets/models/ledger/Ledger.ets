@@ -17,6 +17,8 @@ export class Ledger {
   name: string = '';
   colorKey: string = LEDGER_COLOR_DEFAULT;
   createdAt: number = 0;
+  // 端云同步比较用：最近一次内容变更时间（合并时新者胜）
+  updatedAt: number = 0;
 }
 
 /** 未选分类时的 category 值 */
@@ -31,6 +33,8 @@ export class LedgerRecord {
   note: string = '';
   time: number = 0;
   createdAt: number = 0;
+  // 端云同步比较用：最近一次内容变更时间（合并时新者胜）
+  updatedAt: number = 0;
   // 账单分类 id（取 CategoryStore 的分类，-1 表示未选）
   category: number = LEDGER_RECORD_NO_CATEGORY;
   // 关联的主账单 id（空串表示与主账单无关），供“从现有账单导入”防重复

@@ -217,6 +217,12 @@ struct ImportBill {
           .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM, top: 6, bottom: 6 })
           .backgroundColor(this.tk().primarySoft)
           .borderRadius(SPACE_SMALL)
+        Text($r('app.string.import_format_app'))
+          .fontSize(this.fs(12))
+          .fontColor(this.tk().primary)
+          .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM, top: 6, bottom: 6 })
+          .backgroundColor(this.tk().primarySoft)
+          .borderRadius(SPACE_SMALL)
       }
 
       Text($r('app.string.import_privacy_tip'))
