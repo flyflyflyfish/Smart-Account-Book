@@ -33,14 +33,18 @@ import { Logger } from '../utils/Logger';
  * - 其他设置：按 update_time 新者胜，云端值落地后重载主题等内存态
  */
 class CloudSyncService {
+  // 登录瞬间云端令牌可能未就绪导致首同步失败：延迟自动重试的上限与基础间隔
+  private static readonly MAX_SYNC_RETRY: number = 3;
+  private static readonly SYNC_RETRY_BASE_MS: number = 2000;
   private syncing: boolean = false;
   private lastSyncAt: number = 0;
+  private syncFailCount: number = 0;
   private localRepo: RdbAccountRepository = new RdbAccountRepository();
   private ledgerRepo: LedgerRepository = new LedgerRepository();
 
   /**
-   * 全量同步入口：重复触发时防重入，force=false 时按最小间隔节流
-   */
+    * 全量同步入口：重复触发时防重入，force=false 时按最小间隔节流
+    */
   async syncAll(force: boolean = false): Promise<void> {
     if (this.syncing) {
       return;
@@ -61,12 +65,31 @@ class CloudSyncService {
       await this.syncBills(uid, tombstones);
       await this.syncLedgers(uid, tombstones);
       this.lastSyncAt = Date.now();
+      this.syncFailCount = 0;
       Logger.debug('端云全量同步完成');
     } catch (err) {
       Logger.error('端云全量同步失败', (err as Error).message);
+      this.scheduleSyncRetry();
     } finally {
       this.syncing = false;
     }
+  }
+
+  /**
+    * 同步失败后延迟自动重试（2s/4s/6s 递增，最多3次）：
+    * 登录/启动后首次同步常因云端令牌未就绪失败，重试期间账单恢复无需重启应用；
+    * 重试耗尽后停止，等下次回前台或登录触发
+    */
+  private scheduleSyncRetry(): void {
+    if (this.syncFailCount >= CloudSyncService.MAX_SYNC_RETRY) {
+      return;
+    }
+    this.syncFailCount += 1;
+    const delay = this.syncFailCount * CloudSyncService.SYNC_RETRY_BASE_MS;
+    setTimeout(() => {
+      this.syncAll(true).catch((): void => {
+      });
+    }, delay);
   }
 
   /**
