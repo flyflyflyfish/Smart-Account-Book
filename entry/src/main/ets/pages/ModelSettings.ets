@@ -1,15 +1,8 @@
 import AccountNavigator from '../components/Navigator';
-import dayjs from 'dayjs';
-import { picker } from '@kit.CoreFileKit';
-import common from '@ohos.app.ability.common';
-import photoAccessHelper from '@ohos.file.photoAccessHelper';
 import { CloudLlmConfig, SavedProviderConfig } from '../models/recognition/CloudLlmModels';
 import { LLM_PROVIDERS, LlmProvider, findProvider, findModelLabel } from '../models/recognition/LlmProviders';
-import { SampleSummary } from '../models/recognition/OcrSample';
 import CloudLlmConfigStore from '../service/recognition/CloudLlmConfigStore';
 import { CloudLlmRecognizer } from '../service/recognition/CloudLlmRecognizer';
-import { LocalOcrRecognizer } from '../service/recognition/LocalOcrRecognizer';
-import OcrSampleCollector from '../service/recognition/OcrSampleCollector';
 import { Toast } from '../components/ToastDialog';
 import { Logger } from '../utils/Logger';
 import BreakpointConstants from '../common/breakpoint';
@@ -44,13 +37,6 @@ struct ModelSettings {
   @State testing: boolean = false;
   @State testResult: string = '';
   @State testSuccess: boolean = false;
-  @State trainCollectEnabled: boolean = false;
-  @State trainSampleCount: number = 0;
-  @State ocrSupported: boolean = false;
-  @State ocrTesting: boolean = false;
-  @State ocrTestResult: string = '';
-  @State ocrTestFullText: string = '';
-  @State samples: SampleSummary[] = [];
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
 
   async aboutToAppear(): Promise<void> {
@@ -64,10 +50,6 @@ struct ModelSettings {
       this.selectProviderById(initId);
       this.ocrEnabled = await CloudLlmConfigStore.loadOcrEnabled();
       this.cloudEnabled = await CloudLlmConfigStore.loadCloudEnabled();
-      this.trainCollectEnabled = await CloudLlmConfigStore.loadTrainCollectEnabled();
-      this.trainSampleCount = await OcrSampleCollector.sampleCount(getContext(this) as common.Context);
-      this.samples = await OcrSampleCollector.listSamples(getContext(this) as common.Context);
-      this.ocrSupported = canIUse('SystemCapability.AI.OCR.TextRecognition');
     } catch (error) {
       Logger.error('加载设置失败', (error as Error).message);
     }
@@ -248,17 +230,6 @@ struct ModelSettings {
     }
   }
 
-  async onSave(): Promise<void> {
-    try {
-      await CloudLlmConfigStore.saveOcrEnabled(this.ocrEnabled);
-      await CloudLlmConfigStore.saveCloudEnabled(this.cloudEnabled);
-      Toast.success($r('app.string.settings_saved'));
-    } catch (error) {
-      Logger.error('保存设置失败', (error as Error).message);
-      Toast.error($r('app.string.save_failed'));
-    }
-  }
-
   // 端侧识别开关：切换即持久化，退出重进不丢
   async onToggleOcr(value: boolean): Promise<void> {
     this.ocrEnabled = value;
@@ -309,111 +280,6 @@ struct ModelSettings {
       return trimmed;
     }
     return trimmed.substring(0, REPLY_DISPLAY_MAX) + '...';
-  }
-
-  // 导出训练数据：经系统保存选择器写为 .json，方便传到电脑
-  async onExportSamples(): Promise<void> {
-    const count = await OcrSampleCollector.sampleCount(getContext(this) as common.Context);
-    if (count <= 0) {
-      Toast.error($r('app.string.train_export_empty'));
-      return;
-    }
-    try {
-      const saveOptions = new picker.DocumentSaveOptions();
-      saveOptions.newFileNames = ['训练数据.json'];
-      saveOptions.fileSuffixChoices = ['JSON 数据|.json'];
-      const documentPicker = new picker.DocumentViewPicker(getContext(this));
-      const uris = await documentPicker.save(saveOptions);
-      if (!uris || uris.length === 0) {
-        return;
-      }
-      const exported = await OcrSampleCollector.exportTo(getContext(this) as common.Context, uris[0]);
-      Toast.success($r('app.string.train_export_success', exported));
-      this.trainSampleCount = await OcrSampleCollector.sampleCount(getContext(this) as common.Context);
-    } catch (err) {
-      Logger.error('导出训练数据失败', (err as Error).message);
-      Toast.error($r('app.string.export_failed'));
-    }
-  }
-
-  // 自检端侧 OCR：选一张图实跑 recognizeBlocks，把识别出的文本行数与完整文本反馈出来
-  async onTestOcr(): Promise<void> {
-    const ctx = getContext(this);
-    if (!canIUse('SystemCapability.AI.OCR.TextRecognition')) {
-      this.ocrTestResult = ctx.resourceManager.getStringSync($r('app.string.ocr_unsupported'));
-      this.ocrTestFullText = '';
-      Toast.error($r('app.string.ocr_unsupported'));
-      return;
-    }
-    this.ocrTesting = true;
-    this.ocrTestResult = '';
-    this.ocrTestFullText = '';
-    try {
-      const photoPicker = new photoAccessHelper.PhotoViewPicker();
-      const options = new photoAccessHelper.PhotoSelectOptions();
-      options.MIMEType = photoAccessHelper.PhotoViewMIMETypes.IMAGE_TYPE;
-      options.maxSelectNumber = 1;
-      const result = await photoPicker.select(options);
-      if (result.photoUris.length === 0) {
-        this.ocrTestResult = ctx.resourceManager.getStringSync($r('app.string.pick_image_failed'));
-        return;
-      }
-      const vision = await new LocalOcrRecognizer().recognizeBlocks(result.photoUris[0]);
-      this.ocrTestResult = ctx.resourceManager.getStringSync($r('app.string.ocr_test_success'), vision.blocks.length);
-      const lines: string[] = [];
-      for (const block of vision.blocks) {
-        lines.push(`${block.text}  [${block.left.toFixed(3)},${block.top.toFixed(3)} ${block.right.toFixed(3)},${block.bottom.toFixed(3)}]`);
-      }
-      this.ocrTestFullText = lines.join('\n');
-      Toast.success($r('app.string.ocr_test_success', vision.blocks.length));
-    } catch (err) {
-      const e = err as Error;
-      Logger.error('OCR 自检失败', e.message);
-      this.ocrTestResult = e.message ? e.message : ctx.resourceManager.getStringSync($r('app.string.ocr_failed'));
-      this.ocrTestFullText = '';
-      Toast.error(e.message ? e.message : $r('app.string.ocr_failed'));
-    } finally {
-      this.ocrTesting = false;
-    }
-  }
-
-  // 刷新样本列表与计数
-  async refreshSamples(): Promise<void> {
-    this.trainSampleCount = await OcrSampleCollector.sampleCount(getContext(this) as common.Context);
-    this.samples = await OcrSampleCollector.listSamples(getContext(this) as common.Context);
-  }
-
-  async onDeleteSample(index: number): Promise<void> {
-    await OcrSampleCollector.deleteSample(getContext(this) as common.Context, index);
-    await this.refreshSamples();
-    Toast.success($r('app.string.train_delete_success'));
-  }
-
-  async onClearSamples(): Promise<void> {
-    await OcrSampleCollector.clearAll(getContext(this) as common.Context);
-    await this.refreshSamples();
-    Toast.success($r('app.string.train_clear_success'));
-  }
-
-  confirmClearSamples(): void {
-    AlertDialog.show({
-      title: $r('app.string.train_clear_confirm_title'),
-      message: $r('app.string.train_clear_confirm_msg'),
-      autoCancel: true,
-      alignment: DialogAlignment.Center,
-      primaryButton: {
-        value: $r('app.string.cancel'),
-        action: () => {
-        }
-      },
-      secondaryButton: {
-        value: $r('app.string.confirm'),
-        fontColor: this.tk().danger,
-        action: () => {
-          this.onClearSamples();
-        }
-      }
-    });
   }
 
   @Builder SectionTitle(label: ResourceStr) {
@@ -485,146 +351,6 @@ struct ModelSettings {
                 .lineHeight(this.fs(17))
                 .fontColor(this.tk().textSecondary)
             }.width('100%')
-          }
-          .width('100%')
-          .padding(SPACE_LARGE)
-          .backgroundColor(this.tk().surface)
-          .borderRadius(RADIUS_CARD)
-          .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
-
-          Column({ space: SPACE_MEDIUM }) {
-            this.SectionTitle($r('app.string.train_section_title'))
-            Column({ space: SPACE_TINY }) {
-              Row({ space: SPACE_MEDIUM }) {
-                Text($r('app.string.train_collect_label'))
-                  .fontSize(this.fs(15))
-                  .fontWeight(FontWeight.Medium)
-                  .fontColor(this.tk().textPrimary)
-                Blank()
-                Toggle({ type: ToggleType.Switch, isOn: this.trainCollectEnabled })
-                  .onChange((value: boolean) => {
-                    this.trainCollectEnabled = value;
-                    void CloudLlmConfigStore.saveTrainCollectEnabled(value);
-                  })
-              }.width('100%')
-              Text($r('app.string.train_collect_hint'))
-                .width('100%')
-                .fontSize(this.fs(12))
-                .lineHeight(this.fs(17))
-                .fontColor(this.tk().textSecondary)
-            }.width('100%')
-            Divider().color(this.tk().surfaceVariant)
-            Row({ space: SPACE_MEDIUM }) {
-              Text(this.ocrSupported ? $r('app.string.ocr_supported') : $r('app.string.ocr_unsupported'))
-                .fontSize(this.fs(13))
-                .fontColor(this.ocrSupported ? this.tk().primary : this.tk().danger)
-                .layoutWeight(1)
-              Text($r('app.string.train_collected_count', this.trainSampleCount))
-                .fontSize(this.fs(13))
-                .fontColor(this.tk().textSecondary)
-            }.width('100%')
-            Row({ space: SPACE_SMALL }) {
-              Button(this.ocrTesting ? $r('app.string.ocr_testing') : $r('app.string.ocr_test_do'))
-                .layoutWeight(1)
-                .height(32)
-                .fontSize(this.fs(13))
-                .backgroundColor(this.tk().surface)
-                .fontColor(this.tk().primary)
-                .type(ButtonType.Normal)
-                .borderRadius(SPACE_SMALL)
-                .border({ width: 1, color: this.tk().primary })
-                .enabled(!this.ocrTesting)
-                .onClick(() => {
-                  this.onTestOcr();
-                })
-              Button($r('app.string.train_export_do'))
-                .layoutWeight(1)
-                .height(32)
-                .fontSize(this.fs(13))
-                .backgroundColor(this.tk().surface)
-                .fontColor(this.tk().primary)
-                .type(ButtonType.Normal)
-                .borderRadius(SPACE_SMALL)
-                .border({ width: 1, color: this.tk().primary })
-                .onClick(() => {
-                  this.onExportSamples();
-                })
-            }.width('100%')
-            if (this.ocrTestResult.length > 0) {
-              Text(this.ocrTestResult)
-                .width('100%')
-                .fontSize(this.fs(13))
-                .lineHeight(this.fs(18))
-                .fontColor(this.tk().textPrimary)
-                .margin({ top: SPACE_SMALL })
-            }
-            if (this.ocrTestFullText.length > 0) {
-              Column({ space: 0 }) {
-                Text($r('app.string.ocr_test_detail'))
-                  .width('100%')
-                  .fontSize(this.fs(12))
-                  .fontColor(this.tk().textSecondary)
-                  .margin({ bottom: SPACE_TINY })
-                Text(this.ocrTestFullText)
-                  .width('100%')
-                  .fontSize(this.fs(13))
-                  .lineHeight(this.fs(20))
-                  .fontColor(this.tk().textPrimary)
-              }
-              .width('100%')
-              .margin({ top: SPACE_SMALL })
-              .padding(SPACE_SMALL)
-              .backgroundColor(this.tk().background)
-              .borderRadius(SPACE_SMALL)
-            }
-            if (this.samples.length > 0) {
-              Column({ space: SPACE_TINY }) {
-                Text($r('app.string.train_list_title'))
-                  .width('100%')
-                  .fontSize(this.fs(12))
-                  .fontColor(this.tk().textSecondary)
-                ForEach(this.samples, (item: SampleSummary) => {
-                  Row({ space: SPACE_SMALL }) {
-                    Column({ space: 2 }) {
-                      Text(dayjs(item.capturedAt).format('MM-DD HH:mm') + '  #' + item.index)
-                        .fontSize(this.fs(12))
-                        .fontColor(this.tk().textPrimary)
-                      Text(`${item.txnPreview} · ${item.lineCount} 行 · ${item.txnCount} 笔`)
-                        .fontSize(this.fs(11))
-                        .fontColor(this.tk().textSecondary)
-                    }
-                    .alignItems(HorizontalAlign.Start)
-                    .layoutWeight(1)
-                    Text($r('app.string.delete'))
-                      .fontSize(this.fs(12))
-                      .fontColor(this.tk().danger)
-                      .onClick(() => {
-                        this.onDeleteSample(item.index);
-                      })
-                  }
-                  .width('100%')
-                  .padding({ top: 6, bottom: 6 })
-                }, (item: SampleSummary) => item.capturedAt + '_' + item.index)
-                Button($r('app.string.train_clear_all'))
-                  .width('100%')
-                  .height(32)
-                  .fontSize(this.fs(13))
-                  .fontColor(this.tk().danger)
-                  .backgroundColor(this.tk().surface)
-                  .type(ButtonType.Normal)
-                  .borderRadius(SPACE_SMALL)
-                  .border({ width: 1, color: this.tk().danger })
-                  .margin({ top: SPACE_TINY })
-                  .onClick(() => {
-                    this.confirmClearSamples();
-                  })
-              }
-              .width('100%')
-              .margin({ top: SPACE_SMALL })
-              .padding(SPACE_SMALL)
-              .backgroundColor(this.tk().background)
-              .borderRadius(SPACE_SMALL)
-            }
           }
           .width('100%')
           .padding(SPACE_LARGE)
@@ -750,7 +476,7 @@ struct ModelSettings {
                   }
                   .width('100%')
                   .padding({ top: 8, bottom: 8 })
-                }, (item: SavedProviderConfig) => item.id)
+                }, (item: SavedProviderConfig) => `${item.id}_${item.model}_${item.apiKey.length}`)
                 Button($r('app.string.provider_clear_all'))
                   .width('100%')
                   .height(32)
@@ -793,11 +519,10 @@ struct ModelSettings {
                   .width('100%')
                   .height(44)
                   .fontSize(this.fs(16))
-                  .backgroundColor(this.tk().surface)
-                  .fontColor(this.tk().primary)
+                  .backgroundColor(this.tk().primary)
+                  .fontColor(this.tk().surface)
                   .type(ButtonType.Normal)
                   .borderRadius(SPACE_SMALL)
-                  .border({ width: 1, color: this.tk().primary })
                   .onClick(() => {
                     this.onTestConnection();
                   })
@@ -816,18 +541,6 @@ struct ModelSettings {
             .borderRadius(RADIUS_CARD)
             .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
           }
-
-          Button($r('app.string.save'))
-            .width('100%')
-            .height(44)
-            .fontSize(this.fs(16))
-            .backgroundColor(this.tk().primary)
-            .fontColor(this.tk().surface)
-            .type(ButtonType.Normal)
-            .borderRadius(SPACE_SMALL)
-            .onClick(() => {
-              this.onSave();
-            })
         }
         .width(BreakpointConstants.max_content_size.getValue(this.currentBreakpoint))
         .padding({ left: SPACE_XLARGE, right: SPACE_XLARGE, top: SPACE_MEDIUM })

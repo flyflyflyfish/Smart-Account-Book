@@ -3,26 +3,21 @@ import dayjs from 'dayjs';
 import cameraPicker from '@ohos.multimedia.cameraPicker';
 import camera from '@ohos.multimedia.camera';
 import photoAccessHelper from '@ohos.file.photoAccessHelper';
-import common from '@ohos.app.ability.common';
 import AccountNavigator from '../components/Navigator';
 import AccountTypeModel from '../models/accountType/AccountTypeModel';
 import CategoryRegistry from '../models/accountType/CategoryRegistry';
-import CategoryStore from '../models/accountType/CategoryStore';
 import { AccountInfo, AccountType } from '../models/account/account';
 import { BillDraft } from '../models/recognition/BillDraft';
 import { ImageTask, ImageTaskStatus } from '../models/recognition/ImageTask';
-import { RecognitionResult, copyRecognitionResult } from '../models/recognition/RecognitionResult';
-import { OcrVisionResult, SampleTransaction } from '../models/recognition/OcrSample';
 import { RecognizerFactory } from '../service/recognition/RecognizerFactory';
 import { Recognizer } from '../service/recognition/Recognizer';
-import OcrSampleCollector from '../service/recognition/OcrSampleCollector';
 import CloudLlmConfigStore from '../service/recognition/CloudLlmConfigStore';
 import { RecognitionPipeline } from '../service/recognition/pipeline/RecognitionPipeline';
 import learnedClassifier from '../service/recognition/classifier/LearnedClassifier';
 import AccountService from '../service/account';
 import { PREF_LEDGER_SYNC_BILLS, SOURCE_IMAGE } from '../common/constants';
 import PreferenceUtil from '../utils/PreferenceUtil';
-import { MAX_PICK_IMAGES, RECOGNIZE_CONCURRENCY, RECOGNIZE_RETRY_MAX_ATTEMPTS, RECOGNIZE_RETRY_BASE_DELAY_MS, IMPORT_SAMPLE_WAIT_MS } from '../common/Config';
+import { MAX_PICK_IMAGES, RECOGNIZE_CONCURRENCY, RECOGNIZE_RETRY_MAX_ATTEMPTS, RECOGNIZE_RETRY_BASE_DELAY_MS } from '../common/Config';
 import { CloudLlmRecognizer } from '../service/recognition/CloudLlmRecognizer';
 import { RetryRecognizer } from '../service/recognition/decorators/RetryRecognizer';
 import { isDuplicateBill } from '../common/dedup';
@@ -34,7 +29,7 @@ import { LEDGER_RECORD_EXPENSE, LEDGER_RECORD_INCOME } from '../models/ledger/Le
 import BreakpointConstants from '../common/breakpoint';
 import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_TINY, SPACE_XLARGE } from '../common/dimens';
 import { ThemeKit, ThemePalette } from '../common/theme/Theme';
-import { AMOUNT_MAX, clampAmount } from '../utils/AmountGuard';
+import { AMOUNT_MAX } from '../utils/AmountGuard';
 
 // 识别流程步骤：选图 -> 识别中 -> 结果确认
 const STEP_PICK: number = 0;
@@ -83,8 +78,6 @@ struct RecognizeBill {
   @State importing: boolean = false;
   // 从账本进入时是否同步记入主账单（首页统计）；非账本入口不显示开关、恒为 true
   @State syncToBills: boolean = true;
-  // 每张图的训练样本缓存协程：入账前需等它们完成，否则样本可能因“无缓存”被静默丢弃
-  private samplePromises: Map<string, Promise<void>> = new Map();
   // 账本入口：非空时入账的每笔同步复制进该账本
   private ledgerId: string = '';
   private ledgerRepository: LedgerRepository = new LedgerRepository();
@@ -116,11 +109,8 @@ struct RecognizeBill {
   }
 
   aboutToDisappear(): void {
-    // 退出识别页时清理未入账的采集缓存，避免内存残留；
-    // 同时置销毁标志，让仍在后台执行的识别/采集协程放弃后续状态更新
+    // 置销毁标志，让仍在后台执行的识别协程放弃后续状态更新
     this.destroyed = true;
-    this.samplePromises.clear();
-    OcrSampleCollector.clearPending();
   }
 
   // 从相册多选账单图片：走系统选择器，无需相册权限
@@ -260,25 +250,11 @@ struct RecognizeBill {
   }
 
   // 识别单张图片：走流水线得到草稿，失败只标记该任务不影响其他，返回是否成功
-  // cacheTrainSample 为 false 时跳过训练样本采集（手动回退大模型场景，保留首次识别的样本不覆盖）
-  async recognizeOne(task: ImageTask, recognizer: Recognizer, cacheTrainSample: boolean = true): Promise<boolean> {
+  async recognizeOne(task: ImageTask, recognizer: Recognizer): Promise<boolean> {
     task.status = ImageTaskStatus.RECOGNIZING;
     this.refreshTasks();
     try {
-      // 阶段1：并行采集训练数据。本地 OCR 与主识别（多模态）同时进行；
-      // 关闭开关时 collectOcr 立即返回 null，采集失败也不影响主流程。
-      // 这里只缓存，等用户入账确认后才真正落盘（标签用人工确认结果）。
-      let ocrPromise: Promise<OcrVisionResult | null> | null = null;
-      if (cacheTrainSample) {
-        ocrPromise = OcrSampleCollector.collectOcr(task.uri);
-      }
       const raws = await recognizer.recognize(task.uri);
-      if (cacheTrainSample && ocrPromise !== null) {
-        // 训练样本要的是识别器原始输出：识别后立刻快照，避免流水线就地修改污染样本
-        const rawSnapshot = this.snapshotRaws(raws);
-        const samplePromise = this.cacheSample(ocrPromise, rawSnapshot, task.uri);
-        this.samplePromises.set(task.uri, samplePromise);
-      }
       if (raws.length === 0) {
         task.status = ImageTaskStatus.FAILED;
         task.error = getContext().resourceManager.getStringSync($r('app.string.not_a_bill'));
@@ -308,34 +284,6 @@ struct RecognizeBill {
       this.refreshTasks();
       return false;
     }
-  }
-
-  // 阶段1：识别时缓存「OCR 文本块 + 大模型原始输出」，等入账确认后再落盘。失败只记日志
-  private async cacheSample(ocrPromise: Promise<OcrVisionResult | null>,
-    raws: RecognitionResult[], uri: string): Promise<void> {
-    try {
-      const ocr = await ocrPromise;
-      // 页面已退出：采集缓存已被清理，直接放弃本次缓存
-      if (this.destroyed) {
-        return;
-      }
-      if (ocr !== null) {
-        OcrSampleCollector.cache(uri, ocr, raws);
-      }
-    } catch (err) {
-      Logger.error('缓存训练数据失败', (err as Error).message);
-    } finally {
-      this.samplePromises.delete(uri);
-    }
-  }
-
-  // 识别结果的独立副本：与流水线、草稿的修改完全隔离
-  private snapshotRaws(raws: RecognitionResult[]): RecognitionResult[] {
-    const copies: RecognitionResult[] = [];
-    for (const r of raws) {
-      copies.push(copyRecognitionResult(r));
-    }
-    return copies;
   }
 
   // 失败项单独重试，成功后追加新草稿，保留已有编辑
@@ -390,8 +338,7 @@ struct RecognizeBill {
     const recognizer = new RetryRecognizer(
       new CloudLlmRecognizer(await CloudLlmConfigStore.loadConfig()),
       RECOGNIZE_RETRY_MAX_ATTEMPTS, RECOGNIZE_RETRY_BASE_DELAY_MS);
-    // 不重复采集训练样本：保留首次识别缓存的端侧原始输出，避免被云端输出覆盖污染
-    const ok = await this.recognizeOne(task, recognizer, false);
+    const ok = await this.recognizeOne(task, recognizer);
     if (this.destroyed) {
       return;
     }
@@ -659,30 +606,10 @@ struct RecognizeBill {
     if (this.expandedIndex >= 0) {
       this.commitExpanded();
     }
-    // 等待仍在后台采集的 OCR/大模型原始输出缓存完成：
-    // appendConfirmed 对“无缓存”的图会静默忽略，不等会导致训练样本丢失。
-    // 有界等待：采集依赖 OCR 串行队列，积压或底层挂起时最多等 IMPORT_SAMPLE_WAIT_MS，
-    // 超时放弃等待继续入账（样本可能缺采），绝不阻塞用户入账
-    const pending: Promise<void>[] = [];
-    this.samplePromises.forEach((p: Promise<void>) => {
-      pending.push(p);
-    });
-    if (pending.length > 0) {
-      const timeoutPromise: Promise<void> = new Promise<void>((resolve: () => void) => {
-        setTimeout(resolve, IMPORT_SAMPLE_WAIT_MS);
-      });
-      const allPromise: Promise<void> = Promise.all(pending).then((): void => {
-      }, (): void => {
-      });
-      await Promise.race([allPromise, timeoutPromise]);
-      if (this.samplePromises.size > 0) {
-        Logger.warn('等待训练样本采集超时，继续入账');
-      }
-    }
     if (this.destroyed) {
       return;
     }
-    // 入账：只处理勾选的（去重只影响是否入账，不影响训练标签）
+    // 入账：只处理勾选的
     let imported = 0;
     let overLimit = false;
     const toLedger = this.ledgerId.length > 0;
@@ -739,37 +666,6 @@ struct RecognizeBill {
     if (this.destroyed) {
       return;
     }
-    // 采集训练数据：图上所有真实交易 = 勾选入账的 + 判重复未勾选的。
-    // 判重复的交易仍是图上真实存在的一笔，不应剔除；仅排除用户手动取消勾选的非重复项（识别错/不想记）。
-    const confirmedByUri: Map<string, SampleTransaction[]> = new Map();
-    for (const draft of this.drafts) {
-      if (!draft.selected && !draft.duplicated) {
-        continue;
-      }
-      const amount = clampAmount(parseFloat(draft.amountText));
-      if (!(amount > 0) || !draft.selectType) {
-        continue;
-      }
-      const txn: SampleTransaction = {
-        accountType: draft.accountType === AccountType.INCOME ? '收入' : '支出',
-        amount: amount,
-        merchant: draft.merchant,
-        payTime: draft.payTime,
-        categoryName: CategoryStore.nameText(draft.selectType.id, draft.accountType),
-        confidence: 1
-      };
-      let list = confirmedByUri.get(draft.imageUri);
-      if (!list) {
-        list = [];
-        confirmedByUri.set(draft.imageUri, list);
-      }
-      list.push(txn);
-    }
-    // 阶段1：把「OCR 块 + 大模型原始输出 + 用户确认结果（含重复交易）」落盘
-    const ctx = getContext(this) as common.Context;
-    confirmedByUri.forEach((confirmed: SampleTransaction[], uri: string) => {
-      OcrSampleCollector.appendConfirmed(ctx, uri, confirmed);
-    });
     // 账本入口：通知账本详情/列表刷新
     if (toLedger) {
       LedgerStore.notifyChanged();

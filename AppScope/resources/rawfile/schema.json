@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 11,
+  "schemaVersion": 12,
   "objectTypes": [
     {
       "objectTypeName": "account",
@@ -37,6 +37,35 @@
         {"fieldName": "owner_uid", "fieldType": "String", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false}
       ],
       "indexes": []
+    },
+    {
+      "objectTypeName": "ledger",
+      "fields": [
+        {"fieldName": "id", "fieldType": "String", "belongPrimaryKey": true, "notNull": true, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "name", "fieldType": "String", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "color_key", "fieldType": "String", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "created_at", "fieldType": "Long", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "update_time", "fieldType": "Long", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "owner_uid", "fieldType": "String", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false}
+      ],
+      "indexes": []
+    },
+    {
+      "objectTypeName": "ledger_record",
+      "fields": [
+        {"fieldName": "id", "fieldType": "String", "belongPrimaryKey": true, "notNull": true, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "ledger_id", "fieldType": "String", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "type", "fieldType": "Integer", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "amount", "fieldType": "Double", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "note", "fieldType": "Text", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "time", "fieldType": "Long", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "created_at", "fieldType": "Long", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "update_time", "fieldType": "Long", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "category", "fieldType": "Integer", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "bill_id", "fieldType": "String", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false},
+        {"fieldName": "owner_uid", "fieldType": "String", "belongPrimaryKey": false, "notNull": false, "isNeedEncrypt": false, "isSensitive": false}
+      ],
+      "indexes": []
     }
   ],
   "permissions": [
@@ -60,6 +89,24 @@
     },
     {
       "objectTypeName": "bill_tombstone",
+      "permissions": [
+        {"role": "World", "rights": []},
+        {"role": "Authenticated", "rights": ["Read", "Upsert"]},
+        {"role": "Creator", "rights": ["Read", "Upsert", "Delete"]},
+        {"role": "Administrator", "rights": ["Read", "Upsert", "Delete"]}
+      ]
+    },
+    {
+      "objectTypeName": "ledger",
+      "permissions": [
+        {"role": "World", "rights": []},
+        {"role": "Authenticated", "rights": ["Read", "Upsert"]},
+        {"role": "Creator", "rights": ["Read", "Upsert", "Delete"]},
+        {"role": "Administrator", "rights": ["Read", "Upsert", "Delete"]}
+      ]
+    },
+    {
+      "objectTypeName": "ledger_record",
       "permissions": [
         {"role": "World", "rights": []},
         {"role": "Authenticated", "rights": ["Read", "Upsert"]},

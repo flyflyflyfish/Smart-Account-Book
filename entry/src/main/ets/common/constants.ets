@@ -19,8 +19,6 @@ export const PREF_OCR_ENABLED = 'ocr_enabled';
 export const PREF_CLOUD_ENABLED = 'cloud_enabled';
 // 用户是否同意将图片上传至云端识别服务
 export const PREF_CLOUD_CONSENT = 'cloud_consent';
-// 训练数据采集开关（默认关闭，仅存本机，不上传）
-export const PREF_TRAIN_COLLECT_ENABLED = 'train_collect_enabled';
 
 // 自定义分类配置（JSON：新增的自定义分类 + 被隐藏的默认分类 id）的 Preferences 键
 export const PREF_CATEGORY_CONFIG = 'category_config';
@@ -93,6 +91,11 @@ export const PREF_CLOUD_TOMBSTONES = 'cloud_bill_tombstones';
 
 // 本地墓碑记录上限，超过后淘汰最早记录
 export const CLOUD_TOMBSTONE_MAX: number = 500;
+
+// 账本/账本记录删除墓碑 id 前缀：与账单墓碑共用 bill_tombstone 表与本地墓碑列表，
+// 同步时按前缀区分类型，账单同步循环不会误匹配带前缀的 id
+export const LEDGER_TOMBSTONE_PREFIX: string = 'ledger:';
+export const LEDGER_RECORD_TOMBSTONE_PREFIX: string = 'ledger_record:';
 
 // 端云全量同步的最小间隔（毫秒）：回前台等高频触发时按此节流
 export const CLOUD_SYNC_MIN_INTERVAL_MS: number = 10 * 60 * 1000;

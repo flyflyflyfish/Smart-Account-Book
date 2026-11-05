@@ -26,11 +26,10 @@ export const LLM_PROVIDERS: LlmProvider[] = [
     baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
     custom: false,
     models: [
-      { id: 'doubao-seed-evolving', label: '豆包 Seed Evolving（快速迭代）', vision: true },
+      { id: 'doubao-seed-evolving', label: '豆包 Seed Evolving（最新·多模态）', vision: true },
       { id: 'doubao-seed-2-1-pro-260915', label: '豆包 2.1 Pro（旗舰）', vision: true },
       { id: 'doubao-seed-2-1-lite-260915', label: '豆包 2.1 Lite（更快更省）', vision: true },
-      { id: 'doubao-seed-2-0-mini-260428', label: '豆包 2.0 Mini', vision: true },
-      { id: 'doubao-seed-2-0-code-preview-260215', label: '豆包 2.0 Code（预览）', vision: true }
+      { id: 'doubao-seed-2-0-mini-260428', label: '豆包 2.0 Mini（极速·低价）', vision: true }
     ]
   },
   {
@@ -40,14 +39,10 @@ export const LLM_PROVIDERS: LlmProvider[] = [
     custom: false,
     models: [
       { id: 'qwen3.8-max', label: 'Qwen3.8 Max（旗舰·视觉）', vision: true },
-      { id: 'qwen3.8-plus', label: 'Qwen3.8 Plus（视觉）', vision: true },
+      { id: 'qwen3.7-plus', label: 'Qwen3.7 Plus（视觉·均衡）', vision: true },
+      { id: 'qwen3.8-plus', label: 'Qwen3.8 Plus（视觉·均衡）', vision: true },
       { id: 'qwen3.8-flash', label: 'Qwen3.8 Flash（视觉·性价比）', vision: true },
-      { id: 'qwen3.8-omni-flash', label: 'Qwen3.8 Omni Flash（全模态）', vision: true },
-      { id: 'qwen-vl-max', label: 'Qwen-VL Max（视觉）', vision: true },
-      { id: 'qwen-max', label: 'Qwen Max（纯文本旗舰）', vision: false },
-      { id: 'qwen-plus', label: 'Qwen Plus（纯文本）', vision: false },
-      { id: 'qwen-turbo', label: 'Qwen Turbo（纯文本·快）', vision: false },
-      { id: 'qwen3-coder-plus', label: 'Qwen3 Coder Plus（纯文本）', vision: false }
+      { id: 'qwen3.8-omni-flash', label: 'Qwen3.8 Omni Flash（全模态·性价比）', vision: true }
     ]
   },
   {
@@ -57,12 +52,12 @@ export const LLM_PROVIDERS: LlmProvider[] = [
     custom: false,
     models: [
       { id: 'glm-5.3', label: 'GLM-5.3（纯文本旗舰）', vision: false },
-      { id: 'glm-5.3-flash', label: 'GLM-5.3 Flash（多模态）', vision: true },
+      { id: 'glm-5.3-flash', label: 'GLM-5.3 Flash（多模态·性价比）', vision: true },
       { id: 'glm-5.3-flashx', label: 'GLM-5.3 FlashX（多模态·高速）', vision: true },
-      { id: 'glm-5.2', label: 'GLM-5.2（文本·支持视觉）', vision: true },
-      { id: 'glm-4-plus', label: 'GLM-4 Plus（纯文本·旧版）', vision: false },
-      { id: 'glm-4-air', label: 'GLM-4 Air（纯文本·旧版）', vision: false },
-      { id: 'glm-4-flash', label: 'GLM-4 Flash（纯文本·旧版）', vision: false }
+      { id: 'glm-5v-turbo', label: 'GLM-5V Turbo（视觉推理）', vision: true },
+      { id: 'glm-5.2', label: 'GLM-5.2（纯文本）', vision: false },
+      { id: 'glm-4.7-flash', label: 'GLM-4.7 Flash（纯文本·免费）', vision: false },
+      { id: 'glm-4.6v-flash', label: 'GLM-4.6V Flash（视觉·免费）', vision: true }
     ]
   },
   {
@@ -71,10 +66,8 @@ export const LLM_PROVIDERS: LlmProvider[] = [
     baseUrl: 'https://api.deepseek.com/v1',
     custom: false,
     models: [
-      { id: 'deepseek-v4-pro', label: 'DeepSeek-V4 Pro（纯文本）', vision: false },
-      { id: 'deepseek-flash', label: 'DeepSeek-V4.1 Flash（支持图片）', vision: true },
-      { id: 'deepseek-v3.2', label: 'DeepSeek-V3.2（纯文本·旧版）', vision: false },
-      { id: 'deepseek-coder-v2', label: 'DeepSeek Coder V2（纯文本）', vision: false }
+      { id: 'deepseek-flash', label: 'DeepSeek-V4.1 Flash（视觉·性价比）', vision: true },
+      { id: 'deepseek-v4-pro', label: 'DeepSeek-V4 Pro（纯文本旗舰）', vision: false }
     ]
   },
   {
@@ -84,9 +77,9 @@ export const LLM_PROVIDERS: LlmProvider[] = [
     custom: false,
     models: [
       { id: 'kimi-k3', label: 'Kimi K3（旗舰·视觉）', vision: true },
-      { id: 'kimi-k2.7-code-highspeed', label: 'Kimi K2.7 Code 高速（视觉）', vision: true },
-      { id: 'kimi-k2.7-code', label: 'Kimi K2.7 Code（视觉）', vision: true },
-      { id: 'kimi-k2.6', label: 'Kimi K2.6（通用·视觉）', vision: true }
+      { id: 'kimi-k2.6', label: 'Kimi K2.6（通用·视觉）', vision: true },
+      { id: 'kimi-k2.7-code-highspeed', label: 'Kimi K2.7 Code 高速（纯文本）', vision: false },
+      { id: 'kimi-k2.7-code', label: 'Kimi K2.7 Code（纯文本）', vision: false }
     ]
   },
   {
