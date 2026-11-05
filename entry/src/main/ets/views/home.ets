@@ -567,9 +567,9 @@ export default struct Home {
                       this.openEditPage(record);
                     }
                   })
-                })
+                }, (record: ItemRecordInfo): string => record.id)
               }.divider({ strokeWidth: 1, color: this.tk().surfaceVariant })
-            })
+            }, (item: GroupByDate): string => item.time.toString())
           }.divider({ strokeWidth: 1, color: this.tk().surfaceVariant })
           Divider().color(this.tk().surfaceVariant)
         } else if (this.loading) {
