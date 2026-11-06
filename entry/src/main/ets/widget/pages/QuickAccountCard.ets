@@ -33,7 +33,7 @@ struct QuickAccountCard {
   @LocalStorageProp('entryAiSoft') entryAiSoft: string = '#296FA02E';
   // 大卡（2*4）宽布局标记，由 EntryFormAbility 按卡片尺寸下发
   @LocalStorageProp('isWide') isWideFlag: string = '0';
-  // 第三入口样式：ai AI助手 / ledger 账本，跟随外观-首页统计的底部第二页签设置下发
+  // 第三入口样式：ai AI助手 / ledger 账本，跟随外观-功能的底部第二页签设置下发
   @LocalStorageProp('thirdEntry') thirdEntry: string = 'ai';
   // 账本入口配色（取主题蓝点缀色）
   @LocalStorageProp('accentBlue') accentBlue: string = '#3D94F0';
