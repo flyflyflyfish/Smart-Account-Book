@@ -537,6 +537,10 @@
       "value": "API Key"
     },
     {
+      "name": "api_key_guide_title",
+      "value": "如何获取 API Key"
+    },
+    {
       "name": "api_key_placeholder",
       "value": "请输入 API Key"
     },
@@ -918,11 +922,31 @@
     },
     {
       "name": "appearance_tab_home",
-      "value": "首页统计"
+      "value": "功能"
     },
     {
       "name": "appearance_tab_glow",
       "value": "光感"
+    },
+    {
+      "name": "second_tab_menu_title",
+      "value": "切换底部第二页签"
+    },
+    {
+      "name": "home_scope_menu_title",
+      "value": "切换统计口径"
+    },
+    {
+      "name": "guide_title",
+      "value": "使用指引"
+    },
+    {
+      "name": "guide_msg",
+      "value": "长按底部「AI 助手 / 账本」页签可切换该位置的功能；长按首页顶部的「本月 / 本日」可切换统计口径。\n也可稍后在 设置 → 外观 → 功能 中修改。"
+    },
+    {
+      "name": "guide_got_it",
+      "value": "知道了"
     },
     {
       "name": "appearance_mode_system",
