@@ -1,13 +1,19 @@
+import router from '@ohos.router';
 import AccountNavigator from '../components/Navigator';
 import CloudLlmConfigStore from '../service/recognition/CloudLlmConfigStore';
 import learnedClassifier from '../service/recognition/classifier/LearnedClassifier';
 import MerchantLearningSync from '../service/MerchantLearningSync';
+import CloudSyncService from '../service/CloudSyncService';
+import WidgetUpdater from '../common/widget/WidgetUpdater';
 import { Toast } from '../components/ToastDialog';
 import { Logger } from '../utils/Logger';
 import BreakpointConstants from '../common/breakpoint';
-import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_XLARGE } from '../common/dimens';
+import { RADIUS_CARD, SPACE_LARGE, SPACE_MEDIUM, SPACE_SMALL, SPACE_TINY, SPACE_XLARGE } from '../common/dimens';
 import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
+/**
+ * 隐私与安全页：隐私承诺说明、云端识别授权、数据管理（清除学习分类/清空全部账单数据）
+ */
 @Entry
 @Component
 struct PrivacySecurity {
@@ -23,6 +29,7 @@ struct PrivacySecurity {
   }
 
   @State cloudConsent: boolean = false;
+  @State clearing: boolean = false;
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
 
   async aboutToAppear(): Promise<void> {
@@ -77,11 +84,124 @@ struct PrivacySecurity {
     }
   }
 
+  confirmClearAllFirst(): void {
+    AlertDialog.show({
+      title: $r('app.string.clear_all_confirm_title'),
+      message: $r('app.string.clear_all_confirm_msg'),
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      primaryButton: {
+        value: $r('app.string.cancel'),
+        action: () => {
+        }
+      },
+      secondaryButton: {
+        value: $r('app.string.clear_all_next'),
+        fontColor: this.tk().danger,
+        action: () => {
+          this.confirmClearAllSecond();
+        }
+      }
+    });
+  }
+
+  confirmClearAllSecond(): void {
+    AlertDialog.show({
+      title: $r('app.string.clear_all_confirm_again_title'),
+      message: $r('app.string.clear_all_confirm_again_msg'),
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      primaryButton: {
+        value: $r('app.string.cancel'),
+        action: () => {
+        }
+      },
+      secondaryButton: {
+        value: $r('app.string.clear_all_confirm_btn'),
+        fontColor: this.tk().danger,
+        action: () => {
+          this.clearAllBills();
+        }
+      }
+    });
+  }
+
+  async clearAllBills(): Promise<void> {
+    if (this.clearing) {
+      return;
+    }
+    this.clearing = true;
+    try {
+      await CloudSyncService.clearAllBillsData();
+      // 清空后小组件金额归零，立即刷新卡片
+      await WidgetUpdater.refreshAllForms(getContext(this), ThemeKit.palette());
+      Toast.success($r('app.string.clear_all_success'));
+    } catch (error) {
+      Logger.error('清空全部账单数据失败', (error as Error).message);
+      Toast.error($r('app.string.clear_all_failed'));
+    } finally {
+      this.clearing = false;
+    }
+  }
+
+  @Builder
+  PrivacyItem(title: ResourceStr, desc: ResourceStr) {
+    Column({ space: SPACE_TINY }) {
+      Text(title)
+        .fontSize(this.fs(14))
+        .fontWeight(FontWeight.Medium)
+        .fontColor(this.tk().textPrimary)
+      Text(desc)
+        .fontSize(this.fs(12))
+        .fontColor(this.tk().textSecondary)
+        .lineHeight(this.fs(18))
+    }
+    .alignItems(HorizontalAlign.Start)
+    .width('100%')
+  }
+
   build() {
     Column() {
       AccountNavigator({ title: $r('app.string.privacy_security') })
       Scroll() {
         Column({ space: SPACE_MEDIUM }) {
+          // 隐私承诺说明
+          Column({ space: SPACE_MEDIUM }) {
+            Text($r('app.string.privacy_commitment_title'))
+              .fontSize(this.fs(15))
+              .fontWeight(FontWeight.Bold)
+              .fontColor(this.tk().textPrimary)
+            this.PrivacyItem($r('app.string.privacy_item_local_title'),
+              $r('app.string.privacy_item_local_desc'))
+            this.PrivacyItem($r('app.string.privacy_item_sync_title'),
+              $r('app.string.privacy_item_sync_desc'))
+            this.PrivacyItem($r('app.string.privacy_item_apikey_title'),
+              $r('app.string.privacy_item_apikey_desc'))
+            this.PrivacyItem($r('app.string.privacy_item_cloud_title'),
+              $r('app.string.privacy_item_cloud_desc'))
+            this.PrivacyItem($r('app.string.privacy_item_permission_title'),
+              $r('app.string.privacy_item_permission_desc'))
+            Button($r('app.string.privacy_policy_entry'))
+              .width('100%')
+              .height(36)
+              .fontSize(this.fs(13))
+              .fontColor(this.tk().primary)
+              .backgroundColor(this.tk().surface)
+              .type(ButtonType.Normal)
+              .borderRadius(SPACE_SMALL)
+              .border({ width: 1, color: this.tk().primary })
+              .onClick(() => {
+                router.pushUrl({ url: 'pages/PrivacyPolicy' });
+              })
+          }
+          .width('100%')
+          .alignItems(HorizontalAlign.Start)
+          .padding(SPACE_LARGE)
+          .backgroundColor(this.tk().surface)
+          .borderRadius(RADIUS_CARD)
+          .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
+
+          // 云端识别授权
           Column({ space: SPACE_MEDIUM }) {
             Row({ space: SPACE_MEDIUM }) {
               Column({ space: 2 }) {
@@ -116,18 +236,68 @@ struct PrivacySecurity {
           .borderRadius(RADIUS_CARD)
           .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
 
-          Button($r('app.string.clear_learned'))
-            .width('100%')
-            .height(44)
-            .fontSize(this.fs(15))
-            .fontColor(this.tk().danger)
-            .backgroundColor(this.tk().surface)
-            .type(ButtonType.Normal)
-            .borderRadius(SPACE_SMALL)
-            .border({ width: 1, color: this.tk().danger })
-            .onClick(() => {
-              this.confirmClearLearned();
-            })
+          // 数据管理
+          Column({ space: SPACE_LARGE }) {
+            Text($r('app.string.data_management_title'))
+              .fontSize(this.fs(15))
+              .fontWeight(FontWeight.Bold)
+              .fontColor(this.tk().textPrimary)
+            Row({ space: SPACE_MEDIUM }) {
+              Column({ space: 2 }) {
+                Text($r('app.string.clear_learned'))
+                  .fontSize(this.fs(14))
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor(this.tk().textPrimary)
+                Text($r('app.string.clear_learned_desc'))
+                  .fontSize(this.fs(12))
+                  .fontColor(this.tk().textSecondary)
+              }
+              .alignItems(HorizontalAlign.Start)
+              .layoutWeight(1)
+              Button($r('app.string.clear_learned_confirm'))
+                .height(32)
+                .fontSize(this.fs(13))
+                .fontColor(this.tk().danger)
+                .backgroundColor(this.tk().surface)
+                .type(ButtonType.Normal)
+                .borderRadius(SPACE_SMALL)
+                .border({ width: 1, color: this.tk().danger })
+                .onClick(() => {
+                  this.confirmClearLearned();
+                })
+            }.width('100%')
+            Row({ space: SPACE_MEDIUM }) {
+              Column({ space: 2 }) {
+                Text($r('app.string.clear_all_bills'))
+                  .fontSize(this.fs(14))
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor(this.tk().textPrimary)
+                Text($r('app.string.clear_all_bills_desc'))
+                  .fontSize(this.fs(12))
+                  .fontColor(this.tk().textSecondary)
+              }
+              .alignItems(HorizontalAlign.Start)
+              .layoutWeight(1)
+              Button(this.clearing ? $r('app.string.clearing_in_progress') : $r('app.string.clear_all_confirm_btn'))
+                .height(32)
+                .fontSize(this.fs(13))
+                .fontColor(this.tk().danger)
+                .backgroundColor(this.tk().surface)
+                .type(ButtonType.Normal)
+                .borderRadius(SPACE_SMALL)
+                .border({ width: 1, color: this.tk().danger })
+                .enabled(!this.clearing)
+                .onClick(() => {
+                  this.confirmClearAllFirst();
+                })
+            }.width('100%')
+          }
+          .width('100%')
+          .alignItems(HorizontalAlign.Start)
+          .padding(SPACE_LARGE)
+          .backgroundColor(this.tk().surface)
+          .borderRadius(RADIUS_CARD)
+          .shadow({ radius: 16, color: this.tk().primaryShadow, offsetX: 0, offsetY: 6 })
         }
         .width(BreakpointConstants.max_content_size.getValue(this.currentBreakpoint))
         .padding({ left: SPACE_XLARGE, right: SPACE_XLARGE, top: SPACE_MEDIUM })
