@@ -88,11 +88,18 @@ export default class EntryFormAbility extends FormExtensionAbility {
       return;
     }
     try {
-      // 先从磁盘重载偏好：主题是主应用进程写入的，本进程缓存实例读不到最新值，
-      // 不重载会一直用旧主题调色板推送，把主应用推送的新配色覆盖回旧色
+      // 先从磁盘重载偏好：主题与卡片收支缓存都是主应用进程写入的，本进程缓存实例读不到最新值，
+      // 不重载会一直用旧主题/旧金额推送，把主应用推送的新配色或新金额覆盖回旧值
       await PreferenceUtil.reloadPreference(this.context);
       const palette = await this.resolvePalette();
-      await WidgetUpdater.refreshForm(this.context, formId, dimension, palette);
+      // 只读主应用持久化的收支缓存并做跨日/跨月归零，不跨进程查主应用数据库
+      const cache = await WidgetUpdater.loadRolloverSummary();
+      if (!cache) {
+        // 主应用从未启动过、还没写入缓存：跳过推送，保留添加卡片时显示的占位 '--'，不推未知金额
+        Logger.info('暂无卡片收支缓存，跳过推送', formId);
+        return;
+      }
+      await WidgetUpdater.refreshForm(this.context, formId, dimension, palette, cache);
     } catch (err) {
       Logger.error('卡片数据更新失败', (err as Error).message);
     }

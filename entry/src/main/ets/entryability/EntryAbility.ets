@@ -14,6 +14,7 @@ import CloudSyncService from '../service/CloudSyncService';
 import RecurringBillService from '../service/RecurringBillService';
 import SecondTabStore from '../common/SecondTabStore';
 import { ThemeKit } from '../common/theme/Theme';
+import WidgetUpdater from '../common/widget/WidgetUpdater';
 import {
   ACCOUNT_CREATE_TABLE_SQL,
   LEDGER_CREATE_TABLE_SQL,
@@ -171,6 +172,10 @@ export default class EntryAbility extends UIAbility {
     RecurringBillService.start(this.context);
     // 回前台节流触发一次端云全量同步，多设备间保持数据最新
     CloudSyncService.syncAll();
+    // 回前台重查今日/本月收支并刷新小组件缓存：后台期间卡片只能读到旧缓存，回来后补一次最新值
+    DBUtil.ready.then((): void => {
+      WidgetUpdater.refreshAllForms(this.context, ThemeKit.palette()).catch((): void => {});
+    });
     hilog.info(0x0000, 'testTag', '%{private}s', 'Ability onForeground');
   }
 
