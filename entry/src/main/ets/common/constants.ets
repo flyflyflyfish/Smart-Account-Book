@@ -64,6 +64,8 @@ export const FORM_DIM_PREFIX = 'form_dim_';
 export const FORM_RANGE_PREFIX = 'form_range_';
 export const WIDGET_RANGE_TODAY: string = 'today';
 export const WIDGET_RANGE_MONTH: string = 'month';
+// 小组件收支汇总缓存（JSON）：主应用查库后写入，卡片进程只读此缓存推送、不跨进程查库
+export const PREF_WIDGET_SUMMARY = 'widget_summary_cache';
 
 // 显示与外观：主题 / 深浅色模式 / 字号缩放 / 光感（阴影浓度）/ 首页汇总口径的 Preferences 键
 export const PREF_THEME_ID = 'theme_id';
