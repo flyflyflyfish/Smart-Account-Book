@@ -749,6 +749,162 @@
       "value": "已清除学习到的商家分类"
     },
     {
+      "name": "privacy_commitment_title",
+      "value": "数据与隐私说明"
+    },
+    {
+      "name": "privacy_item_local_title",
+      "value": "账单本地存储"
+    },
+    {
+      "name": "privacy_item_local_desc",
+      "value": "账单保存在本机数据库，未登录云账号时不联网上传。"
+    },
+    {
+      "name": "privacy_item_sync_title",
+      "value": "云同步需登录"
+    },
+    {
+      "name": "privacy_item_sync_desc",
+      "value": "登录后账单经加密通道端云同步，可随时退出登录。"
+    },
+    {
+      "name": "privacy_item_apikey_title",
+      "value": "API Key 仅存本机"
+    },
+    {
+      "name": "privacy_item_apikey_desc",
+      "value": "识别服务的密钥只保存在设备上，不上传云端。"
+    },
+    {
+      "name": "privacy_item_cloud_title",
+      "value": "云端识别需授权"
+    },
+    {
+      "name": "privacy_item_cloud_desc",
+      "value": "授权后才会把账单图片发送至你配置的服务商。"
+    },
+    {
+      "name": "privacy_item_permission_title",
+      "value": "权限用途透明"
+    },
+    {
+      "name": "privacy_item_permission_desc",
+      "value": "相机/麦克风仅用于拍票与语音记账，通知仅用于提醒。"
+    },
+    {
+      "name": "privacy_policy_entry",
+      "value": "查看完整隐私政策"
+    },
+    {
+      "name": "data_management_title",
+      "value": "数据管理"
+    },
+    {
+      "name": "clear_learned_desc",
+      "value": "仅清除商家分类学习记忆，不影响账单。"
+    },
+    {
+      "name": "clear_all_bills",
+      "value": "清空全部账单数据"
+    },
+    {
+      "name": "clear_all_bills_desc",
+      "value": "同时删除本机与云端的全部账单及账本记录，不可恢复。"
+    },
+    {
+      "name": "clear_all_confirm_title",
+      "value": "清空全部账单数据？"
+    },
+    {
+      "name": "clear_all_confirm_msg",
+      "value": "将永久删除本机与云端的全部账单及账本记录（账本、分类、预算与设置保留），其他设备同步后同样删除。"
+    },
+    {
+      "name": "clear_all_next",
+      "value": "继续"
+    },
+    {
+      "name": "clear_all_confirm_again_title",
+      "value": "最后确认"
+    },
+    {
+      "name": "clear_all_confirm_again_msg",
+      "value": "此操作不可恢复，确定要清空全部账单数据吗？"
+    },
+    {
+      "name": "clear_all_confirm_btn",
+      "value": "清空"
+    },
+    {
+      "name": "clearing_in_progress",
+      "value": "清空中…"
+    },
+    {
+      "name": "clear_all_success",
+      "value": "已清空全部账单数据"
+    },
+    {
+      "name": "clear_all_failed",
+      "value": "清空失败，请重试"
+    },
+    {
+      "name": "privacy_policy",
+      "value": "隐私政策"
+    },
+    {
+      "name": "privacy_policy_desc",
+      "value": "数据收集、存储与权限用途说明"
+    },
+    {
+      "name": "about_title",
+      "value": "关于"
+    },
+    {
+      "name": "about_app_name",
+      "value": "智能记账助手"
+    },
+    {
+      "name": "about_desc",
+      "value": "版本信息、开发者与开源声明"
+    },
+    {
+      "name": "about_version_value",
+      "value": "版本 %s"
+    },
+    {
+      "name": "about_developer_title",
+      "value": "开发者信息"
+    },
+    {
+      "name": "about_developer_label",
+      "value": "开发者"
+    },
+    {
+      "name": "about_email_label",
+      "value": "联系邮箱"
+    },
+    {
+      "name": "about_home_label",
+      "value": "项目主页"
+    },
+    {
+      "name": "about_open_source_title",
+      "value": "开源声明"
+    },
+    {
+      "name": "about_upstream_label",
+      "value": "基于开源项目"
+    },
+    {
+      "name": "about_license_label",
+      "value": "许可证"
+    },
+    {
+      "name": "about_license_desc",
+      "value": "修改与新增部分以 PolyForm Noncommercial 1.0.0 授权（非商业使用），原始代码以 Apache License 2.0 授权。商业授权请联系开发者。"
+    },
+    {
       "name": "ocr_unsupported",
       "value": "当前设备不支持端侧文字识别"
     },

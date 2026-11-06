@@ -261,6 +261,60 @@ class CloudSettingSyncService {
     }
   }
 
+  /** 批量上传云端墓碑，按 100 条一批规避云数据库单次条数/大小限制 */
+  async upsertTombstones(billIds: string[]): Promise<void> {
+    const zone = this.zone;
+    if (!zone || !this.ownerUid || billIds.length === 0) {
+      return;
+    }
+    const BATCH_SIZE = 100;
+    for (let start = 0; start < billIds.length; start += BATCH_SIZE) {
+      const end = Math.min(start + BATCH_SIZE, billIds.length);
+      const rows: TombstoneCloud[] = [];
+      for (let index = start; index < end; index++) {
+        const row = new TombstoneCloud();
+        row.id = billIds[index];
+        row.delete_time = Date.now();
+        row.owner_uid = this.ownerUid;
+        rows.push(row);
+      }
+      try {
+        await zone.upsert(rows);
+      } catch (err) {
+        Logger.error('云端批量上传删除墓碑失败', (err as Error).message);
+      }
+    }
+  }
+
+  /**
+   * 批量删除后调用（如隐私页“清空全部账单数据”）：本地合并记录墓碑防复活，
+   * 已登录时批量上传云端墓碑；本地列表超出上限时淘汰最旧记录
+   */
+  async recordBillDeletions(billIds: string[]): Promise<void> {
+    if (billIds.length === 0) {
+      return;
+    }
+    const local = await this.loadLocalTombstones();
+    const known = new Set<string>();
+    for (const id of local) {
+      known.add(id);
+    }
+    for (const id of billIds) {
+      if (!known.has(id)) {
+        known.add(id);
+        local.push(id);
+      }
+    }
+    while (local.length > CONSTANTS.CLOUD_TOMBSTONE_MAX) {
+      local.shift();
+    }
+    await this.saveLocalTombstones(local);
+    if (!this.isAttached()) {
+      return;
+    }
+    await this.upsertTombstones(billIds);
+  }
+
   /** 读取各设置最近一次本地变更时间 */
   async loadMeta(): Promise<Record<string, number>> {
     const raw = String(await PreferenceUtil.getPreferenceValue(CONSTANTS.PREF_CLOUD_SYNC_META, ''));
