@@ -367,6 +367,12 @@ export default class LedgerRepository {
     await DBUtil.delete(predicates);
   }
 
+  /** 隐私页清空数据用：仅删本地全部账本记录（不记墓碑、不动云端、保留账本结构） */
+  async localDeleteAllRecords(): Promise<number> {
+    const predicates = new relationalStore.RdbPredicates(LEDGER_RECORD_TABLE_NAME);
+    return DBUtil.delete(predicates);
+  }
+
   /**
    * 查询全部账本的汇总视图：账本列表 + 每本支出/收入/笔数。
    * 一次性读出全部记录在内存聚合，避免列表页逐本查询。

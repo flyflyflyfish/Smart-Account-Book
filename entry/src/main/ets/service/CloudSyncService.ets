@@ -313,6 +313,70 @@ class CloudSyncService {
   }
 
   /**
+   * 清空全部账单数据（隐私页）：账单与账本记录做三清——本地行、云端行、删除墓碑，
+   * 墓碑覆盖本地与云端 id 并集，任何设备同步时都不再复活；
+   * 账本结构、分类、预算、学习记忆与设置不受影响
+   */
+  async clearAllBillsData(): Promise<void> {
+    const attached = CloudSettingSync.isAttached();
+    const uid = CloudSettingSync.getUid();
+    // 1. 收集本地与云端全部账单/账本记录 id
+    const localBills = await this.localRepo.queryAll();
+    const localRecords = await this.ledgerRepo.queryAllRecords();
+    let cloudBillIds: string[] = [];
+    let cloudRecordIds: string[] = [];
+    if (attached) {
+      const cloudBills = await CloudAccountRepository.queryAll(uid);
+      cloudBillIds = cloudBills.map((item: AccountCloud): string => item.id);
+      const cloudRecords = await CloudLedgerRepository.queryRecords(uid);
+      cloudRecordIds = cloudRecords.map((item: LedgerRecordCloud): string => item.id);
+    }
+    // 2. 写删除墓碑：本地列表 + 云端墓碑表（账本记录墓碑带前缀）
+    const billIdSet = new Set<string>();
+    for (const item of localBills) {
+      billIdSet.add(item.id);
+    }
+    for (const id of cloudBillIds) {
+      billIdSet.add(id);
+    }
+    const recordIdSet = new Set<string>();
+    for (const item of localRecords) {
+      recordIdSet.add(item.id);
+    }
+    for (const id of cloudRecordIds) {
+      recordIdSet.add(id);
+    }
+    const tombIds: string[] = [];
+    for (const id of billIdSet) {
+      tombIds.push(id);
+    }
+    for (const id of recordIdSet) {
+      tombIds.push(`${CONSTANTS.LEDGER_RECORD_TOMBSTONE_PREFIX}${id}`);
+    }
+    if (tombIds.length > 0) {
+      await CloudSettingSync.recordBillDeletions(tombIds);
+    }
+    // 3. 删云端行
+    if (attached) {
+      if (cloudBillIds.length > 0) {
+        await CloudAccountRepository.deleteAll(cloudBillIds);
+      }
+      if (cloudRecordIds.length > 0) {
+        await CloudLedgerRepository.deleteRecordsByIds(cloudRecordIds);
+      }
+    }
+    // 4. 删本地行
+    if (localBills.length > 0) {
+      await this.localRepo.deleteAll();
+    }
+    if (localRecords.length > 0) {
+      await this.ledgerRepo.localDeleteAllRecords();
+    }
+    BillStore.notifyChanged();
+    LedgerStore.notifyChanged();
+  }
+
+  /**
    * 设置与分类配置的合并同步
    */
   private async syncSettings(): Promise<void> {
