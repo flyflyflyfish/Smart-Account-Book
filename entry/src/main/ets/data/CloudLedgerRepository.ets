@@ -180,6 +180,29 @@ class CloudLedgerRepository {
       Logger.error('云端删除账本记录失败', (err as Error).message);
     }
   }
+
+  /** 按主键批量删除云端账本记录，按 100 条一批规避云数据库单次条数/大小限制 */
+  async deleteRecordsByIds(ids: string[]): Promise<void> {
+    const zone = CloudInit.getZone();
+    if (!zone || ids.length === 0) {
+      return;
+    }
+    const BATCH_SIZE = 100;
+    for (let start = 0; start < ids.length; start += BATCH_SIZE) {
+      const end = Math.min(start + BATCH_SIZE, ids.length);
+      const clouds: LedgerRecordCloud[] = [];
+      for (let index = start; index < end; index++) {
+        const cloud = new LedgerRecordCloud();
+        cloud.id = ids[index];
+        clouds.push(cloud);
+      }
+      try {
+        await zone.delete(clouds);
+      } catch (err) {
+        Logger.error('云端批量删除账本记录失败', (err as Error).message);
+      }
+    }
+  }
 }
 
 export default new CloudLedgerRepository();

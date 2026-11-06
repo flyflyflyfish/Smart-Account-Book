@@ -68,6 +68,12 @@ export class RdbAccountRepository implements AccountRepository {
     return DBUtil.delete(predicates);
   }
 
+  /** 清空全部本地账单（隐私页“清空全部账单数据”用，墓碑由调用方统一记录） */
+  async deleteAll(): Promise<number> {
+    const predicates = new relationalStore.RdbPredicates(ACCOUNT_TABLE_NAME);
+    return DBUtil.delete(predicates);
+  }
+
   private async queryAccount(predicates: relationalStore.RdbPredicates): Promise<AccountPO[]> {
     const result = await DBUtil.query(predicates, QUERY_COLUMNS);
     const list: AccountPO[] = [];

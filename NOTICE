@@ -36,7 +36,10 @@
 
 - 相对主线（main）剥离开发期训练数据采集工具，仅保留面向用户的功能
 
-## 版权声明
+## 版权声明与许可
 
-上游代码版权归原作者 banggx 所有，遵循 Apache License 2.0 分发。
-本项目的修改部分由本项目贡献者提供，同样遵循 Apache License 2.0。
+上游代码版权归原作者 banggx 所有，始终遵循 Apache License 2.0 分发（全文见 [LICENSE-Apache-2.0](LICENSE-Apache-2.0)），任何人均可依该许可使用上游原始代码。
+
+本项目的修改与新增部分（详见上文“修改说明”）由本项目贡献者提供，采用 [PolyForm Noncommercial License 1.0.0](LICENSE) 授权：仅限非商业目的使用、修改与分发；商业使用需联系开发者取得授权（3855757949@qq.com）。
+
+应用内“关于”与“隐私政策”页面（`pages/About.ets`、`pages/PrivacyPolicy.ets`）展示的开发者信息与本声明一致。
