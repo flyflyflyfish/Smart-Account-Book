@@ -248,8 +248,8 @@ export default struct LedgerView {
     .onClick(() => {
       this.openDetail(overview);
     })
-    // 长按卡片弹出 重命名 / 删除 菜单
-    .gesture(LongPressGesture({ repeat: false })
+    // 长按卡片弹出 重命名 / 删除 菜单（300ms 触发，与页签/口径长按手感一致）
+    .gesture(LongPressGesture({ repeat: false, duration: 300 })
       .onAction(() => {
         this.showCardMenu(overview);
       }))
