@@ -525,6 +525,10 @@
       "value": "API Key"
     },
     {
+      "name": "api_key_guide_title",
+      "value": "How to Get an API Key"
+    },
+    {
       "name": "api_key_placeholder",
       "value": "Enter API Key"
     },
@@ -1190,11 +1194,31 @@
     },
     {
       "name": "appearance_tab_home",
-      "value": "Home Stats"
+      "value": "Features"
     },
     {
       "name": "appearance_tab_glow",
       "value": "Glow"
+    },
+    {
+      "name": "second_tab_menu_title",
+      "value": "Switch Bottom Tab"
+    },
+    {
+      "name": "home_scope_menu_title",
+      "value": "Switch Stats Range"
+    },
+    {
+      "name": "guide_title",
+      "value": "Quick Tips"
+    },
+    {
+      "name": "guide_msg",
+      "value": "Long-press the bottom \"AI Assistant / Ledger\" tab to switch features; long-press \"This month / Today\" at the top of the home page to switch the stats range.\nYou can also change this later in Settings → Display & Appearance → Features."
+    },
+    {
+      "name": "guide_got_it",
+      "value": "Got it"
     },
     {
       "name": "appearance_mode_system",
