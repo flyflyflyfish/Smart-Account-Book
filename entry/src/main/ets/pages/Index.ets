@@ -2,6 +2,7 @@ import router from '@ohos.router';
 import window from '@ohos.window';
 import dayjs from 'dayjs';
 import { BusinessError } from '@kit.BasicServicesKit';
+import { promptAction } from '@kit.ArkUI';
 import Home from '../views/home';
 import AiAssistant from '../views/aiAssistant';
 import LedgerView from '../views/ledger';
@@ -10,7 +11,7 @@ import SettingsView from '../views/settings';
 import PreferenceUtil from '../utils/PreferenceUtil';
 import DBUtil from '../utils/DBUtil';
 import * as CONSTANTS from '../common/constants';
-import { SECOND_TAB_STYLE_LEDGER } from '../common/constants';
+import { SECOND_TAB_STYLE_AI, SECOND_TAB_STYLE_LEDGER } from '../common/constants';
 import SecondTabStore, { SecondTabChangeListener } from '../common/SecondTabStore';
 import BreakpointSystem from '../utils/BreakpointSystem';
 import BreakpointConstants from '../common/breakpoint';
@@ -42,7 +43,7 @@ struct Index {
   @State currentTab: number = 0;
   @State showAddMenu: boolean = false;
   @State keyboardVisible: boolean = false;
-  // 底部第二页签样式：AI 助手 / 账本（外观-首页统计里可改，经 SecondTabStore 单例读取）
+  // 底部第二页签样式：AI 助手 / 账本（外观-功能里可改，也可长按该页签快捷切换，经 SecondTabStore 单例读取）
   @State secondTabStyle: string = SecondTabStore.current();
 
   // 第二页签是否为账本
@@ -94,6 +95,10 @@ struct Index {
         .catch((err: BusinessError): void => {
           Logger.error('记录首次使用时间失败', err.message);
         });
+      // 新用户首次启动：等首帧渲染完成后弹一次使用指引（长按快捷切换）
+      setTimeout((): void => {
+        this.showNewUserGuide();
+      }, 800);
     }
   }
 
@@ -184,6 +189,52 @@ struct Index {
     router.pushUrl({ url: 'pages/AddAccount' });
   }
 
+  // 新用户使用指引：介绍长按快捷切换（底部第二页签 / 首页统计口径）
+  showNewUserGuide(): void {
+    AlertDialog.show({
+      title: $r('app.string.guide_title'),
+      message: $r('app.string.guide_msg'),
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      primaryButton: {
+        value: $r('app.string.guide_got_it'),
+        fontColor: this.tk().primary,
+        action: (): void => {
+        }
+      }
+    });
+  }
+
+  // 长按底部第二页签：快捷切换 AI 助手 / 账本（与 设置→外观→功能 同一数据源，双向同步）
+  showSecondTabMenu(): void {
+    this.getUIContext().getPromptAction().showActionMenu({
+      title: $r('app.string.second_tab_menu_title'),
+      buttons: [
+        { text: $r('app.string.ai_assistant'), color: this.tk().textPrimary },
+        { text: $r('app.string.ledger'), color: this.tk().textPrimary }
+      ]
+    })
+      .then((response: promptAction.ActionMenuSuccessResponse) => {
+        if (response.index === 0) {
+          this.applySecondTabStyle(SECOND_TAB_STYLE_AI);
+        } else if (response.index === 1) {
+          this.applySecondTabStyle(SECOND_TAB_STYLE_LEDGER);
+        }
+      })
+      .catch((err: BusinessError): void => {
+        Logger.error('打开第二页签切换菜单失败', err.message);
+      });
+  }
+
+  // 应用第二页签样式：经 SecondTabStore 通知底部页签即时刷新并落盘，同步桌面小组件第三入口
+  applySecondTabStyle(style: string): void {
+    if (style === SecondTabStore.current()) {
+      return;
+    }
+    SecondTabStore.set(style);
+    WidgetUpdater.refreshAllForms(getContext(this), ThemeKit.palette());
+  }
+
   goRecognize(source: string): void {
     this.showAddMenu = false;
     const param: RecognizeSourceParam = { source: source };
@@ -226,6 +277,11 @@ struct Index {
     .onClick(() => {
       this.currentTab = 1;
     })
+    // 长按第二页签快捷切换 AI 助手 / 账本
+    .gesture(LongPressGesture({ repeat: false })
+      .onAction(() => {
+        this.showSecondTabMenu();
+      }))
   }
 
   @Builder AddButton() {

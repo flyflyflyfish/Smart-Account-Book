@@ -11,6 +11,39 @@ import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
 const REPLY_DISPLAY_MAX: number = 50;
 
+// 各服务商 API Key 获取指引：步骤 + 控制台入口（点击 API Key 标签旁「?」弹出）
+interface ProviderKeyGuide {
+  steps: string;
+  consoleUrl: string;
+}
+
+const PROVIDER_KEY_GUIDES: Record<string, ProviderKeyGuide> = {
+  'doubao': {
+    steps: '1. 注册并登录火山引擎，开通「火山方舟」大模型服务\n2. 进入控制台「API Key 管理」创建 API Key',
+    consoleUrl: 'https://console.volcengine.com/ark'
+  },
+  'qwen': {
+    steps: '1. 注册并登录阿里云，开通「百炼」大模型服务\n2. 在百炼控制台「API-KEY」页面创建密钥',
+    consoleUrl: 'https://bailian.console.aliyun.com'
+  },
+  'glm': {
+    steps: '1. 注册并登录智谱开放平台\n2. 在「API Keys」页面创建密钥',
+    consoleUrl: 'https://open.bigmodel.cn'
+  },
+  'deepseek': {
+    steps: '1. 注册并登录 DeepSeek 开放平台\n2. 在「API keys」页面创建密钥',
+    consoleUrl: 'https://platform.deepseek.com'
+  },
+  'kimi': {
+    steps: '1. 注册并登录月之暗面开放平台\n2. 在「API Key 管理」创建密钥',
+    consoleUrl: 'https://platform.moonshot.cn'
+  },
+  'custom': {
+    steps: '自定义服务商请前往对应平台，创建 OpenAI 兼容接口的 API Key 后填入',
+    consoleUrl: ''
+  }
+};
+
 @Entry
 @Component
 struct ModelSettings {
@@ -290,6 +323,57 @@ struct ModelSettings {
       .margin({ bottom: SPACE_SMALL })
   }
 
+  // 弹出当前服务商的 API Key 获取指引
+  showApiKeyGuide(): void {
+    const provider = LLM_PROVIDERS[this.providerIndex];
+    const guide = PROVIDER_KEY_GUIDES[provider.id];
+    const message = guide === undefined ? '' :
+      (guide.consoleUrl.length > 0 ? guide.steps + '\n\n控制台：' + guide.consoleUrl : guide.steps);
+    AlertDialog.show({
+      title: $r('app.string.api_key_guide_title'),
+      message: message,
+      autoCancel: true,
+      alignment: DialogAlignment.Center,
+      primaryButton: {
+        value: $r('app.string.guide_got_it'),
+        fontColor: this.tk().primary,
+        action: (): void => {
+        }
+      }
+    });
+  }
+
+  // API Key 输入行：标签旁带「?」帮助入口，点击弹出获取指引
+  @Builder ApiKeyRow() {
+    Row() {
+      Text($r('app.string.api_key_label'))
+        .fontSize(this.fs(14))
+        .fontColor(this.tk().textPrimary)
+      Text('?')
+        .width(16)
+        .height(16)
+        .fontSize(this.fs(10))
+        .fontWeight(FontWeight.Medium)
+        .fontColor(this.tk().textSecondary)
+        .borderRadius(8)
+        .border({ width: 1, color: this.tk().textSecondary })
+        .textAlign(TextAlign.Center)
+        .margin({ left: SPACE_SMALL })
+        .onClick(() => {
+          this.showApiKeyGuide();
+        })
+      TextInput({ text: this.apiKey, placeholder: $r('app.string.api_key_placeholder') })
+        .type(InputType.Password)
+        .fontSize(this.fs(14))
+        .fontColor(this.tk().textPrimary)
+        .layoutWeight(1)
+        .backgroundColor(this.tk().surface)
+        .onChange((value: string) => {
+          this.apiKey = value;
+        })
+    }.width('100%').height(44)
+  }
+
   @Builder FormRow(label: ResourceStr, placeholder: ResourceStr, value: string, isPassword: boolean,
     onValueChange: (value: string) => void) {
     Row() {
@@ -408,10 +492,7 @@ struct ModelSettings {
                   })
               }
               Divider().color(this.tk().surfaceVariant)
-              this.FormRow($r('app.string.api_key_label'), $r('app.string.api_key_placeholder'), this.apiKey, true,
-                (value: string) => {
-                  this.apiKey = value;
-                })
+              this.ApiKeyRow()
               Text($r('app.string.cloud_hint'))
                 .width('100%')
                 .fontSize(this.fs(12))
