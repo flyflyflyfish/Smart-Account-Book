@@ -374,7 +374,7 @@ export default struct Home {
           this.showDatePicker();
         }
       })
-      .gesture(LongPressGesture({ repeat: false })
+      .gesture(LongPressGesture({ repeat: false, duration: 300 })
         .onAction(() => {
           this.showScopeMenu();
         }))
