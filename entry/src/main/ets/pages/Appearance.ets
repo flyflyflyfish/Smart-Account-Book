@@ -122,7 +122,7 @@ struct Appearance {
 
   @StorageProp('themeSeq') themeSeq: number = 0;
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
-  // 当前页签：0 主题 / 1 字体与排版 / 2 首页统计 / 3 光感
+  // 当前页签：0 主题 / 1 字体与排版 / 2 功能 / 3 光感
   @State currentTab: number = 0;
   // 深浅色模式与主题 id（本地镜像 ThemeKit，点击即写回）
   @State colorMode: string = THEME_MODE_SYSTEM;

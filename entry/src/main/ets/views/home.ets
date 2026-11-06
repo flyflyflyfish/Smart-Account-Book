@@ -1,5 +1,7 @@
 import dayjs from 'dayjs';
 import router from '@ohos.router';
+import { BusinessError } from '@kit.BasicServicesKit';
+import { promptAction } from '@kit.ArkUI';
 import { GroupByDate, ItemRecordInfo } from '../models/account/account';
 import { StatsType } from '../models/stats/stats';
 import AccountService from '../service/account';
@@ -190,6 +192,26 @@ export default struct Home {
     this.monthPickerController.open();
   }
 
+  // 长按「本月/本日」时间段：快捷切换首页统计口径（与 设置→外观→功能 同一数据源，双向同步）
+  showScopeMenu(): void {
+    this.getUIContext().getPromptAction().showActionMenu({
+      title: $r('app.string.home_scope_menu_title'),
+      buttons: [
+        { text: $r('app.string.appearance_home_scope_day'), color: this.tk().textPrimary },
+        { text: $r('app.string.appearance_home_scope_month'), color: this.tk().textPrimary }
+      ]
+    })
+      .then((response: promptAction.ActionMenuSuccessResponse) => {
+        const scope = response.index === 0 ? HOME_SCOPE_DAY : HOME_SCOPE_MONTH;
+        if (scope !== ThemeKit.currentHomeScope()) {
+          ThemeKit.setHomeScope(scope);
+        }
+      })
+      .catch((err: BusinessError): void => {
+        Logger.error('打开统计口径切换菜单失败', err.message);
+      });
+  }
+
   showDatePicker(): void {
     this.getUIContext().showDatePickerDialog({
       start: new Date('2020-1-1'),
@@ -352,6 +374,10 @@ export default struct Home {
           this.showDatePicker();
         }
       })
+      .gesture(LongPressGesture({ repeat: false })
+        .onAction(() => {
+          this.showScopeMenu();
+        }))
       Blank()
       Row({ space: SPACE_MEDIUM }) {
         Text(this.batchMode ? $r('app.string.cancel') : $r('app.string.batch_manage'))
