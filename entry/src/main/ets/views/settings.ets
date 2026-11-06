@@ -242,6 +242,12 @@ export default struct SettingsView {
           this.MenuRow($r('app.media.budget'), $r('app.string.budget_settings'),
             $r('app.string.budget_settings_desc'), 'pages/BudgetSettings',
             this.tk().accentGreen, this.tk().accentGreenSoft)
+          this.MenuRow($r('app.media.date'), $r('app.string.import_bill'),
+            $r('app.string.import_bill_desc'), 'pages/ImportBill',
+            this.tk().accentBlue, this.tk().accentBlueSoft)
+          this.MenuRow($r('app.media.stats'), $r('app.string.export_bill'),
+            $r('app.string.export_bill_desc'), 'pages/ExportBill',
+            this.tk().accentBlue, this.tk().accentBlueSoft)
           this.MenuRow($r('app.media.date'), $r('app.string.recurring_bill_title'),
             $r('app.string.recurring_bill_settings_desc'), 'pages/RecurringBillManage',
             this.tk().accentRed, this.tk().accentRedSoft)
@@ -249,12 +255,6 @@ export default struct SettingsView {
             $r('app.string.add_widget_desc'), (): void => {
               this.addWidget();
             }, this.tk().accentOrange, this.tk().accentOrangeSoft)
-          this.MenuRow($r('app.media.date'), $r('app.string.import_bill'),
-            $r('app.string.import_bill_desc'), 'pages/ImportBill',
-            this.tk().accentBlue, this.tk().accentBlueSoft)
-          this.MenuRow($r('app.media.stats'), $r('app.string.export_bill'),
-            $r('app.string.export_bill_desc'), 'pages/ExportBill',
-            this.tk().accentBlue, this.tk().accentBlueSoft)
           this.MenuRow($r('app.media.shield'), $r('app.string.privacy_security'),
             $r('app.string.privacy_security_desc'), 'pages/PrivacySecurity',
             this.tk().accentGreen, this.tk().accentGreenSoft)
