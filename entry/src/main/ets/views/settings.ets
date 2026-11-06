@@ -245,6 +245,10 @@ export default struct SettingsView {
           this.MenuRow($r('app.media.date'), $r('app.string.recurring_bill_title'),
             $r('app.string.recurring_bill_settings_desc'), 'pages/RecurringBillManage',
             this.tk().accentRed, this.tk().accentRedSoft)
+          this.ActionRow($r('app.media.add'), $r('app.string.add_widget'),
+            $r('app.string.add_widget_desc'), (): void => {
+              this.addWidget();
+            }, this.tk().accentOrange, this.tk().accentOrangeSoft)
           this.MenuRow($r('app.media.date'), $r('app.string.import_bill'),
             $r('app.string.import_bill_desc'), 'pages/ImportBill',
             this.tk().accentBlue, this.tk().accentBlueSoft)
@@ -254,16 +258,9 @@ export default struct SettingsView {
           this.MenuRow($r('app.media.shield'), $r('app.string.privacy_security'),
             $r('app.string.privacy_security_desc'), 'pages/PrivacySecurity',
             this.tk().accentGreen, this.tk().accentGreenSoft)
-          this.MenuRow($r('app.media.shield'), $r('app.string.privacy_policy'),
-            $r('app.string.privacy_policy_desc'), 'pages/PrivacyPolicy',
-            this.tk().accentPurple, this.tk().accentPurpleSoft)
           this.MenuRow($r('app.media.user'), $r('app.string.about_title'),
             $r('app.string.about_desc'), 'pages/About',
             this.tk().accentBlue, this.tk().accentBlueSoft)
-          this.ActionRow($r('app.media.add'), $r('app.string.add_widget'),
-            $r('app.string.add_widget_desc'), (): void => {
-              this.addWidget();
-            }, this.tk().accentOrange, this.tk().accentOrangeSoft)
         }
         .width('100%')
         .padding({ left: SPACE_LARGE, right: SPACE_LARGE, top: SPACE_SMALL, bottom: SPACE_LARGE })
