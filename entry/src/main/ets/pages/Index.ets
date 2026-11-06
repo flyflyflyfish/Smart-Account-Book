@@ -277,8 +277,8 @@ struct Index {
     .onClick(() => {
       this.currentTab = 1;
     })
-    // 长按第二页签快捷切换 AI 助手 / 账本
-    .gesture(LongPressGesture({ repeat: false })
+    // 长按第二页签快捷切换 AI 助手 / 账本（300ms 触发，避免默认 500ms 觉得不灵敏）
+    .gesture(LongPressGesture({ repeat: false, duration: 300 })
       .onAction(() => {
         this.showSecondTabMenu();
       }))
