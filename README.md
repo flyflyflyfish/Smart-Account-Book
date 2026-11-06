@@ -128,10 +128,16 @@ account_app_harmonyos
 ├── docs/                               # 用户手册、设计报告、实验报告、KPI、安全设计
 ├── NOTICE                              # 来源与修改声明
 ├── THIRD_PARTY.md                      # 第三方依赖许可
-├── LICENSE                             # Apache License 2.0
+├── LICENSE                             # PolyForm Noncommercial 1.0.0（修改与新增部分）
+├── LICENSE-Apache-2.0                  # Apache License 2.0（上游原始代码）
 └── README.md
 ```
 
 ## 许可证
 
-本项目遵循 [Apache License 2.0](./LICENSE)。上游代码版权归原作者 banggx 所有。
+本项目采用双许可结构，详见 [NOTICE](./NOTICE)：
+
+- **修改与新增部分**：[PolyForm Noncommercial License 1.0.0](./LICENSE) —— 仅限非商业目的使用、修改与分发；商业使用需联系开发者取得授权（3855757949@qq.com）
+- **上游原始代码**：[Apache License 2.0](./LICENSE-Apache-2.0)，版权归原作者 banggx 所有
+
+本项目基于开源项目 [account_app_harmonyos](https://github.com/banggx/account_app_harmonyos) 二次开发。

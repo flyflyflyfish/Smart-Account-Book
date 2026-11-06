@@ -8,6 +8,8 @@
     "pages/ModelSettings",
     "pages/Appearance",
     "pages/PrivacySecurity",
+    "pages/PrivacyPolicy",
+    "pages/About",
     "pages/ExportBill",
     "pages/ImportBill",
     "pages/CategoryManage",

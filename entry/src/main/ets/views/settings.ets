@@ -254,6 +254,12 @@ export default struct SettingsView {
           this.MenuRow($r('app.media.shield'), $r('app.string.privacy_security'),
             $r('app.string.privacy_security_desc'), 'pages/PrivacySecurity',
             this.tk().accentGreen, this.tk().accentGreenSoft)
+          this.MenuRow($r('app.media.shield'), $r('app.string.privacy_policy'),
+            $r('app.string.privacy_policy_desc'), 'pages/PrivacyPolicy',
+            this.tk().accentPurple, this.tk().accentPurpleSoft)
+          this.MenuRow($r('app.media.user'), $r('app.string.about_title'),
+            $r('app.string.about_desc'), 'pages/About',
+            this.tk().accentBlue, this.tk().accentBlueSoft)
           this.ActionRow($r('app.media.add'), $r('app.string.add_widget'),
             $r('app.string.add_widget_desc'), (): void => {
               this.addWidget();

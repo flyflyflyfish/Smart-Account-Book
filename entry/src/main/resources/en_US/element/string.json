@@ -737,6 +737,162 @@
       "value": "Learned merchant categories cleared"
     },
     {
+      "name": "privacy_commitment_title",
+      "value": "Data & Privacy Notes"
+    },
+    {
+      "name": "privacy_item_local_title",
+      "value": "Bills stay on device"
+    },
+    {
+      "name": "privacy_item_local_desc",
+      "value": "Bills are stored in the on-device database and never uploaded unless you sign in."
+    },
+    {
+      "name": "privacy_item_sync_title",
+      "value": "Cloud sync requires sign-in"
+    },
+    {
+      "name": "privacy_item_sync_desc",
+      "value": "After signing in, bills sync across devices over an encrypted channel; sign out anytime."
+    },
+    {
+      "name": "privacy_item_apikey_title",
+      "value": "API keys stay local"
+    },
+    {
+      "name": "privacy_item_apikey_desc",
+      "value": "Recognition service keys are stored only on this device, never uploaded."
+    },
+    {
+      "name": "privacy_item_cloud_title",
+      "value": "Cloud OCR is opt-in"
+    },
+    {
+      "name": "privacy_item_cloud_desc",
+      "value": "Bill images are sent to your configured provider only after you grant consent."
+    },
+    {
+      "name": "privacy_item_permission_title",
+      "value": "Minimal permissions"
+    },
+    {
+      "name": "privacy_item_permission_desc",
+      "value": "Camera/mic only for bill capture and voice entry; notifications only for reminders."
+    },
+    {
+      "name": "privacy_policy_entry",
+      "value": "View full privacy policy"
+    },
+    {
+      "name": "data_management_title",
+      "value": "Data Management"
+    },
+    {
+      "name": "clear_learned_desc",
+      "value": "Clears only learned merchant categories; bills are unaffected."
+    },
+    {
+      "name": "clear_all_bills",
+      "value": "Erase all bill data"
+    },
+    {
+      "name": "clear_all_bills_desc",
+      "value": "Permanently deletes all bills and ledger records on this device and in the cloud. Cannot be undone."
+    },
+    {
+      "name": "clear_all_confirm_title",
+      "value": "Erase all bill data?"
+    },
+    {
+      "name": "clear_all_confirm_msg",
+      "value": "All bills and ledger records on this device and in the cloud will be permanently deleted (ledgers, categories, budgets and settings are kept). Other devices will also lose them after sync."
+    },
+    {
+      "name": "clear_all_next",
+      "value": "Continue"
+    },
+    {
+      "name": "clear_all_confirm_again_title",
+      "value": "Final confirmation"
+    },
+    {
+      "name": "clear_all_confirm_again_msg",
+      "value": "This cannot be undone. Erase all bill data now?"
+    },
+    {
+      "name": "clear_all_confirm_btn",
+      "value": "Erase"
+    },
+    {
+      "name": "clearing_in_progress",
+      "value": "Erasing…"
+    },
+    {
+      "name": "clear_all_success",
+      "value": "All bill data erased"
+    },
+    {
+      "name": "clear_all_failed",
+      "value": "Failed to erase, please retry"
+    },
+    {
+      "name": "privacy_policy",
+      "value": "Privacy Policy"
+    },
+    {
+      "name": "privacy_policy_desc",
+      "value": "How your data is collected, stored and used"
+    },
+    {
+      "name": "about_title",
+      "value": "About"
+    },
+    {
+      "name": "about_app_name",
+      "value": "Smart Account Book"
+    },
+    {
+      "name": "about_desc",
+      "value": "Version, developer and open-source info"
+    },
+    {
+      "name": "about_version_value",
+      "value": "Version %s"
+    },
+    {
+      "name": "about_developer_title",
+      "value": "Developer"
+    },
+    {
+      "name": "about_developer_label",
+      "value": "Developer"
+    },
+    {
+      "name": "about_email_label",
+      "value": "Email"
+    },
+    {
+      "name": "about_home_label",
+      "value": "Project home"
+    },
+    {
+      "name": "about_open_source_title",
+      "value": "Open Source"
+    },
+    {
+      "name": "about_upstream_label",
+      "value": "Based on"
+    },
+    {
+      "name": "about_license_label",
+      "value": "License"
+    },
+    {
+      "name": "about_license_desc",
+      "value": "Modified and new code is licensed under PolyForm Noncommercial 1.0.0 (non-commercial use); original code under Apache License 2.0. For commercial licensing contact the developer."
+    },
+    {
       "name": "ocr_unsupported",
       "value": "This device does not support on-device OCR"
     },
