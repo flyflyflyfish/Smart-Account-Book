@@ -7,7 +7,7 @@ import { ACCOUNT_TABLE_NAME } from '../../data/schema';
 import { Logger } from '../../utils/Logger';
 import PreferenceUtil from '../../utils/PreferenceUtil';
 import { withAlpha, ThemePalette } from '../theme/Theme';
-import { FORM_DIM_PREFIX, FORM_RANGE_PREFIX, PREF_FORM_IDS, PREF_SECOND_TAB_STYLE,
+import { FORM_DIM_PREFIX, FORM_RANGE_PREFIX, PREF_FORM_IDS, PREF_SECOND_TAB_STYLE, PREF_WIDGET_SUMMARY,
   SECOND_TAB_STYLE_AI, SECOND_TAB_STYLE_LEDGER, WIDGET_RANGE_MONTH, WIDGET_RANGE_TODAY } from '../constants';
 
 const DB_FILENAME: string = 'account.db';
@@ -33,6 +33,19 @@ function getWidgetStore(context: common.Context): Promise<relationalStore.RdbSto
 export interface RangeSummary {
   expenses: number;
   income: number;
+}
+
+/** 单口径收支快照：key 为日期（YYYY-MM-DD）或月份（YYYY-MM）标记，卡片进程据此做跨日/跨月归零 */
+export interface RangeSummaryEntry {
+  key: string;
+  expenses: number;
+  income: number;
+}
+
+/** 小组件两口径收支缓存：主应用查库后写入 Preferences，卡片进程只读缓存推送 */
+export interface WidgetSummaryCache {
+  today: RangeSummaryEntry;
+  month: RangeSummaryEntry;
 }
 
 // 各卡片的「+」菜单展开状态（进程内内存态，不持久化；进程重启后自动收起）
@@ -74,12 +87,14 @@ export function buildCardData(expenses: string, income: string, range: string, m
 }
 
 /**
- * 卡片数据推送中心：卡片进程与主应用进程共用同一套查询与推送逻辑。
- * 主应用在启动与账单变化时调用 refreshAllForms 主动同步所有已添加卡片，
- * 弥补卡片仅在添加时与定时刷新时更新数据、不随记账实时变化的问题。
+ * 卡片数据推送中心：卡片进程与主应用进程共用同一套推送逻辑。
+ * 数据源职责分离：数据库只在主应用进程查询——查今日/本月两口径各一次，
+ * 连同日期/月份标记持久化为缓存；卡片进程的定时/交互刷新只读缓存推送，
+ * 不再跨进程读主应用数据库（多进程读库可能读到空/旧库，把正确金额覆盖成 0.00）。
+ * 缓存按标记跨日/跨月自动归零；主应用在启动、回前台与账单变化时主动刷新全部卡片。
  */
 export default class WidgetUpdater {
-  /** 卡片进程与主应用进程隔离，各自独立建立 RDB 连接，按时间范围查询收支 */
+  /** 查询指定时间范围的收支（仅主应用进程调用；卡片进程读持久化缓存，不开库） */
   static async queryRangeSummary(context: common.Context, start: number, end: number): Promise<RangeSummary> {
     const store = await getWidgetStore(context);
     const predicates = new relationalStore.RdbPredicates(ACCOUNT_TABLE_NAME);
@@ -138,18 +153,99 @@ export default class WidgetUpdater {
     }
   }
 
-  /** 主应用启动或账单变化时，向所有已添加卡片推送最新数据 */
+  /** 主应用启动、回前台或账单变化时，向所有已添加卡片推送最新数据 */
   static async refreshAllForms(context: common.Context, palette: ThemePalette): Promise<void> {
     try {
       // 先从磁盘重载：卡片可能是本进程运行期间由卡片进程注册的，缓存实例里还没有其 formId
       await PreferenceUtil.reloadPreference(context);
+      const cache = await WidgetUpdater.querySummaryCache(context);
+      if (!cache) {
+        return;
+      }
       const ids = await WidgetUpdater.readFormIds();
       for (const formId of ids) {
-        await WidgetUpdater.refreshForm(context, formId, undefined, palette);
+        await WidgetUpdater.refreshForm(context, formId, undefined, palette, cache);
       }
     } catch (err) {
       Logger.error('批量刷新卡片失败', (err as Error).message);
     }
+  }
+
+  /**
+   * 查询今日/本月两口径收支并持久化为缓存（仅主应用进程调用）：
+   * 卡片进程随后的定时/交互刷新只读缓存，不再跨进程查库
+   */
+  static async querySummaryCache(context: common.Context): Promise<WidgetSummaryCache | undefined> {
+    try {
+      const today = await WidgetUpdater.queryRangeSummary(context,
+        dayjs().startOf('day').valueOf(), dayjs().endOf('day').valueOf());
+      const month = await WidgetUpdater.queryRangeSummary(context,
+        dayjs().startOf('month').valueOf(), dayjs().endOf('day').valueOf());
+      const cache = WidgetUpdater.buildSummaryCache(today, month);
+      await WidgetUpdater.persistSummaryCache(cache);
+      return cache;
+    } catch (err) {
+      Logger.error('查询卡片收支失败', (err as Error).message);
+      return undefined;
+    }
+  }
+
+  /** 组装两口径缓存，带上当前日期/月份标记供卡片进程做跨日/跨月归零判定 */
+  static buildSummaryCache(today: RangeSummary, month: RangeSummary): WidgetSummaryCache {
+    const cache: WidgetSummaryCache = {
+      today: { key: dayjs().format('YYYY-MM-DD'), expenses: today.expenses, income: today.income },
+      month: { key: dayjs().format('YYYY-MM'), expenses: month.expenses, income: month.income }
+    };
+    return cache;
+  }
+
+  static async persistSummaryCache(cache: WidgetSummaryCache): Promise<void> {
+    await PreferenceUtil.putPreferenceValue(PREF_WIDGET_SUMMARY, JSON.stringify(cache));
+  }
+
+  /** 读取主应用持久化的收支缓存；无缓存（应用从未启动过）返回 undefined */
+  static async loadSummaryCache(): Promise<WidgetSummaryCache | undefined> {
+    const raw = String(await PreferenceUtil.getPreferenceValue(PREF_WIDGET_SUMMARY, ''));
+    if (raw.length === 0) {
+      return undefined;
+    }
+    try {
+      const parsed = JSON.parse(raw) as WidgetSummaryCache;
+      if (!parsed || !parsed.today || !parsed.month) {
+        return undefined;
+      }
+      if (typeof parsed.today.key !== 'string' || typeof parsed.today.expenses !== 'number' ||
+        typeof parsed.today.income !== 'number') {
+        return undefined;
+      }
+      if (typeof parsed.month.key !== 'string' || typeof parsed.month.expenses !== 'number' ||
+        typeof parsed.month.income !== 'number') {
+        return undefined;
+      }
+      return parsed;
+    } catch (err) {
+      return undefined;
+    }
+  }
+
+  /** 跨日/跨月归零：缓存写入时的“今日/本月”已过期时，对应口径从 0 重新开始 */
+  static rolloverSummary(cache: WidgetSummaryCache): WidgetSummaryCache {
+    const todayKey = dayjs().format('YYYY-MM-DD');
+    const monthKey = dayjs().format('YYYY-MM');
+    const today: RangeSummaryEntry = cache.today.key === todayKey
+      ? cache.today
+      : { key: todayKey, expenses: 0, income: 0 };
+    const month: RangeSummaryEntry = cache.month.key === monthKey
+      ? cache.month
+      : { key: monthKey, expenses: 0, income: 0 };
+    const rolled: WidgetSummaryCache = { today: today, month: month };
+    return rolled;
+  }
+
+  /** 卡片进程用：读取持久化缓存并做跨日/跨月归零；无缓存返回 undefined */
+  static async loadRolloverSummary(): Promise<WidgetSummaryCache | undefined> {
+    const cache = await WidgetUpdater.loadSummaryCache();
+    return cache ? WidgetUpdater.rolloverSummary(cache) : undefined;
   }
 
   /** 读取卡片已保存的统计口径，未设置时默认今日 */
@@ -169,9 +265,12 @@ export default class WidgetUpdater {
     }
   }
 
-  /** 查询卡片当前口径（今日/本月）的收支并推送到指定卡片；dimension 缺省时从 Preference 恢复 */
+  /**
+   * 把指定口径的收支缓存推送到指定卡片；dimension 缺省时从 Preference 恢复。
+   * 不查数据库：金额一律取自传入缓存（cache），卡片进程调用时传读取并归零后的缓存
+   */
   static async refreshForm(context: common.Context, formId: string, dimension: number | undefined,
-    palette: ThemePalette): Promise<void> {
+    palette: ThemePalette, cache: WidgetSummaryCache): Promise<void> {
     if (!formId) {
       return;
     }
@@ -186,16 +285,13 @@ export default class WidgetUpdater {
       const isWide = dim === formInfo.FormDimension.Dimension_2_4;
       // 小卡（2*2）固定展示今日收支，不使用口径切换；大卡（2*4）按已保存口径展示
       const range = isWide ? await WidgetUpdater.readFormRange(formId) : WIDGET_RANGE_TODAY;
-      // 金额单位固定为元，不做万位缩写，保证 100001.00 这类金额完整显示
-      const summary = await WidgetUpdater.queryRangeSummary(context,
-        range === WIDGET_RANGE_MONTH ? dayjs().startOf('month').valueOf() : dayjs().startOf('day').valueOf(),
-        dayjs().endOf('day').valueOf());
+      const entry = range === WIDGET_RANGE_MONTH ? cache.month : cache.today;
       const menuVisible = formMenuOpenStates.get(formId) === true ? '1' : '0';
       // 第三入口跟随底部第二页签样式：AI 助手 / 账本
       const savedTabStyle = await PreferenceUtil.getPreferenceValue(PREF_SECOND_TAB_STYLE, SECOND_TAB_STYLE_AI);
       const thirdEntry = savedTabStyle === SECOND_TAB_STYLE_LEDGER ? SECOND_TAB_STYLE_LEDGER : SECOND_TAB_STYLE_AI;
-      Logger.info('推送卡片数据', formId, range, '支出', summary.expenses, '收入', summary.income);
-      const data = buildCardData(summary.expenses.toFixed(2), summary.income.toFixed(2),
+      Logger.info('推送卡片数据', formId, range, '支出', entry.expenses, '收入', entry.income);
+      const data = buildCardData(entry.expenses.toFixed(2), entry.income.toFixed(2),
         range, menuVisible, palette, isWide, thirdEntry);
       await formProvider.updateForm(formId, formBindingData.createFormBindingData(data));
     } catch (err) {
