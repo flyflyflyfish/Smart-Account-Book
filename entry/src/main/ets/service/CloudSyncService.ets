@@ -318,6 +318,19 @@ class CloudSyncService {
    * 账本结构、分类、预算、学习记忆与设置不受影响
    */
   async clearAllBillsData(): Promise<void> {
+    // 与 syncAll 互斥：清空与同步并发执行时，同步可能把清空前的快照推回云端或与墓碑写入交错
+    if (this.syncing) {
+      throw new Error('sync_in_progress');
+    }
+    this.syncing = true;
+    try {
+      await this.doClearAllBillsData();
+    } finally {
+      this.syncing = false;
+    }
+  }
+
+  private async doClearAllBillsData(): Promise<void> {
     const attached = CloudSettingSync.isAttached();
     const uid = CloudSettingSync.getUid();
     // 1. 收集本地与云端全部账单/账本记录 id
