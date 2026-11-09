@@ -29,6 +29,8 @@ struct AccountLogin {
   @State uid: string = '';
   @State displayName: string = '';
   @State photoUrl: string = '';
+  // 登录进行中标志：双击登录按钮会拉起两次华为登录授权
+  @State signing: boolean = false;
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
 
   async aboutToAppear(): Promise<void> {
@@ -69,43 +71,51 @@ struct AccountLogin {
   }
 
   async onSignIn(): Promise<void> {
-    const profile = await AuthService.signInWithHuaweiId();
-    if (profile) {
-      CloudInit.init(profile.uid);
-      AppStorage.setOrCreate('accountUid', profile.uid);
-      AppStorage.setOrCreate('accountName', profile.displayName);
-      AppStorage.setOrCreate('accountAvatar', profile.photoUrl);
-      this.signedIn = true;
-      this.uid = profile.uid;
-      this.displayName = profile.displayName;
-      this.photoUrl = profile.photoUrl;
-      if (CloudInit.isReady()) {
-        Toast.success($r('app.string.sign_in_success'));
-        // 登录成功：立即做一次端云全量同步，把云端的账单/分类/设置恢复到本机，本机新增上传云端
-        CloudSyncService.syncAll(true);
+    if (this.signing) {
+      return;
+    }
+    this.signing = true;
+    try {
+      const profile = await AuthService.signInWithHuaweiId();
+      if (profile) {
+        CloudInit.init(profile.uid);
+        AppStorage.setOrCreate('accountUid', profile.uid);
+        AppStorage.setOrCreate('accountName', profile.displayName);
+        AppStorage.setOrCreate('accountAvatar', profile.photoUrl);
+        this.signedIn = true;
+        this.uid = profile.uid;
+        this.displayName = profile.displayName;
+        this.photoUrl = profile.photoUrl;
+        if (CloudInit.isReady()) {
+          Toast.success($r('app.string.sign_in_success'));
+          // 登录成功：立即做一次端云全量同步，把云端的账单/分类/设置恢复到本机，本机新增上传云端
+          CloudSyncService.syncAll(true);
+        } else {
+          // 登录成功但云服务初始化失败：本地记账不受影响，但需明确告知云端同步不可用
+          Toast.error($r('app.string.cloud_sync_unavailable'));
+          Logger.error('云同步初始化失败', '登录成功但云开发服务不可用，账单将不会同步到云端');
+        }
+        // 登录后补全华为账号头像昵称：首次会拉起 profile 授权确认页，之后静默返回
+        profileAskTried = true;
+        this.ensureProfileInfo(true);
       } else {
-        // 登录成功但云服务初始化失败：本地记账不受影响，但需明确告知云端同步不可用
-        Toast.error($r('app.string.cloud_sync_unavailable'));
-        Logger.error('云同步初始化失败', '登录成功但云开发服务不可用，账单将不会同步到云端');
+        if (AuthService.needsRestartHint()) {
+          AlertDialog.show({
+            title: $r('app.string.agc_credential_reset_title'),
+            message: $r('app.string.agc_credential_reset_message'),
+            primaryButton: {
+              value: $r('app.string.confirm'),
+              action: () => {
+              }
+            },
+            alignment: DialogAlignment.Center
+          });
+        } else {
+          Toast.error($r('app.string.sign_in_failed'));
+        }
       }
-      // 登录后补全华为账号头像昵称：首次会拉起 profile 授权确认页，之后静默返回
-      profileAskTried = true;
-      this.ensureProfileInfo(true);
-    } else {
-      if (AuthService.needsRestartHint()) {
-        AlertDialog.show({
-          title: $r('app.string.agc_credential_reset_title'),
-          message: $r('app.string.agc_credential_reset_message'),
-          primaryButton: {
-            value: $r('app.string.confirm'),
-            action: () => {
-            }
-          },
-          alignment: DialogAlignment.Center
-        });
-      } else {
-        Toast.error($r('app.string.sign_in_failed'));
-      }
+    } finally {
+      this.signing = false;
     }
   }
 
@@ -196,6 +206,8 @@ struct AccountLogin {
               .backgroundColor(this.tk().primary)
               .type(ButtonType.Normal)
               .borderRadius(SPACE_SMALL)
+              .enabled(!this.signing)
+              .opacity(this.signing ? 0.6 : 1)
               .onClick(() => {
                 this.onSignIn();
               })
