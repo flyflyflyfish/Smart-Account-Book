@@ -97,14 +97,14 @@ GitHub Actions 工作流（`.github/workflows/ci.yml`）在 push / PR 时自动�
 
 ## 团队与分工
 
-本项目由 2 人协作完成，模块归属见 [`.github/CODEOWNERS`](./.github/CODEOWNERS)，git 度量证据见 [工作量分配与 KPI](./docs/工作量分配与KPI.md)。
+本项目由 2 人按**两条纵向条线**协作完成，每人对一条线端到端负责；模块级归属见 [`.github/CODEOWNERS`](./.github/CODEOWNERS)，git 度量证据见 [工作量分配与 KPI](./docs/工作量分配与KPI.md)。
 
-| 成员 | 负责模块 | GitHub |
-| ---- | -------- | ------ |
-| 潘妍朵 | 识别子系统（端侧模型 / 识别流水线 / 分类器）、云端大模型接入与 AGC 端云同步、数据层仓储、账本与导入导出、预算与周期账单、CI 与交付文档 | [@flyflyflyfish](https://github.com/flyflyflyfish) |
-| 伍翰彬 | 桌面小部件（2×2 / 2×4 双布局、卡片视觉与快捷入口）、自定义主题与跨进程主题一致性、界面缺陷修复、真机验收与演示 | [@wuhanbinnnnnn](https://github.com/wuhanbinnnnnn) |
+| 成员 | 主责条线 | 覆盖范围 | GitHub |
+| ---- | -------- | -------- | ------ |
+| 潘妍朵 | 智能识别与云能力<br>（技术主线） | 端侧模型与识别流水线、云端大模型接入、AGC 端云同步、数据层仓储、多账本与账单导入导出、预算 / 周期账单 / 搜索 / 统计、CI 与工程脚本 | [@flyflyflyfish](https://github.com/flyflyflyfish) |
+| 伍翰彬 | 产品体验与交付<br>（界面主线） | 桌面小部件（2×2 / 2×4 双布局、卡片视觉、快捷入口、双击进首页）、自定义主题与跨进程主题一致性、界面缺陷修复与视觉走查、真机验收与演示 | [@wuhanbinnnnnn](https://github.com/wuhanbinnnnnn) |
 
-协作方式：功能在 `feat/*` 分支开发 → 发起 PR 并请求对应模块负责人评审 → 合入 `main`；剩余工作以 issue 跟踪与认领。
+页面级 UI 实现、联调与上架合规材料由两人共同承担。协作方式：功能在 `feat/*` 分支开发 → 发起 PR 并请求对应模块负责人评审 → 合入 `main`；剩余工作以 issue 跟踪与认领。
 
 ## 文档
 
