@@ -1,9 +1,11 @@
 import { RecognitionResult } from '../../../models/recognition/RecognitionResult';
 import { Recognizer } from '../Recognizer';
+import { NonRetryableError } from '../NonRetryableError';
 import { Logger } from '../../../utils/Logger';
 
 /**
- * 重试识别器：失败按指数退避重试（间隔逐次翻倍），耗尽次数后抛出最后一次错误
+ * 重试识别器：失败按指数退避重试（间隔逐次翻倍），耗尽次数后抛出最后一次错误；
+ * NonRetryableError（服务端明确拒绝，重试必然同结果）直接上抛不重试
  */
 export class RetryRecognizer implements Recognizer {
   private inner: Recognizer;
@@ -23,6 +25,10 @@ export class RetryRecognizer implements Recognizer {
       try {
         return await this.inner.recognize(imageUri);
       } catch (error) {
+        if (error instanceof NonRetryableError) {
+          Logger.debug('识别失败且不可重试，直接上抛: ', (error as Error).message);
+          throw error;
+        }
         attempt++;
         if (attempt >= this.maxAttempts) {
           const err = error as Error;

@@ -641,6 +641,14 @@
       "value": "Invalid response format from recognition service"
     },
     {
+      "name": "cloud_model_no_vision",
+      "value": "The current model does not support image input. Switch to a vision model in Model Settings"
+    },
+    {
+      "name": "cloud_bad_request",
+      "value": "Request rejected by the cloud. Check the API URL and model name"
+    },
+    {
       "name": "cloud_bad_result",
       "value": "Invalid recognition result format, please retry"
     },
