@@ -849,6 +849,10 @@
       "value": "清空中…"
     },
     {
+      "name": "signing_in",
+      "value": "正在登录…"
+    },
+    {
       "name": "clear_all_success",
       "value": "已清空全部账单数据"
     },
