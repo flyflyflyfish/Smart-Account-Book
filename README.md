@@ -95,6 +95,17 @@ GitHub Actions 工作流（`.github/workflows/ci.yml`）在 push / PR 时自动�
 
 发行流程：`main` 功能稳定后挑选用户可见特性入 `release`，打 tag 发布。
 
+## 团队与分工
+
+本项目由 2 人协作完成，模块归属见 [`.github/CODEOWNERS`](./.github/CODEOWNERS)，git 度量证据见 [工作量分配与 KPI](./docs/工作量分配与KPI.md)。
+
+| 成员 | 负责模块 | GitHub |
+| ---- | -------- | ------ |
+| 潘妍朵 | 识别子系统（端侧模型 / 识别流水线 / 分类器）、云端大模型接入与 AGC 端云同步、数据层仓储、账本与导入导出、预算与周期账单、CI 与交付文档 | [@flyflyflyfish](https://github.com/flyflyflyfish) |
+| 伍翰彬 | 桌面小部件（2×2 / 2×4 双布局、卡片视觉与快捷入口）、自定义主题与跨进程主题一致性、界面缺陷修复、真机验收与演示 | [@wuhanbinnnnnn](https://github.com/wuhanbinnnnnn) |
+
+协作方式：功能在 `feat/*` 分支开发 → 发起 PR 并请求对应模块负责人评审 → 合入 `main`；剩余工作以 issue 跟踪与认领。
+
 ## 文档
 
 - [用户手册](./docs/用户手册.md)：功能使用说明
