@@ -39,10 +39,16 @@ class AccountService {
     }
   }
 
-  private async syncDelete(id: string): Promise<void> {
-    await CloudAccountRepository.deleteById(id);
-    // 记录删除墓碑：防止其他设备同步时把已删账单重新推回云端（复活）
-    await CloudSettingSync.recordBillDeletion(id);
+  // 本地删除成功后异步同步云端：批量删行 + 一次性记墓碑。
+  // 必须走批量接口单次读改写本地墓碑偏好——逐笔 fire-and-forget 并发执行时
+  // 各自 load→push→save 互相覆盖，会丢墓碑导致已删账单在其他设备复活
+  private syncDeleteMany(ids: string[]): void {
+    CloudAccountRepository.deleteAll(ids).catch((error: BusinessError): void => {
+      Logger.error('云同步删除账单失败', error.message);
+    });
+    CloudSettingSync.recordBillDeletions(ids).catch((error: BusinessError): void => {
+      Logger.error('云同步删除标记失败', error.message);
+    });
   }
 
   /**
@@ -106,7 +112,9 @@ class AccountService {
     po.merchant = info.merchant ?? '';
     po.source = info.source ?? SOURCE_MANUAL;
     po.payTime = info.payTime ? info.payTime : this.buildDefaultPayTime(info.time);
-    po.createTime = info.createTime ?? Date.now();
+    // 编辑即刷新版本时间戳：同步按 create_time 新者胜合并，编辑过的账单才会被
+    // 其他设备拉取落地（保留旧值时两端相等互不覆盖，修改永远不同步）；UI 不依赖创建时间
+    po.createTime = Date.now();
     const rows = await this.repository.update(id, po);
     BillStore.notifyChanged();
     this.syncUpsert(po).catch((error: BusinessError): void => {
@@ -121,9 +129,7 @@ class AccountService {
   async deleteById(id: string): Promise<number> {
     const rows = await this.repository.deleteById(id);
     BillStore.notifyChanged();
-    this.syncDelete(id).catch((error: BusinessError): void => {
-      Logger.error('云同步删除账单失败', error.message);
-    });
+    this.syncDeleteMany([id]);
     return rows;
   }
 
@@ -134,11 +140,9 @@ class AccountService {
     let rows = 0;
     for (const id of ids) {
       rows += await this.repository.deleteById(id);
-      this.syncDelete(id).catch((error: BusinessError): void => {
-        Logger.error('云同步删除账单失败', error.message);
-      });
     }
     BillStore.notifyChanged();
+    this.syncDeleteMany(ids);
     return rows;
   }
 

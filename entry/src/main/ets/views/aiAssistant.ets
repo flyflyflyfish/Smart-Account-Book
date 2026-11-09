@@ -404,6 +404,13 @@ export default struct AiAssistant {
     }
     this.billDrafts.splice(index, 1);
     this.billDrafts = this.billDrafts.slice();
+    // 正在编辑其他草稿时删除会整体移位：前移编辑下标保持指向同一草稿，
+    // 删中当前编辑项则关闭编辑面板，否则 saveEdit 会改写到错位的草稿
+    if (this.editingIndex === index) {
+      this.editingIndex = -1;
+    } else if (index < this.editingIndex) {
+      this.editingIndex--;
+    }
   }
 
   startEdit(index: number): void {
@@ -924,7 +931,7 @@ export default struct AiAssistant {
             this.EditPanel()
           }
         }.width('100%')
-      }, (draft: BillDraft, index: number) => index.toString() + draft.amountText + draft.merchant)
+      }, (draft: BillDraft, index: number) => index.toString() + '_' + JSON.stringify(draft))
 
       Button($r('app.string.confirm_save'))
         .width('100%')

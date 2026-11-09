@@ -103,8 +103,10 @@ class CloudLedgerRepository {
       condition.equalTo('owner_uid', ownerUid);
       return await zone.query(condition);
     } catch (err) {
-      Logger.error('云端拉取账本失败', (err as Error).message);
-      return [];
+      const e = err as Error;
+      Logger.error('云端拉取账本失败', e.message);
+      // 拉取失败上抛而非当空集，避免调用方误判云端无数据
+      throw e;
     }
   }
 
@@ -119,8 +121,10 @@ class CloudLedgerRepository {
       condition.equalTo('owner_uid', ownerUid);
       return await zone.query(condition);
     } catch (err) {
-      Logger.error('云端拉取账本记录失败', (err as Error).message);
-      return [];
+      const e = err as Error;
+      Logger.error('云端拉取账本记录失败', e.message);
+      // 拉取失败上抛而非当空集，避免调用方误判云端无数据
+      throw e;
     }
   }
 

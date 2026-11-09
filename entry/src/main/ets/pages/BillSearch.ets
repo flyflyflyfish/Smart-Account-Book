@@ -21,6 +21,12 @@ import {
 } from '../common/dimens';
 import { ThemeKit, ThemePalette } from '../common/theme/Theme';
 
+// 分类 chip 数据：分类模型 + 所属收支侧（两侧分类 id 均从 0 编号，必须靠 side 区分）
+interface CategoryChipInfo {
+  model: AccountTypeModel;
+  side: AccountType;
+}
+
 /**
  * 全局账单搜索页：默认搜全部账单，
  * 可按时间段 / 收支类型 / 分类 / 关键字（备注、商家、分类名）筛选，
@@ -37,8 +43,9 @@ struct BillSearch {
   @State rangeIndex: number = 0;
   // 类型筛选：0 全部 / 1 支出 / 2 收入
   @State typeIndex: number = 0;
-  // 分类筛选：-1 全部分类，其余为分类 id（跟随类型筛选的收支侧）
+  // 分类筛选：-1 全部分类，其余为分类 id；配合 categoryFilterSide（所属收支侧）才能唯一定位
   @State categoryFilter: number = -1;
+  @State categoryFilterSide: number = -1;
   // 自定义时间段起止（rangeIndex=4 时生效）
   @State customStart: number = 0;
   @State customEnd: number = 0;
@@ -111,20 +118,24 @@ struct BillSearch {
     return $r('app.string.ledger_filter_all');
   }
 
-  // 当前类型筛选下可选的分类列表：支出/收入取对应侧，全部时合并两侧
-  categoryList(): AccountTypeModel[] {
-    if (this.typeIndex === 1) {
-      return CategoryStore.list(AccountType.EXPENSES);
-    }
+  // 当前类型筛选下可选的分类 chip：支出/收入取对应侧，全部时合并两侧（带 side 区分）
+  categoryChips(): CategoryChipInfo[] {
+    const chips: CategoryChipInfo[] = [];
     if (this.typeIndex === 2) {
-      return CategoryStore.list(AccountType.INCOME);
+      for (const model of CategoryStore.list(AccountType.INCOME)) {
+        chips.push({ model: model, side: AccountType.INCOME });
+      }
+      return chips;
     }
-    const merged: AccountTypeModel[] = CategoryStore.list(AccountType.EXPENSES).slice();
-    const incomeList = CategoryStore.list(AccountType.INCOME);
-    incomeList.forEach((item: AccountTypeModel) => {
-      merged.push(item);
-    });
-    return merged;
+    for (const model of CategoryStore.list(AccountType.EXPENSES)) {
+      chips.push({ model: model, side: AccountType.EXPENSES });
+    }
+    if (this.typeIndex === 0) {
+      for (const model of CategoryStore.list(AccountType.INCOME)) {
+        chips.push({ model: model, side: AccountType.INCOME });
+      }
+    }
+    return chips;
   }
 
   // 账单的排序/显示时间：优先支付时间，兼容老数据
@@ -165,7 +176,8 @@ struct BillSearch {
         bill.accountType === (this.typeIndex === 1 ? AccountType.EXPENSES : AccountType.INCOME));
     }
     if (this.categoryFilter >= 0) {
-      filtered = filtered.filter((bill: AccountPO): boolean => bill.type === this.categoryFilter);
+      filtered = filtered.filter((bill: AccountPO): boolean =>
+        bill.type === this.categoryFilter && bill.accountType === this.categoryFilterSide);
     }
     const keyword = this.keyword.trim().toLowerCase();
     if (keyword.length > 0) {
@@ -195,6 +207,7 @@ struct BillSearch {
     }
     this.rangeIndex = range;
     this.categoryFilter = -1;
+    this.categoryFilterSide = -1;
     this.loading = true;
     this.loadBills();
   }
@@ -206,16 +219,28 @@ struct BillSearch {
     }
     this.typeIndex = type;
     this.categoryFilter = -1;
+    this.categoryFilterSide = -1;
     this.refilter();
   }
 
-  // 切换分类筛选：内存过滤
-  applyCategoryFilter(categoryId: number): void {
-    if (this.categoryFilter === categoryId) {
+  // 切换分类筛选：内存过滤（id + 收支侧唯一定位分类）
+  applyCategoryFilter(item: CategoryChipInfo | null): void {
+    const id = item === null ? -1 : item.model.id;
+    const side = item === null ? -1 : item.side;
+    if (this.categoryFilter === id && this.categoryFilterSide === side) {
       return;
     }
-    this.categoryFilter = categoryId;
+    this.categoryFilter = id;
+    this.categoryFilterSide = side;
     this.refilter();
+  }
+
+  // 分类 chip 是否选中：null 表示“全部分类”
+  isCategorySelected(item: CategoryChipInfo | null): boolean {
+    if (item === null) {
+      return this.categoryFilter === -1;
+    }
+    return this.categoryFilter === item.model.id && this.categoryFilterSide === item.side;
   }
 
   // 自定义时间段第 1 步：选开始日（页内引导，选完停在“选结束日”步骤）
@@ -334,17 +359,15 @@ struct BillSearch {
   }
 
   // 分类筛选 chip：item 为 null 表示“全部分类”
-  @Builder CategoryChip(item: AccountTypeModel | null) {
-    Text(item === null ? $r('app.string.ledger_filter_all') : item.name)
+  @Builder CategoryChip(item: CategoryChipInfo | null) {
+    Text(item === null ? $r('app.string.ledger_filter_all') : item.model.name)
       .fontSize(this.fs(12))
-      .fontColor(this.categoryFilter === (item === null ? -1 : item.id)
-        ? this.tk().onPrimary : this.tk().textSecondary)
+      .fontColor(this.isCategorySelected(item) ? this.tk().onPrimary : this.tk().textSecondary)
       .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM, top: 6, bottom: 6 })
       .borderRadius(999)
-      .backgroundColor(this.categoryFilter === (item === null ? -1 : item.id)
-        ? this.tk().primary : this.tk().surfaceVariant)
+      .backgroundColor(this.isCategorySelected(item) ? this.tk().primary : this.tk().surfaceVariant)
       .onClick(() => {
-        this.applyCategoryFilter(item === null ? -1 : item.id);
+        this.applyCategoryFilter(item);
       })
   }
 
@@ -353,9 +376,9 @@ struct BillSearch {
     Scroll() {
       Row({ space: SPACE_SMALL }) {
         this.CategoryChip(null)
-        ForEach(this.categoryList(), (item: AccountTypeModel) => {
+        ForEach(this.categoryChips(), (item: CategoryChipInfo) => {
           this.CategoryChip(item)
-        }, (item: AccountTypeModel) => 'search_category_' + item.id)
+        }, (item: CategoryChipInfo) => 'search_category_' + item.side + '_' + item.model.id)
       }
     }
     .scrollable(ScrollDirection.Horizontal)
@@ -446,9 +469,9 @@ struct BillSearch {
             .onClick(() => {
               this.openEditPage(record);
             })
-          }, (record: ItemRecordInfo): string => 'search_record_' + record.id + '_' + record.amount)
+          }, (record: ItemRecordInfo): string => 'search_record_' + record.id + '_' + JSON.stringify(record))
         }
-      }, (group: GroupByDate): string => 'search_group_' + group.time + '_' + group.records.length)
+      }, (group: GroupByDate): string => 'search_group_' + group.time + '_' + JSON.stringify(group.records))
     }
     .width('100%')
     .layoutWeight(1)
