@@ -20,7 +20,7 @@ const MAX_BACKFILL_DAYS: number = 366;
 const MAX_LOOKUP_DAYS: number = 62;
 // 每月模式可选日期范围 1-28 日
 const MONTH_DAY_MIN: number = 1;
-const MONTH_DAY_MAX: number = 28;
+const MONTH_DAY_MAX: number = 31;
 
 /**
  * 快捷记账（原重复性账单）：规则存取、一键添加、到期补记、记入成功通知与周期检查
