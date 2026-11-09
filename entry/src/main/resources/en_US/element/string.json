@@ -837,6 +837,10 @@
       "value": "Erasing…"
     },
     {
+      "name": "model_no_vision_hint",
+      "value": "This model does not support image input and cannot be used for bill image recognition. Choose a model labeled \"multimodal/vision\". Text-only AI assistant chat is unaffected."
+    },
+    {
       "name": "signing_in",
       "value": "Signing in…"
     },

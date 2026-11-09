@@ -232,7 +232,8 @@ export default struct AccountForm {
     if (rows <= 0) {
       return 0;
     }
-    return rows * 55 + (rows - 1) * 16;
+    // 行高 = 36 图标 + 4 间距 + 分类名行高(fs15)：随字号缩放，大字体下文字不再超出固定行高
+    return rows * (40 + this.fs(15)) + (rows - 1) * 16;
   }
 
   getKeyboardHeight(): number {
@@ -288,7 +289,7 @@ export default struct AccountForm {
               .textAlign(TextAlign.End)
               .layoutWeight(1)
           }.width('100%')
-          .height(40)
+          .height(this.fs(40))
           .onClick(() => {
             this.showKeyboard = !this.showKeyboard;
           })

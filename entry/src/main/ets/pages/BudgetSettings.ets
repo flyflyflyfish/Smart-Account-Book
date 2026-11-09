@@ -189,14 +189,18 @@ struct BudgetSettings {
               Divider().color(this.tk().surfaceVariant)
 
               Row() {
+                // 长标签随字号缩放，超出时省略号截断，避免把右侧金额挤出卡片
                 Text($r('app.string.budget_month_spent_period_label', dayjs().format('YYYY年M月')))
                   .fontSize(this.fs(13))
                   .fontColor(this.tk().textSecondary)
-                Blank()
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .layoutWeight(1)
                 Text('¥ ' + this.monthExpenses.toFixed(2))
                   .fontSize(this.fs(15))
                   .fontWeight(FontWeight.Medium)
                   .fontColor(this.isOver() ? this.tk().danger : this.tk().textPrimary)
+                  .maxLines(1)
               }.width('100%')
 
               if (this.effectiveLimit() > 0) {
@@ -206,21 +210,26 @@ struct BudgetSettings {
                   .borderRadius(4)
                   .animation({ duration: 400, curve: Curve.EaseOut })
                 Row() {
+                  // 长标签（已支出 ¥xx / 额度 ¥xx）随字号缩放，超出时省略号截断
                   Text($r('app.string.budget_usage_label',
                     this.monthExpenses.toFixed(2), this.effectiveLimit().toFixed(2)))
                     .fontSize(this.fs(12))
                     .fontColor(this.tk().textSecondary)
-                  Blank()
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                    .layoutWeight(1)
                   if (this.isOver()) {
                     Text($r('app.string.budget_over_row_label', this.overAmount().toFixed(2)))
                       .fontSize(this.fs(12))
                       .fontWeight(FontWeight.Medium)
                       .fontColor(this.tk().danger)
+                      .maxLines(1)
                   } else {
                     Text($r('app.string.budget_remaining_label', this.remainingAmount().toFixed(2)))
                       .fontSize(this.fs(12))
                       .fontWeight(FontWeight.Medium)
                       .fontColor(this.usagePercent() >= 80 ? this.tk().warning : this.tk().primary)
+                      .maxLines(1)
                   }
                 }.width('100%')
               } else {
