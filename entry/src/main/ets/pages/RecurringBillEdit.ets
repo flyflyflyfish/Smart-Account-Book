@@ -24,7 +24,7 @@ const AMOUNT_PATTERN: RegExp = /^\d+(\.\d{1,2})?$/;
 const MAX_CATEGORY_ROWS: number = 4;
 // 每月模式可选日期范围 1-28 日
 const MONTH_DAY_MIN: number = 1;
-const MONTH_DAY_MAX: number = 28;
+const MONTH_DAY_MAX: number = 31;
 
 /**
  * 重复性账单编辑：设置金额、分类、重复频率（每天/周一至周五/每周/每月）、
@@ -61,8 +61,9 @@ struct RecurringBillEdit {
   @State incomeTypeList: AccountTypeModel[] = CategoryStore.list(AccountType.INCOME);
   // 周 chips 展示顺序：周一至周六、周日
   private weekdayOrder: number[] = [1, 2, 3, 4, 5, 6, 0];
+  // 每月可选日期：1~31（短月里选不到的日期自然跳过，如 2 月的 30/31）
   private monthDayOptions: number[] =
-    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28];
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31];
   // 编辑时保留管理页上的规则开关状态，不在本页重复提供启停入口
   private enabledSaved: boolean = true;
 
