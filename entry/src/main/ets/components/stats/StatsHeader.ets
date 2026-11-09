@@ -26,11 +26,13 @@ export default struct StatsHeader {
   @Link time: number;
   private firstUseTime: number = 0;
 
+  // 弹窗参数全部走晚绑定回调：控制器只构造一次，切换月/年账单或改过时间后
+  // 重开弹窗必须读取最新值（构造时快照会显示旧模式/旧时间）
   periodController = new CustomDialogController({
     builder: PeriodPickerDialog({
-      mode: this.type,
-      time: this.time,
-      minYear: this.minYear(),
+      getMode: (): StatsType => this.type,
+      getTime: (): number => this.time,
+      getMinYear: (): number => this.minYear(),
       onChange: (picked: number) => {
         this.time = picked;
       }

@@ -29,18 +29,26 @@ export default struct PeriodPickerDialog {
 
   controller: CustomDialogController;
   mode: StatsType = StatsType.MONTH;
+  // 可选的晚绑定取值：弹窗每次打开时读取调用方最新模式/时间/年份下界，
+  // 避免控制器构造时一次性快照导致重开弹窗显示旧的模式与时间
+  getMode?: () => StatsType;
   time: number = 0;
-  // 可选的晚绑定取值：弹窗每次打开时读取调用方最新选中时间，
-  // 避免控制器构造时一次性绑定 time 导致重开弹窗显示旧值
   getTime?: () => number;
   minYear: number = 0;
+  getMinYear?: () => number;
   onChange?: (time: number) => void;
   // 弹窗内正在浏览的年份：不直接改 time，点选月份/年份才生效
   @State viewYear: number = 0;
 
   aboutToAppear(): void {
+    if (this.getMode) {
+      this.mode = this.getMode();
+    }
     if (this.getTime) {
       this.time = this.getTime();
+    }
+    if (this.getMinYear) {
+      this.minYear = this.getMinYear();
     }
     this.viewYear = dayjs(this.time).year();
   }

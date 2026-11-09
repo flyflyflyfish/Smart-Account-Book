@@ -72,7 +72,8 @@ class CloudAccountRepository {
     } catch (err) {
       const e = err as Error;
       Logger.error('云端拉取账单失败', e.message);
-      return [];
+      // 拉取失败必须上抛而非当空集：清空数据等调用方若拿到空集会误判云端无数据，造成云端残留甚至复活
+      throw e;
     }
   }
 
