@@ -1,0 +1,6 @@
+# 统一作者显示：把历史旧邮箱映射到当前 GitHub 账号身份
+# 用法：`git log` / `git shortlog` 会自动套用本文件，无需改写提交历史
+潘妍朵 <266233463+flyflyflyfish@users.noreply.github.com> 潘妍朵 <flyflyflysheep@gmail.com>
+潘妍朵 <266233463+flyflyflyfish@users.noreply.github.com> 潘妍朵 <3855757949@qq.com>
+伍翰彬 <308713295+wuhanbinnnnnn@users.noreply.github.com> 伍翰彬 <2318582927@example.com>
+伍翰彬 <308713295+wuhanbinnnnnn@users.noreply.github.com> wuhanbinnnnnn <2318582927@example.com>
