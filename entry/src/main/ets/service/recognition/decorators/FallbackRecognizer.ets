@@ -1,6 +1,7 @@
 import { RecognitionResult } from '../../../models/recognition/RecognitionResult';
 import { Recognizer } from '../Recognizer';
 import { Logger } from '../../../utils/Logger';
+import { Toast } from '../../../components/ToastDialog';
 
 /**
  * 降级识别器：primary 抛错或结果最小置信度低于阈值时，改用 secondary；
@@ -35,6 +36,8 @@ export class FallbackRecognizer implements Recognizer {
       const err = error as Error;
       if (primaryResults.length > 0) {
         Logger.warn('备用识别器失败，回退主识别器低置信结果: ', err.message);
+        // 云端失败原因仍要告知用户（如"当前模型不支持图片输入"），结果给端侧的，原因说云端的
+        Toast.error(err.message);
         return primaryResults;
       }
       throw err;
