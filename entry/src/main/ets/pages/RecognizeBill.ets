@@ -354,11 +354,13 @@ struct RecognizeBill {
       this.replaceTaskDrafts(task);
       return;
     }
-    // 云端识别失败：恢复成功态并保留原端侧草稿，用户可继续编辑或再次回退
+    // 云端识别失败：恢复成功态并保留原端侧草稿，用户可继续编辑或再次回退；
+    // 优先展示具体失败原因（如"当前模型不支持图片输入"），只弹笼统文案用户无从排查
+    const reason = task.error;
     task.status = ImageTaskStatus.SUCCESS;
     task.error = '';
     this.refreshTasks();
-    Toast.error($r('app.string.cloud_fallback_failed'));
+    Toast.error(reason !== '' ? reason : $r('app.string.cloud_fallback_failed'), 3000);
   }
 
   // 用该图最新识别结果替换确认页草稿：手动补录的保留，展开编辑状态尽量恢复
@@ -489,6 +491,26 @@ struct RecognizeBill {
     return '';
   }
 
+  // 展开编辑中的卡片头部实时显示编辑值（绑定 this.* 状态随编辑即时刷新），
+  // 收起的卡片显示草稿值（编辑值要等 commitExpanded 才写回草稿）
+  draftAmountDisplay(draft: BillDraft, index: number): Resource | string {
+    const text = this.expandedIndex === index ? this.amountText : draft.amountText;
+    return text ? '¥' + text : $r('app.string.amount_placeholder');
+  }
+
+  draftMerchantDisplay(draft: BillDraft, index: number): string {
+    return this.expandedIndex === index ? this.merchant : draft.merchant;
+  }
+
+  draftCategoryDisplay(draft: BillDraft, index: number): ResourceStr {
+    const type = this.expandedIndex === index ? this.selectType : draft.selectType;
+    return type ? type.name : '';
+  }
+
+  draftPayTimeDisplay(draft: BillDraft, index: number): number {
+    return this.expandedIndex === index ? this.payTime : draft.payTime;
+  }
+
   commitExpanded(): void {
     const index = this.expandedIndex;
     if (index < 0 || index >= this.drafts.length) {
@@ -502,6 +524,9 @@ struct RecognizeBill {
     draft.autoClassified = this.autoClassified;
     draft.selectedDate = this.selectedDate;
     draft.payTime = this.payTime;
+    // V1 状态数组只观察数组本身：元素字段就地修改不触发 ForEach 重渲，
+    // 整体替换让收起编辑后卡片头部立即显示新金额/类别/时间
+    this.drafts = this.drafts.slice();
   }
 
   loadExpanded(): void {
@@ -720,7 +745,8 @@ struct RecognizeBill {
     if (rows <= 0) {
       return 0;
     }
-    return rows * 55 + (rows - 1) * 16;
+    // 行高 = 36 图标 + 4 间距 + 分类名行高(fs15)：随字号缩放，大字体下文字不再超出固定行高
+    return rows * (40 + this.fs(15)) + (rows - 1) * 16;
   }
 
   @Builder PickPanel() {
@@ -988,15 +1014,17 @@ struct RecognizeBill {
           })
         Column({ space: SPACE_TINY }) {
           Row({ space: SPACE_SMALL }) {
-            Text(draft.amountText ? '¥' + draft.amountText : $r('app.string.amount_placeholder'))
+            Text(this.draftAmountDisplay(draft, index))
               .fontSize(this.fs(15))
               .fontWeight(FontWeight.Medium)
               .fontColor(this.tk().textPrimary)
-            Text(draft.merchant)
+            // 商家名占剩余宽度：大字号/长商家名时省略号截断，不再溢出卡片
+            Text(this.draftMerchantDisplay(draft, index))
               .fontSize(this.fs(13))
               .fontColor(this.tk().textSecondary)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .layoutWeight(1)
           }
           Row({ space: SPACE_SMALL }) {
             if (draft.engine !== '') {
@@ -1007,14 +1035,18 @@ struct RecognizeBill {
                 .borderRadius(4)
                 .backgroundColor(this.tk().primarySoft)
             }
-            Text(draft.selectType?.name ?? '')
-              .fontSize(this.fs(12))
-              .fontColor(this.tk().textSecondary)
-            Text(dayjs(draft.payTime).format('YYYY-MM-DD HH:mm'))
+            Text(this.draftCategoryDisplay(draft, index))
               .fontSize(this.fs(12))
               .fontColor(this.tk().textSecondary)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
+            // 时间占剩余宽度：大字号下超出时省略号截断，不再溢出卡片
+            Text(dayjs(this.draftPayTimeDisplay(draft, index)).format('YYYY-MM-DD HH:mm'))
+              .fontSize(this.fs(12))
+              .fontColor(this.tk().textSecondary)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .layoutWeight(1)
           }
         }.alignItems(HorizontalAlign.Start)
         .layoutWeight(1)

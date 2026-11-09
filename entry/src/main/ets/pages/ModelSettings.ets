@@ -157,6 +157,21 @@ struct ModelSettings {
     return arr;
   }
 
+  // 当前编辑中的模型是否不支持图片输入：固定服务商查目录 vision 标记，
+  // 自定义服务商模型名无法判断，不作提示
+  selectedModelNoVision(): boolean {
+    const provider = LLM_PROVIDERS[this.providerIndex];
+    if (provider.custom) {
+      return false;
+    }
+    for (const m of provider.models) {
+      if (m.id === this.model) {
+        return !m.vision;
+      }
+    }
+    return false;
+  }
+
   // 保存当前编辑中的服务商（新增或覆盖）并设为当前使用
   async saveCurrentProvider(): Promise<void> {
     const provider = LLM_PROVIDERS[this.providerIndex];
@@ -378,7 +393,7 @@ struct ModelSettings {
     onValueChange: (value: string) => void) {
     Row() {
       Text(label)
-        .width(72)
+        .width(this.fs(72))
         .fontSize(this.fs(14))
         .fontColor(this.tk().textPrimary)
       TextInput({ text: value, placeholder: placeholder })
@@ -484,6 +499,14 @@ struct ModelSettings {
                       this.modelIndex = index;
                       this.model = LLM_PROVIDERS[this.providerIndex].models[index].id;
                     })
+                  // 纯文本模型选中的即时警示：账单识别必须多模态，提前拦住而不是等识别失败才提示
+                  if (this.selectedModelNoVision()) {
+                    Text($r('app.string.model_no_vision_hint'))
+                      .width('100%')
+                      .fontSize(this.fs(12))
+                      .lineHeight(this.fs(17))
+                      .fontColor(this.tk().warning)
+                  }
                 }.width('100%')
               } else {
                 this.FormRow($r('app.string.model_label'), $r('app.string.model_placeholder'), this.model, false,

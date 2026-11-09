@@ -204,26 +204,31 @@ struct ImportBill {
       .alignItems(HorizontalAlign.Center)
       .width('100%')
 
-      Row({ space: SPACE_SMALL }) {
+      // 大字号下三个来源标签可能放不下同一行，用可折行的 Flex 自动换行，避免溢出卡片
+      Flex({ wrap: FlexWrap.Wrap }) {
         Text($r('app.string.import_format_alipay'))
           .fontSize(this.fs(12))
           .fontColor(this.tk().primary)
           .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM, top: 6, bottom: 6 })
           .backgroundColor(this.tk().primarySoft)
           .borderRadius(SPACE_SMALL)
+          .margin({ right: SPACE_SMALL, bottom: SPACE_TINY })
         Text($r('app.string.import_format_wechat'))
           .fontSize(this.fs(12))
           .fontColor(this.tk().primary)
           .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM, top: 6, bottom: 6 })
           .backgroundColor(this.tk().primarySoft)
           .borderRadius(SPACE_SMALL)
+          .margin({ right: SPACE_SMALL, bottom: SPACE_TINY })
         Text($r('app.string.import_format_app'))
           .fontSize(this.fs(12))
           .fontColor(this.tk().primary)
           .padding({ left: SPACE_MEDIUM, right: SPACE_MEDIUM, top: 6, bottom: 6 })
           .backgroundColor(this.tk().primarySoft)
           .borderRadius(SPACE_SMALL)
+          .margin({ right: SPACE_SMALL, bottom: SPACE_TINY })
       }
+      .width('100%')
 
       Text($r('app.string.import_privacy_tip'))
         .fontSize(this.fs(11))
@@ -263,6 +268,10 @@ struct ImportBill {
             .fontColor(this.tk().textSecondary)
           Text('¥ ' + this.expenseTotal.toFixed(2))
             .fontSize(this.fs(18))
+            .minFontSize(10)
+            .maxFontSize(this.fs(18))
+            .heightAdaptivePolicy(TextHeightAdaptivePolicy.MIN_FONT_SIZE_FIRST)
+            .maxLines(1)
             .fontWeight(FontWeight.Bold)
             .fontColor(this.tk().danger)
         }
@@ -274,6 +283,10 @@ struct ImportBill {
             .fontColor(this.tk().textSecondary)
           Text('¥ ' + this.incomeTotal.toFixed(2))
             .fontSize(this.fs(18))
+            .minFontSize(10)
+            .maxFontSize(this.fs(18))
+            .heightAdaptivePolicy(TextHeightAdaptivePolicy.MIN_FONT_SIZE_FIRST)
+            .maxLines(1)
             .fontWeight(FontWeight.Bold)
             .fontColor(this.tk().primary)
         }
@@ -285,6 +298,10 @@ struct ImportBill {
             .fontColor(this.tk().textSecondary)
           Text(this.bills.length.toString())
             .fontSize(this.fs(18))
+            .minFontSize(10)
+            .maxFontSize(this.fs(18))
+            .heightAdaptivePolicy(TextHeightAdaptivePolicy.MIN_FONT_SIZE_FIRST)
+            .maxLines(1)
             .fontWeight(FontWeight.Bold)
             .fontColor(this.tk().textPrimary)
         }
@@ -372,9 +389,15 @@ struct ImportBill {
             Text(bill.categoryName)
               .fontSize(this.fs(12))
               .fontColor(this.tk().textSecondary)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+            // 时间占剩余宽度：大字号下超出时省略号截断，不再溢出卡片
             Text(dayjs(bill.payTime).format('MM-DD HH:mm'))
               .fontSize(this.fs(12))
               .fontColor(this.tk().textSecondary)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .layoutWeight(1)
           }
           .width('100%')
         }
