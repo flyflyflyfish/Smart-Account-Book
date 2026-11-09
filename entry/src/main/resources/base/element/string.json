@@ -653,6 +653,14 @@
       "value": "识别服务返回格式错误"
     },
     {
+      "name": "cloud_model_no_vision",
+      "value": "当前模型不支持图片输入，请在模型设置中更换为多模态模型"
+    },
+    {
+      "name": "cloud_bad_request",
+      "value": "请求被云端拒绝，请检查接口地址与模型名称"
+    },
+    {
       "name": "cloud_bad_result",
       "value": "识别结果格式错误，请重试"
     },
