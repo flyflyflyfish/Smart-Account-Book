@@ -283,8 +283,8 @@ export default class WidgetUpdater {
         dim = typeof saved === 'number' ? saved : formInfo.FormDimension.Dimension_2_2;
       }
       const isWide = dim === formInfo.FormDimension.Dimension_2_4;
-      // 小卡（2*2）固定展示今日收支，不使用口径切换；大卡（2*4）按已保存口径展示
-      const range = isWide ? await WidgetUpdater.readFormRange(formId) : WIDGET_RANGE_TODAY;
+      // 大小卡都支持「今日 / 本月」口径切换，按各自已保存口径展示
+      const range = await WidgetUpdater.readFormRange(formId);
       const entry = range === WIDGET_RANGE_MONTH ? cache.month : cache.today;
       const menuVisible = formMenuOpenStates.get(formId) === true ? '1' : '0';
       // 第三入口跟随底部第二页签样式：AI 助手 / 账本

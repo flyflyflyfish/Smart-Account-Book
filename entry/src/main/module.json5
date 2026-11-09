@@ -20,6 +20,9 @@
         "label": "$string:EntryAbility_label",
         "startWindowIcon": "$media:icon",
         "startWindowBackground": "$color:start_window_background",
+        // 单例模式：小组件/桌面图标拉起时复用已存活实例并回调 onNewWant，
+        // 默认 standard 会新建实例，导致返回时露出旧实例首页（表现为"点小组件跳到首页"）
+        "launchType": "singleton",
         "exported": true,
         "skills": [
           {

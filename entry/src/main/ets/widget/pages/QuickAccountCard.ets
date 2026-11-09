@@ -3,7 +3,7 @@ let storage = new LocalStorage();
 /**
  * 快捷记账卡片。
  * 大卡（2*4）：今日/本月口径切换 + 支出/收入两列 + 三个图标快捷入口。
- * 小卡（2*2）：第一排今日支出、第二排今日收入，右上角「+」点击展开
+ * 小卡（2*2）：今日/本月口径切换 + 第一排支出、第二排收入，右上角「+」点击展开
  * 手动添加 / 拍照识别 / AI助手三个入口，任选其一跳转对应页面。
  * 金额单位固定为元，不做万位缩写；按金额长度自适应字号，保证 100001.00 这类金额完整显示。
  * 颜色由 EntryFormAbility 按当前应用主题解析后随卡片数据推送，
@@ -35,9 +35,6 @@ struct QuickAccountCard {
   @LocalStorageProp('isWide') isWideFlag: string = '0';
   // 第三入口样式：ai AI助手 / ledger 账本，跟随外观-功能的底部第二页签设置下发
   @LocalStorageProp('thirdEntry') thirdEntry: string = 'ai';
-  // 账本入口配色（取主题蓝点缀色）
-  @LocalStorageProp('accentBlue') accentBlue: string = '#3D94F0';
-  @LocalStorageProp('accentBlueSoft') accentBlueSoft: string = '#293D94F0';
 
   // 双击检测：记录上一次点击时间戳，400ms 内连点两次非按钮区域进入应用首页
   private lastTapTime: number = 0;
@@ -227,17 +224,17 @@ struct QuickAccountCard {
           })
 
           if (this.thirdEntry === 'ledger') {
-            // 第三入口为账本：跟随底部第二页签设置
+            // 第三入口为账本：跟随底部第二页签设置，配色与 AI 助手入口一致
             Column({ space: 4 }) {
               Stack({ alignContent: Alignment.Center }) {
                 Circle()
                   .width(36)
                   .height(36)
-                  .fill(this.accentBlueSoft)
+                  .fill(this.entryAiSoft)
                 Image($r('app.media.ledger'))
                   .width(18)
                   .height(18)
-                  .fillColor(this.accentBlue)
+                  .fillColor(this.entryAi)
               }
               .width(36)
               .height(36)
@@ -354,17 +351,17 @@ struct QuickAccountCard {
             })
 
             if (this.thirdEntry === 'ledger') {
-              // 第三入口为账本：跟随底部第二页签设置
+              // 第三入口为账本：跟随底部第二页签设置，配色与 AI 助手入口一致
               Row({ space: 8 }) {
                 Stack({ alignContent: Alignment.Center }) {
                   Circle()
                     .width(28)
                     .height(28)
-                    .fill(this.accentBlueSoft)
+                    .fill(this.entryAiSoft)
                   Image($r('app.media.ledger'))
                     .width(14)
                     .height(14)
-                    .fillColor(this.accentBlue)
+                    .fillColor(this.entryAi)
                 }
                 .width(28)
                 .height(28)
@@ -414,10 +411,41 @@ struct QuickAccountCard {
           .justifyContent(FlexAlign.Center)
           .padding({ left: 16, right: 16, top: 34, bottom: 12 })
         } else {
-          // 收起状态：第一排今日支出、第二排今日收入
-          Column({ space: 12 }) {
+          // 收起状态：今日/本月口径切换 + 第一排支出、第二排收入（与大卡同款口径开关）
+          Column({ space: 8 }) {
+            Row({ space: 6 }) {
+              Text($r('app.string.widget_range_today'))
+                .fontSize(11)
+                .fontColor(this.range === 'today' ? this.primaryColor : this.textSecondary)
+                .backgroundColor(this.range === 'today' ? this.primarySoft : Color.Transparent)
+                .borderRadius(9)
+                .padding({ left: 10, right: 10, top: 3, bottom: 3 })
+                .onClick(() => {
+                  this.markButtonTap();
+                  postCardAction(this, {
+                    action: 'message',
+                    params: { range: 'today' }
+                  });
+                })
+
+              Text($r('app.string.widget_range_month'))
+                .fontSize(11)
+                .fontColor(this.range === 'month' ? this.primaryColor : this.textSecondary)
+                .backgroundColor(this.range === 'month' ? this.primarySoft : Color.Transparent)
+                .borderRadius(9)
+                .padding({ left: 10, right: 10, top: 3, bottom: 3 })
+                .onClick(() => {
+                  this.markButtonTap();
+                  postCardAction(this, {
+                    action: 'message',
+                    params: { range: 'month' }
+                  });
+                })
+            }
+            .width('100%')
+
             Row() {
-              Text($r('app.string.widget_today_expense_label'))
+              Text($r('app.string.widget_expense_label'))
                 .fontSize(10)
                 .fontColor(this.textSecondary)
               Text(this.expenses)
@@ -431,7 +459,7 @@ struct QuickAccountCard {
             .width('100%')
 
             Row() {
-              Text($r('app.string.widget_today_income_label'))
+              Text($r('app.string.widget_income_label'))
                 .fontSize(10)
                 .fontColor(this.textSecondary)
               Text(this.income)
