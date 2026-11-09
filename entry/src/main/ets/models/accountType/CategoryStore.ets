@@ -113,6 +113,13 @@ class CategoryStore {
   private allExpenses: Map<number, AccountTypeModel> = new Map();
   private allIncomes: Map<number, AccountTypeModel> = new Map();
 
+  constructor() {
+    // 默认分类映射先就地构建：不依赖 init(context)（应用启动才调用），
+    // 避免 nameText 在映射为空时经 otherName 无限递归（如测试环境/极端启动时序）
+    this.allExpenses = this.buildAllMap(AccountType.EXPENSES);
+    this.allIncomes = this.buildAllMap(AccountType.INCOME);
+  }
+
   // 应用启动时初始化，可重复调用（共享同一个 Promise）
   init(context: common.Context): Promise<void> {
     if (!this.initPromise) {
@@ -276,14 +283,20 @@ class CategoryStore {
   nameText(id: number, accountType: number): string {
     const map = accountType === AccountType.EXPENSES ? this.allExpenses : this.allIncomes;
     const matched = map.get(id);
-    if (!matched) {
-      return this.otherName(accountType);
+    if (matched) {
+      if (typeof matched.name === 'string') {
+        return matched.name;
+      }
+      const names = this.defaultNames(accountType);
+      return names[matched.id] ?? names[names.length - 1];
     }
-    if (typeof matched.name === 'string') {
-      return matched.name;
-    }
+    // 未命中（映射未构建的极端时序）：按名称数组兜底，禁止经 otherName 递归回自身
+    const otherId = accountType === AccountType.EXPENSES ? AccountExpensesType.OTHER : AccountIncomeType.OTHER;
     const names = this.defaultNames(accountType);
-    return names[matched.id] ?? names[names.length - 1];
+    if (id === otherId) {
+      return names[otherId] ?? names[names.length - 1];
+    }
+    return this.otherName(accountType);
   }
 
   isCustom(id: number): boolean {

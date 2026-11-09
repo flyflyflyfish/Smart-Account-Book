@@ -41,7 +41,7 @@ export default function decoratorsTest() {
       primary.results = [buildResult(0.9)];
       const secondary = new FakeRecognizer();
       secondary.results = [buildResult(0.9)];
-      const fallback = new FallbackRecognizer(primary, secondary, 0.6);
+      const fallback = new FallbackRecognizer(primary, secondary, 0.6, true);
       const results = await fallback.recognize('uri');
       expect(results.length).assertEqual(1);
       expect(primary.callCount).assertEqual(1);
@@ -53,7 +53,7 @@ export default function decoratorsTest() {
       primary.failTimes = 1;
       const secondary = new FakeRecognizer();
       secondary.results = [buildResult(0.9)];
-      const fallback = new FallbackRecognizer(primary, secondary, 0.6);
+      const fallback = new FallbackRecognizer(primary, secondary, 0.6, true);
       const results = await fallback.recognize('uri');
       expect(results.length).assertEqual(1);
       expect(secondary.callCount).assertEqual(1);
@@ -64,10 +64,22 @@ export default function decoratorsTest() {
       primary.results = [buildResult(0.2)];
       const secondary = new FakeRecognizer();
       secondary.results = [buildResult(0.9)];
-      const fallback = new FallbackRecognizer(primary, secondary, 0.6);
+      const fallback = new FallbackRecognizer(primary, secondary, 0.6, true);
       const results = await fallback.recognize('uri');
       expect(results.length).assertEqual(1);
       expect(secondary.callCount).assertEqual(1);
+    });
+
+    it('fallback_lowConfidence_keepPrimary_whenFallbackDisabled', 0, async () => {
+      // fallbackOnLowConfidence=false（secondary 弱于 primary 的场景）：低置信不再降级
+      const primary = new FakeRecognizer();
+      primary.results = [buildResult(0.2)];
+      const secondary = new FakeRecognizer();
+      secondary.results = [buildResult(0.9)];
+      const fallback = new FallbackRecognizer(primary, secondary, 0.6, false);
+      const results = await fallback.recognize('uri');
+      expect(results.length).assertEqual(1);
+      expect(secondary.callCount).assertEqual(0);
     });
 
     it('retry_successAfterRetry', 0, async () => {
