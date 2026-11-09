@@ -217,7 +217,9 @@ struct RecognizeBill {
     }
     this.mergeDrafts();
     if (this.drafts.length === 0) {
-      Toast.error($r('app.string.all_recognize_failed'));
+      // 全部失败时优先展示第一张图的具体失败原因（如"当前模型不支持图片输入"），而非笼统提示
+      const failedTask = this.tasks.find((t: ImageTask): boolean => t.error !== '');
+      Toast.error(failedTask !== undefined ? failedTask.error : $r('app.string.all_recognize_failed'));
       this.step = STEP_PICK;
       return;
     }
