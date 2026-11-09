@@ -212,8 +212,10 @@ class CloudSettingSyncService {
       condition.equalTo('owner_uid', this.ownerUid);
       return await zone.query(condition);
     } catch (err) {
-      Logger.error('云端拉取设置失败', (err as Error).message);
-      return [];
+      const e = err as Error;
+      Logger.error('云端拉取设置失败', e.message);
+      // 拉取失败上抛而非当空集：同步流程据此重试，避免用残缺数据合并
+      throw e;
     }
   }
 
@@ -228,8 +230,10 @@ class CloudSettingSyncService {
       condition.equalTo('owner_uid', this.ownerUid);
       return await zone.query(condition);
     } catch (err) {
-      Logger.error('云端拉取删除墓碑失败', (err as Error).message);
-      return [];
+      const e = err as Error;
+      Logger.error('云端拉取删除墓碑失败', e.message);
+      // 拉取失败上抛而非当空集：缺墓碑的合并会让其他设备已删的账单复活
+      throw e;
     }
   }
 
