@@ -18,6 +18,10 @@ class FakeMerchantCategoryStore implements MerchantCategoryStore {
     return this.record;
   }
 
+  async queryAll(): Promise<MerchantCategory[]> {
+    return this.record !== null ? [this.record] : [];
+  }
+
   async upsert(record: MerchantCategory): Promise<void> {
     this.upsertCalled = true;
   }
