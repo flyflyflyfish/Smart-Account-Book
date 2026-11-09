@@ -16,6 +16,7 @@ import {
 } from '../../models/recognition/CloudLlmModels';
 import CategoryRegistry from '../../models/accountType/CategoryRegistry';
 import { Recognizer } from './Recognizer';
+import { NonRetryableError } from './NonRetryableError';
 import { CloudResultParser } from './CloudResultParser';
 import { Logger } from '../../utils/Logger';
 
@@ -40,8 +41,7 @@ const DECODE_LOCK_WAIT_MS: number = 30000;
 
 // 图片解码互斥锁：大图全量解码极耗内存，串行执行降低图片服务压力；
 // 持锁方由外层超时兜底释放，等待方超时后降级为并发执行，任何情况下不会死锁
-class DecodeLock {
-  private busy: boolean = false;
+class DecodeLock {  private busy: boolean = false;
   private waiters: Array<() => void> = [];
 
   acquire(waitMs: number): Promise<boolean> {
@@ -77,6 +77,16 @@ class DecodeLock {
 }
 
 const decodeLock: DecodeLock = new DecodeLock();
+
+// 云端 4xx 错误响应体结构：{"error":{"code":"...","message":"..."}}
+interface CloudErrorDetail {
+  code?: string;
+  message?: string;
+}
+
+interface CloudErrorResponse {
+  error?: CloudErrorDetail;
+}
 
 /**
  * 云端识别器：适配器模式封装 OpenAI 兼容的多模态大模型 API
@@ -309,12 +319,16 @@ export class CloudLlmRecognizer implements Recognizer {
   }
 
   // 状态码分级处理，取 choices[0].message.content 作为模型输出
+  // 4xx 客户端错误（除 429 限流）重试必然同结果，标记为不可重试
   private handleResponse(statusCode: number, resultText: string | null): string {
     if (statusCode === 401) {
-      throw new Error(getContext().resourceManager.getStringSync($r('app.string.cloud_unauthorized')));
+      throw new NonRetryableError(getContext().resourceManager.getStringSync($r('app.string.cloud_unauthorized')));
     }
     if (statusCode === 429) {
       throw new Error(getContext().resourceManager.getStringSync($r('app.string.cloud_rate_limited')));
+    }
+    if (statusCode === 400) {
+      throw new NonRetryableError(this.badRequestMessage(resultText));
     }
     if (statusCode < 200 || statusCode >= 300) {
       throw new Error(getContext().resourceManager.getStringSync($r('app.string.cloud_server_error')));
@@ -333,5 +347,25 @@ export class CloudLlmRecognizer implements Recognizer {
       throw new Error(getContext().resourceManager.getStringSync($r('app.string.cloud_bad_response')));
     }
     return parsed.choices[0].message.content;
+  }
+
+  // 400 细分：多模态参数被拒（如纯文本模型收到图片）提示更换模型，其余为通用请求被拒
+  private badRequestMessage(resultText: string | null): string {
+    let message = '';
+    if (resultText !== null && resultText.length > 0) {
+      try {
+        const parsed = JSON.parse(resultText) as CloudErrorResponse;
+        if (parsed.error && typeof parsed.error.message === 'string') {
+          message = parsed.error.message;
+        }
+      } catch (error) {
+        // 响应体不是 JSON 时走通用文案
+      }
+    }
+    Logger.error('云端诊断: 请求被拒绝(400)', message);
+    if (/参数非法|不支持|image|multimodal|vision/i.test(message)) {
+      return getContext().resourceManager.getStringSync($r('app.string.cloud_model_no_vision'));
+    }
+    return getContext().resourceManager.getStringSync($r('app.string.cloud_bad_request'));
   }
 }

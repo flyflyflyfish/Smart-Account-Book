@@ -7,6 +7,9 @@ import { ACCOUNT_TABLE_NAME } from './schema';
 const ID_COLUMN: string = 'id';
 const DATE_COLUMN: string = 'time';
 const TYPE_COLUMN: string = 'account_type';
+// 列表排序：支付时间倒序为主，创建时间倒序兜底同分钟内的先后
+const PAY_TIME_COLUMN: string = 'pay_time';
+const CREATE_TIME_COLUMN: string = 'create_time';
 const QUERY_COLUMNS: string[] = [
   'id',
   'type',
@@ -93,7 +96,9 @@ export class RdbAccountRepository implements AccountRepository {
     predicates
       .greaterThanOrEqualTo(DATE_COLUMN, startDate)
       .and()
-      .lessThanOrEqualTo(DATE_COLUMN, endDate);
+      .lessThanOrEqualTo(DATE_COLUMN, endDate)
+      .orderByDesc(PAY_TIME_COLUMN)
+      .orderByDesc(CREATE_TIME_COLUMN);
     return this.queryAccount(predicates);
   }
 
@@ -104,7 +109,9 @@ export class RdbAccountRepository implements AccountRepository {
       .and()
       .lessThanOrEqualTo(DATE_COLUMN, endDate)
       .and()
-      .equalTo(TYPE_COLUMN, type);
+      .equalTo(TYPE_COLUMN, type)
+      .orderByDesc(PAY_TIME_COLUMN)
+      .orderByDesc(CREATE_TIME_COLUMN);
     return this.queryAccount(predicates);
   }
 
