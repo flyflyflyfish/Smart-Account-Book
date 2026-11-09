@@ -6,6 +6,7 @@
         compatibleSdkVersion: '5.0.0(12)',
         runtimeOS: 'HarmonyOS',
         targetSdkVersion: '26.0.0',
+        signingConfig: 'default',
         buildOption: {
           strictMode: {
             useNormalizedOHMUrl: true,
@@ -13,7 +14,42 @@
         },
       },
     ],
-    signingConfigs: [],
+    signingConfigs: [
+      {
+        name: 'default',
+        type: 'HarmonyOS',
+        material: {
+          storeFile: 'D:\\harmonyos\\sign\\account_app.p12',
+          storePassword: '0000001BEA78964703249220CDC51DEEA89BF2680C6AD2A54EC014FB88AC3EEFCA0C8306D7A9627031C40A',
+          keyAlias: 'account_app_key',
+          keyPassword: '0000001B627AD0A3E8F335A7B08586F288782B1D298A624996105CE94670ED441FFE0D2F5E17FE585CB5B7',
+          signAlg: 'SHA256withECDSA',
+          profile: 'D:\\harmonyos\\sign\\account_appDebug.p7b',
+          certpath: 'D:\\harmonyos\\sign\\account_app.cer',
+        },
+      },
+      {
+        name: 'release',
+        type: 'HarmonyOS',
+        material: {
+          storeFile: 'D:\\harmonyos\\sign\\release.p12',
+          storePassword: '0000001BEA78964703249220CDC51DEEA89BF2680C6AD2A54EC014FB88AC3EEFCA0C8306D7A9627031C40A',
+          keyAlias: 'account_app_key',
+          keyPassword: '0000001B627AD0A3E8F335A7B08586F288782B1D298A624996105CE94670ED441FFE0D2F5E17FE585CB5B7',
+          signAlg: 'SHA256withECDSA',
+          profile: 'D:\\harmonyos\\sign\\account_releaseRelease.p7b',
+          certpath: 'D:\\harmonyos\\sign\\account_release.cer',
+        },
+      },
+    ],
+    buildModeSet: [
+      {
+        name: 'debug',
+      },
+      {
+        name: 'release',
+      },
+    ],
     capabilities: [
       {
         bundleName: 'com.flyfish.account_app',
