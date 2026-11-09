@@ -13,6 +13,7 @@ import { BillDraft } from '../models/recognition/BillDraft';
 import { ImageTask, ImageTaskStatus } from '../models/recognition/ImageTask';
 import { RecognitionResult, copyRecognitionResult } from '../models/recognition/RecognitionResult';
 import { OcrVisionResult, SampleTransaction } from '../models/recognition/OcrSample';
+import { RecognitionWarnings } from '../models/recognition/RecognitionWarnings';
 import { RecognizerFactory } from '../service/recognition/RecognizerFactory';
 import { Recognizer } from '../service/recognition/Recognizer';
 import OcrSampleCollector from '../service/recognition/OcrSampleCollector';
@@ -222,6 +223,11 @@ struct RecognizeBill {
       Toast.error(failedTask !== undefined ? failedTask.error : $r('app.string.all_recognize_failed'));
       this.step = STEP_PICK;
       return;
+    }
+    // 识别成功但过程有警告（如云端失败回退了端侧结果）：向用户说明原因
+    const warnings = RecognitionWarnings.drain();
+    if (warnings.length > 0) {
+      Toast.error(warnings[0], 3000);
     }
     this.step = STEP_CONFIRM;
   }

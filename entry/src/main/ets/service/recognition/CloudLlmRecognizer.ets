@@ -93,6 +93,11 @@ interface CloudErrorResponse {
  * 流程：图片压缩转码 -> 组装请求 -> 调云端接口 -> 清理并校验 JSON 数组 -> 映射为多笔识别结果
  */
 export class CloudLlmRecognizer implements Recognizer {
+  // 会话级熔断：该模型已被云端判定不支持图片输入，同模型后续识别直接短路，
+  // 不再发注定 400 的请求（省流量省 token）；换模型或重启应用后自动恢复探测
+  private static visionBrokenModel: string = '';
+  private static visionBrokenMessage: string = '';
+
   private config: CloudLlmConfig;
   private parser: CloudResultParser = new CloudResultParser();
 
@@ -103,6 +108,11 @@ export class CloudLlmRecognizer implements Recognizer {
   async recognize(imageUri: string): Promise<RecognitionResult[]> {
     if (!this.config.baseUrl || !this.config.apiKey || !this.config.model) {
       throw new Error(getContext().resourceManager.getStringSync($r('app.string.cloud_config_incomplete')));
+    }
+    if (CloudLlmRecognizer.visionBrokenModel !== '' &&
+      CloudLlmRecognizer.visionBrokenModel === this.config.model) {
+      Logger.warn('云端模型已熔断（不支持图片输入），跳过请求直接回退: ', this.config.model);
+      throw new NonRetryableError(CloudLlmRecognizer.visionBrokenMessage);
     }
     const base64 = await this.decodeWithGuard(imageUri);
     const textPart: ChatContent = { type: 'text', text: this.buildPrompt() };
@@ -364,7 +374,11 @@ export class CloudLlmRecognizer implements Recognizer {
     }
     Logger.error('云端诊断: 请求被拒绝(400)', message);
     if (/参数非法|不支持|image|multimodal|vision/i.test(message)) {
-      return getContext().resourceManager.getStringSync($r('app.string.cloud_model_no_vision'));
+      const noVision = getContext().resourceManager.getStringSync($r('app.string.cloud_model_no_vision'));
+      // 记录熔断：本会话内该模型不再重试图片识别
+      CloudLlmRecognizer.visionBrokenModel = this.config.model;
+      CloudLlmRecognizer.visionBrokenMessage = noVision;
+      return noVision;
     }
     return getContext().resourceManager.getStringSync($r('app.string.cloud_bad_request'));
   }
