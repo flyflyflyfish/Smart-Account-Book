@@ -46,6 +46,8 @@ export default struct AccountForm {
   @State description: string = '';
   // 数字键盘默认隐藏，点击金额行才弹出，避免挤压表单
   @State showKeyboard: boolean = false;
+  // 保存进行中标志：await 期间双击保存会重复插入账单
+  @State saving: boolean = false;
   private keypadKeys: string[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '删'];
 
   aboutToAppear(): void {
@@ -155,6 +157,9 @@ export default struct AccountForm {
   }
 
   async onSave(): Promise<void> {
+    if (this.saving) {
+      return;
+    }
     this.showKeyboard = false;
     const selectType = this.selectType;
     if (!this.validateAmount() || !selectType) {
@@ -169,6 +174,7 @@ export default struct AccountForm {
       description: this.description,
       payTime: this.payTime
     };
+    this.saving = true;
     try {
       const record = this.editRecord;
       if (this.isEditing() && record) {
@@ -189,6 +195,8 @@ export default struct AccountForm {
     } catch (err) {
       Logger.error('保存记账记录失败', (err as Error).message);
       Toast.error($r('app.string.save_failed'));
+    } finally {
+      this.saving = false;
     }
   }
 
@@ -374,6 +382,8 @@ export default struct AccountForm {
             .type(ButtonType.Normal)
             .borderRadius(4)
             .layoutWeight(1)
+            .enabled(!this.saving)
+            .opacity(this.saving ? 0.6 : 1)
             .onClick(() => {
               this.onSave();
             })

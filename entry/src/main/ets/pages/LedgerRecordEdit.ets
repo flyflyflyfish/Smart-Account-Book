@@ -70,6 +70,8 @@ struct LedgerRecordEdit {
   @State payTime: number = dayjs().second(0).millisecond(0).valueOf();
   // 数字键盘默认隐藏，点击金额行才弹出
   @State showKeyboard: boolean = false;
+  // 保存进行中标志：一次保存双写（主账单+账本记录），await 期间双击会产生两份重复数据
+  @State saving: boolean = false;
   // 新增模式下是否同步记入主账单（首页统计）；编辑模式只改账本记录，不显示该开关
   @State syncToBills: boolean = true;
 
@@ -216,6 +218,9 @@ struct LedgerRecordEdit {
   }
 
   async onSave(): Promise<void> {
+    if (this.saving) {
+      return;
+    }
     this.showKeyboard = false;
     if (!this.validateAmount()) {
       Toast.error($r('app.string.ledger_amount_required'));
@@ -224,6 +229,7 @@ struct LedgerRecordEdit {
     const recordType = this.currentIndex === LEDGER_RECORD_INCOME ? LEDGER_RECORD_INCOME : LEDGER_RECORD_EXPENSE;
     const amount = Math.round(parseFloat(this.amountText) * 100) / 100;
     const note = this.noteText.trim();
+    this.saving = true;
     try {
       const editing = this.isEditingRecord();
       // 新增且开关打开：先写主账单（首页统计）并取新账单 id 关联，账本记录据此防重复导入
@@ -257,6 +263,8 @@ struct LedgerRecordEdit {
     } catch (err) {
       Logger.error('保存账本记录失败', (err as Error).message);
       Toast.error($r('app.string.save_failed'));
+    } finally {
+      this.saving = false;
     }
   }
 
@@ -503,6 +511,8 @@ struct LedgerRecordEdit {
               .type(ButtonType.Normal)
               .borderRadius(4)
               .layoutWeight(1)
+              .enabled(!this.saving)
+              .opacity(this.saving ? 0.6 : 1)
               .onClick(() => {
                 this.onSave();
               })
