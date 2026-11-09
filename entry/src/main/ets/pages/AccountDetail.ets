@@ -308,7 +308,7 @@ struct AccountDetail {
                   })
                 }, (record: ItemRecordInfo): string => record.id)
                 }.divider({ strokeWidth: 1, color: this.tk().surfaceVariant })
-              }, (item: GroupByDate): string => item.time.toString())
+              }, (item: GroupByDate): string => item.time.toString() + '_' + JSON.stringify(item.records))
             }.divider({ strokeWidth: 1, color: this.tk().surfaceVariant })
             Divider().color(this.tk().surfaceVariant)
           } else {
