@@ -691,7 +691,7 @@ export default struct Stats {
                     ListItem() {
                       this.DateStatsItem(item, index);
                     }
-                  }, (item: StatsByDate): string => item.time.toString())
+                  }, (item: StatsByDate): string => item.time.toString() + '_' + JSON.stringify(item))
                 }.divider({ color: this.tk().surfaceVariant, strokeWidth: 1 })
               } else {
                 Divider().color(this.tk().surfaceVariant).margin({ top: SPACE_MEDIUM + 2 })
@@ -706,7 +706,7 @@ export default struct Stats {
                     ListItem() {
                       this.TypeStatsItem(item, index)
                     }
-                  }, (item: StatsByType): string => item.info.id.toString())
+                  }, (item: StatsByType): string => item.info.id.toString() + '_' + JSON.stringify(item))
                 }.divider({ color: this.tk().surfaceVariant, strokeWidth: 1 })
               } else {
                 Divider().color(this.tk().surfaceVariant).margin({ top: SPACE_MEDIUM + 2 })
