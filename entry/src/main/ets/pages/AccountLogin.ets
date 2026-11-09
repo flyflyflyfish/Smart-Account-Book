@@ -198,16 +198,28 @@ struct AccountLogin {
                 this.onSignOut();
               })
           } else {
-            Button($r('app.string.sign_in_huawei'))
+            Button({ type: ButtonType.Normal }) {
+              Row({ space: SPACE_SMALL }) {
+                if (this.signing) {
+                  LoadingProgress()
+                    .width(18)
+                    .height(18)
+                    .color(this.tk().surface)
+                  Text($r('app.string.signing_in'))
+                    .fontSize(this.fs(15))
+                    .fontColor(this.tk().surface)
+                } else {
+                  Text($r('app.string.sign_in_huawei'))
+                    .fontSize(this.fs(15))
+                    .fontColor(this.tk().surface)
+                }
+              }
+            }
               .width('100%')
               .height(44)
-              .fontSize(this.fs(15))
-              .fontColor(this.tk().surface)
               .backgroundColor(this.tk().primary)
-              .type(ButtonType.Normal)
               .borderRadius(SPACE_SMALL)
               .enabled(!this.signing)
-              .opacity(this.signing ? 0.6 : 1)
               .onClick(() => {
                 this.onSignIn();
               })

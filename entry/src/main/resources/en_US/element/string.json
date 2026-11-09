@@ -837,6 +837,10 @@
       "value": "Erasing…"
     },
     {
+      "name": "signing_in",
+      "value": "Signing in…"
+    },
+    {
       "name": "clear_all_success",
       "value": "All bill data erased"
     },
