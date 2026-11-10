@@ -17,9 +17,9 @@
 /.github/                                  @flyflyflyfish
 /docs/                                     @flyflyflyfish
 
-# ---- 页面与视图：两人共同维护，默认由仓库负责人兜底 ----
-/entry/src/main/ets/pages/                 @flyflyflyfish @wuhanbinnnnnn
-/entry/src/main/ets/views/                 @flyflyflyfish @wuhanbinnnnnn
-/entry/src/main/ets/components/            @flyflyflyfish @wuhanbinnnnnn
+# ---- 页面与视图：伍翰彬主责，潘妍朵评审 ----
+/entry/src/main/ets/pages/                 @wuhanbinnnnnn @flyflyflyfish
+/entry/src/main/ets/views/                 @wuhanbinnnnnn @flyflyflyfish
+/entry/src/main/ets/components/            @wuhanbinnnnnn @flyflyflyfish
 
 *                                          @flyflyflyfish
