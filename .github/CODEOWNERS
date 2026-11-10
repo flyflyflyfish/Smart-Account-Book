@@ -1,25 +1,36 @@
 # 模块负责人：PR 涉及下列路径时自动请求对应负责人评审
 # 依据 docs/工作量分配与KPI.md 的分工声明
+# 注意：CODEOWNERS 为「后置规则优先」，越靠后的匹配越优先
 
-# ---- 识别子系统 / 云端同步 / 数据层：潘妍朵 ----
-/entry/src/main/ets/service/recognition/   @flyflyflyfish
-/entry/src/main/ets/service/               @flyflyflyfish
-/entry/src/main/ets/data/                  @flyflyflyfish
-/entry/src/main/ets/models/                @flyflyflyfish
-/entry/src/main/ets/entryability/          @flyflyflyfish
+# ---- 识别子系统 / 云端同步：潘妍朵 ----
+/entry/src/main/ets/service/recognition/            @flyflyflyfish
+/entry/src/main/ets/service/CloudSyncService.ets    @flyflyflyfish
+/entry/src/main/ets/service/CloudSettingSync.ets    @flyflyflyfish
+/entry/src/main/ets/service/AuthService.ets         @flyflyflyfish
+/entry/src/main/ets/service/MerchantLearningSync.ets @flyflyflyfish
+/entry/src/main/ets/service/AgcCredentialReset.ets  @flyflyflyfish
+/entry/src/main/ets/service/                        @flyflyflyfish
+/entry/src/main/ets/models/recognition/             @flyflyflyfish
+/entry/src/main/ets/models/cloud/                   @flyflyflyfish
+/entry/src/main/ets/data/Cloud*.ets                 @flyflyflyfish
+/entry/src/main/ets/entryability/                   @flyflyflyfish
 
 # ---- 桌面小部件与主题外观：伍翰彬 ----
-/entry/src/main/ets/widget/                @wuhanbinnnnnn
-/entry/src/main/ets/common/                @wuhanbinnnnnn
-
-# ---- 工程设施与交付文档：潘妍朵 ----
-/scripts/                                  @flyflyflyfish
-/.github/                                  @flyflyflyfish
-/docs/                                     @flyflyflyfish
+/entry/src/main/ets/widget/                         @wuhanbinnnnnn
+/entry/src/main/ets/common/                         @wuhanbinnnnnn
 
 # ---- 页面与视图：伍翰彬主责，潘妍朵评审 ----
-/entry/src/main/ets/pages/                 @wuhanbinnnnnn @flyflyflyfish
-/entry/src/main/ets/views/                 @wuhanbinnnnnn @flyflyflyfish
-/entry/src/main/ets/components/            @wuhanbinnnnnn @flyflyflyfish
+/entry/src/main/ets/pages/                          @wuhanbinnnnnn @flyflyflyfish
+/entry/src/main/ets/views/                          @wuhanbinnnnnn @flyflyflyfish
+/entry/src/main/ets/components/                     @wuhanbinnnnnn @flyflyflyfish
 
-*                                          @flyflyflyfish
+# ---- 数据层（本地 RDB 与数据模型）：伍翰彬主责，潘妍朵评审 ----
+/entry/src/main/ets/data/                           @wuhanbinnnnnn @flyflyflyfish
+/entry/src/main/ets/models/                         @wuhanbinnnnnn @flyflyflyfish
+
+# ---- 工程设施与交付文档：潘妍朵 ----
+/scripts/                                           @flyflyflyfish
+/.github/                                           @flyflyflyfish
+/docs/                                              @flyflyflyfish
+
+*                                                   @flyflyflyfish
