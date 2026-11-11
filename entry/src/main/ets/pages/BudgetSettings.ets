@@ -131,6 +131,28 @@ struct BudgetSettings {
     }
   }
 
+  /**
+   * 开关拨动即保存：关闭立即生效；
+   * 开启时若输入框或上次保存的额度可用则立即生效，否则等输入额度后点保存
+   */
+  async onToggleChanged(isOn: boolean): Promise<void> {
+    this.budgetOn = isOn;
+    if (!isOn) {
+      await this.onSave();
+      return;
+    }
+    const text = this.amountText.trim();
+    if (AMOUNT_PATTERN.test(text) && Number(text) > 0 && Number(text) <= AMOUNT_MAX) {
+      await this.onSave();
+      return;
+    }
+    if (this.savedLimit > 0) {
+      await this.onSave();
+      return;
+    }
+    // 首次开启且未输入额度：展示输入区，输入后点保存
+  }
+
   @Builder SectionTitle(label: ResourceStr) {
     Text(label)
       .width('100%')
@@ -151,7 +173,10 @@ struct BudgetSettings {
                 .fontWeight(FontWeight.Medium)
                 .fontColor(this.tk().textPrimary)
               Blank()
-              Toggle({ type: ToggleType.Switch, isOn: $$this.budgetOn })
+              Toggle({ type: ToggleType.Switch, isOn: this.budgetOn })
+                .onChange((isOn: boolean) => {
+                  this.onToggleChanged(isOn);
+                })
             }.width('100%')
             Text($r('app.string.budget_hint'))
               .width('100%')

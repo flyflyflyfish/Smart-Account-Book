@@ -30,10 +30,12 @@ import { ThemeKit, ThemePalette, HOME_SCOPE_DAY, HOME_SCOPE_MONTH } from '../com
   .lineHeight(lineHeight)
 }
 
-@Component
-export default struct Home {
+  @Component
+  export default struct Home {
 
   @StorageProp('themeSeq') @Watch('onThemeSeqChanged') themeSeq: number = 0;
+  // 额度配置保存/云端同步后刷新额度卡片，否则返回首页仍显示关闭前的旧状态
+  @StorageProp('budgetVersion') @Watch('onBudgetVersionChanged') budgetVersion: number = 0;
 
   tk(): ThemePalette {
     return ThemeKit.palette(this.themeSeq);
@@ -106,6 +108,11 @@ export default struct Home {
   // 外观设置（含汇总口径）变更后按新口径重查
   onThemeSeqChanged(): void {
     this.queryByDate();
+  }
+
+  // 额度设置页保存或云端同步额度后重查额度卡片
+  onBudgetVersionChanged(): void {
+    this.refreshBudgetStatus();
   }
 
   // 查询本月支出与消费额度使用情况
