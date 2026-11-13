@@ -10,6 +10,12 @@
 - 许可证：MIT License
 - 说明：轻量级 JavaScript 日期库，本项目用于记账时间、统计周期等日期计算。
 
+### @hw-agconnect/auth
+
+- 用途：华为账号登录与 AGC 认证服务
+- 许可证：ISC License
+- 说明：华为 AppGallery Connect SDK 的认证模块（实际安装版本 1.1.0），用于华为账号登录、端云同步鉴权。其传递依赖 @hw-agconnect/ohoscore（同为华为 AGC SDK 组件，ISC License）随包自动引入。
+
 ## 开发/测试依赖
 
 ### @ohos/hypium
